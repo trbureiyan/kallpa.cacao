@@ -1,0 +1,9 @@
+.env
+datos/runtime/*
+!datos/runtime/.gitkeep
+node_modules/
+dist/
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
