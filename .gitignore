@@ -1,0 +1,26 @@
+# Configuración y archivos locales
+.env
+.env.*
+!.env.example
+.idea/
+*.iml
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Bases de datos locales
+*.db
+*.sqlite
+*.sqlite3
+
+# Frontend
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
