@@ -73,3 +73,7 @@ jobs:
       - if: steps.detectar.outputs.existe == 'true'
         working-directory: backend
         run: python -m pytest -q
+
+      # respaldo/restauración y rendimiento (scripts/ y tests/); usan el mismo Python del backend
+      - if: steps.detectar.outputs.existe == 'true'
+        run: python -m pytest tests -q
