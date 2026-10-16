@@ -101,7 +101,9 @@ def test_bloquear_cac001_deja_la_ficha_publica_en_bloqueado_con_su_origen(escena
     assert ficha.status_code == 200, ficha.text
     f = ficha.json()
     assert f["status"] == "blocked" and f["availability"] == "not_available"
-    assert f["status_reason"] == MOTIVO
+    # el motivo interno del bloqueo no se publica: el comprador ve un texto fijo
+    assert f["status_reason"] == "Retenido por la asociación para revisión de calidad."
+    assert MOTIVO not in ficha.text
     assert f["origin"] == "Rivera"
     # lo que ve el comprador nunca incluye costos ni datos del productor
     texto = ficha.text.lower()

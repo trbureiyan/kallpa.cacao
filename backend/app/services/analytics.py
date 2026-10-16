@@ -65,7 +65,7 @@ def dashboard_analytics(db: Session) -> dict:
         categories = sorted(cost_data["categories"])
         summary = summarize_cost(quantity, total_cost,
                                  float(transform.sale_price_cop_per_unit) if transform.sale_price_cop_per_unit is not None else None,
-                                 categories)
+                                 categories, has_cost_data="processing" in categories)
         if summary["margin_on_sale_percent"] is not None:
             for lot in outputs:
                 margins.append({"lot_code": lot.code, "stage": transform.stage,

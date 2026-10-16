@@ -7,6 +7,8 @@ from app.models import Lot, Reception, Transformation, TransformationOutput
 from app.schemas.api import PublicProduct
 from app.services.traceability import trace_lot
 
+MOTIVO_PUBLICO_BLOQUEO = "Retenido por la asociación para revisión de calidad."
+
 router = APIRouter(prefix="/public", tags=["Ficha pública"])
 
 
@@ -35,7 +37,8 @@ def product_card(code: str, db: Session = Depends(get_db)):
     return {"code": lot.code, "product_type": lot.product_type, "stage": stage, "occurred_at": occurred_at,
             "output_quantity": float(lot.received_quantity), "unit": lot.unit, "status": lot.status,
             "availability": "available" if lot.status == "released" else "not_available",
-            "status_reason": lot.status_reason if lot.status == "blocked" else None,
+            # el motivo real es interno (puede nombrar personas, reclamos o análisis); el comprador ve un texto fijo
+            "status_reason": MOTIVO_PUBLICO_BLOQUEO if lot.status == "blocked" else None,
             "origin": lot.origin, "received_on": lot.received_on}
 
 
