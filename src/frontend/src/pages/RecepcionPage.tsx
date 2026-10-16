@@ -45,7 +45,7 @@ export function ReceptionPage({
       <PageHead
         eyebrow="RF01 · Recepción"
         title="Recepción de lotes"
-        text="Registra cacao en grano desde campo, incluso sin conexión."
+        text="Registre cacao en grano desde campo, con conectividad limitada."
       />
 
       <div className="split-layout">
@@ -57,10 +57,10 @@ export function ReceptionPage({
           </div>
 
           <div className="eyebrow">Consejo de campo</div>
-          <div className="section-title mt-2">Verifica el peso neto</div>
+          <div className="section-title mt-2">Verifique el peso neto</div>
 
           <p>
-            Confirma que la báscula esté calibrada y descuenta el peso del
+            Confirme que la báscula esté calibrada y descuente el peso del
             empaque antes de guardar el registro.
           </p>
 

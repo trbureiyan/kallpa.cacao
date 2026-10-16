@@ -33,7 +33,7 @@ export function ProcessPage() {
       <PageHead
         eyebrow="RF02 · Transformación"
         title="Transformación y control de merma"
-        text="Registra cada etapa y detecta desviaciones de peso en tiempo real."
+        text="Registre cada etapa y detecte desviaciones de peso en tiempo real."
       />
 
       <div className="process-layout">

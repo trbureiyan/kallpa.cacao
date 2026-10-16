@@ -1,5 +1,4 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/dexieDb';
 import { useNetwork } from '@/context/NetworkContext';
@@ -11,8 +10,7 @@ import { IndicadorConexion } from '@/components/ui/marca';
 
 export const DashboardPage: React.FC = () => {
   const { isOnline } = useNetwork();
-  const { rol, cerrarSesion } = useAuth();
-  const navigate = useNavigate();
+  const { rol } = useAuth();
 
   const lotes = useLiveQuery(() => db.recepciones.toArray(), [], []);
   const auditLogs = useLiveQuery(() => db.auditLogs.reverse().limit(5).toArray(), [], []);
@@ -27,11 +25,6 @@ export const DashboardPage: React.FC = () => {
         eyebrow="Resumen General"
         title={`Panel Principal (${rol})`}
         text="Monitoreo de operaciones en campo, inventario y sincronización."
-        action={
-          <button onClick={() => { cerrarSesion(); navigate('/login'); }} className="btn btn-ghost">
-            Cerrar Sesión
-          </button>
-        }
       />
 
       <div className="metrics">
