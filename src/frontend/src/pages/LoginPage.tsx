@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { useNetwork } from '@/context/NetworkContext';
 import { useAuth } from '@/context/AuthContext';
 import { mensajeError } from '@/api/axiosClient';
-import { Wifi, WifiOff, Sprout, ArrowRight, Eye, ChevronRight } from 'lucide-react';
+import { Wifi, WifiOff, Sprout, ArrowRight, Eye, EyeOff, ChevronRight } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -11,6 +11,7 @@ export const LoginPage: React.FC = () => {
   const { usuario, entrar } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [mostrarClave, setMostrarClave] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -34,6 +35,8 @@ export const LoginPage: React.FC = () => {
       setEnviando(false);
     }
   };
+
+  const alternarVisibilidadClave = () => setMostrarClave((visible) => !visible);
 
   return (
     <main className="login-shell">
@@ -113,15 +116,26 @@ export const LoginPage: React.FC = () => {
               <label htmlFor="clave" className="block text-xs font-bold text-slate-700 uppercase mb-1">
                 Contraseña
               </label>
-              <input
-                id="clave"
-                className="input"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <div className="relative">
+                <input
+                  id="clave"
+                  className="input pr-11"
+                  type={mostrarClave ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={alternarVisibilidadClave}
+                  aria-label={mostrarClave ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  aria-pressed={mostrarClave}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-600"
+                >
+                  {mostrarClave ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+                </button>
+              </div>
             </div>
 
             {error && (
