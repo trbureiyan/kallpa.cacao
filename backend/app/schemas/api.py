@@ -156,7 +156,7 @@ class TransformationCreate(BaseModel):
     output_code: str | None = Field(default=None, min_length=2, max_length=40)
     product_type: str = Field(default="processed_cocoa", min_length=2, max_length=40)
     outputs: list[TransformationOutputCreate] | None = Field(default=None, min_length=1, max_length=20)
-    costs_cop: float = Field(default=0, ge=0)
+    costs_cop: float | None = Field(default=None, ge=0)  # None = la etapa no registró costo
     sale_price_cop_per_unit: float | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")

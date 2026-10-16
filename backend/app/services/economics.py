@@ -1,6 +1,7 @@
 def summarize_cost(output_quantity: float, total_cost_cop: float, sale_price_cop_per_unit: float | None,
-                   included_costs: list[str] | None = None):
-    unit_cost = total_cost_cop / output_quantity if output_quantity > 0 else None
+                   included_costs: list[str] | None = None, has_cost_data: bool = True):
+    # sin costo registrado no se puede dividir: un total de 0 por falta de dato no es un costo unitario de 0
+    unit_cost = total_cost_cop / output_quantity if output_quantity > 0 and has_cost_data else None
     margin = ((sale_price_cop_per_unit - unit_cost) / sale_price_cop_per_unit * 100
               if unit_cost is not None and sale_price_cop_per_unit is not None and sale_price_cop_per_unit > 0 else None)
     category_labels = {

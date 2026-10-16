@@ -28,7 +28,7 @@ def _summary(db: Session, transform: Transformation) -> dict:
         "unit": transform.unit,
         "total_cost_cop": float(total_cost),
         "sale_price_cop_per_unit": sale_price,
-        **summarize_cost(output_quantity, float(total_cost), sale_price, categories),
+        **summarize_cost(output_quantity, float(total_cost), sale_price, categories, has_cost_data="processing" in categories),
     }
 
 

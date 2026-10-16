@@ -50,7 +50,7 @@ def _request_payload(data) -> dict:
         "unit": data.unit,
         "incident": data.incident,
         "output_code": data.output_code,
-        "costs_cop": _money(data.costs_cop),
+        "costs_cop": _money(data.costs_cop) if data.costs_cop is not None else None,
         "sale_price_cop_per_unit": _money(data.sale_price_cop_per_unit) if data.sale_price_cop_per_unit is not None else None,
         "outputs": [{
             "lot_code": output.lot_code if hasattr(output, "lot_code") else output["lot_code"],
@@ -64,6 +64,14 @@ def _request_payload(data) -> dict:
 def _payload_hash(payload: dict) -> str:
     canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _costo_guardado(db: Session, transformation: Transformation) -> str | None:
+    """Costo de la etapa tal como se registró: None si no se registró ninguno (distinto de un costo de 0)."""
+    entries = db.query(CostEntry).filter_by(transformation_id=transformation.id, category="processing").all()
+    if not entries:
+        return None
+    return _money(sum((entry.amount_cop for entry in entries), Decimal("0")))
 
 
 def _stored_payload(db: Session, transformation: Transformation) -> dict:
@@ -83,8 +91,7 @@ def _stored_payload(db: Session, transformation: Transformation) -> dict:
         "unit": transformation.unit,
         "incident": transformation.incident,
         "output_code": linked_outputs[0][0].code if linked_outputs else transformation.output_code,
-        "costs_cop": _money(sum((entry.amount_cop for entry in db.query(CostEntry).filter_by(
-            transformation_id=transformation.id, category="processing").all()), Decimal("0"))),
+        "costs_cop": _costo_guardado(db, transformation),
         "sale_price_cop_per_unit": _money(transformation.sale_price_cop_per_unit) if transformation.sale_price_cop_per_unit is not None else None,
         "outputs": [{
             "lot_code": lot.code,
@@ -251,7 +258,10 @@ def create_transformation(db: Session, data, actor: User):
         total_output_quantity = sum(
             (Decimal(str(output["quantity"])) for output in normalized_outputs), Decimal("0")
         )
-        total_stage_cost = Decimal(str(data.costs_cop)).quantize(Decimal("0.01"))
+        # [DECISION] costs_cop omitido es «sin dato», no 0: no se crea ninguna entrada de costo, el costo unitario queda
+        # sin calcular y se alerta registro_incompleto. Un 0 explícito sí se registra y cuenta como dato.
+        costo_registrado = data.costs_cop is not None
+        total_stage_cost = Decimal(str(data.costs_cop or 0)).quantize(Decimal("0.01"))
         remaining_stage_cost = total_stage_cost
         for index, (output, output_lot) in enumerate(zip(normalized_outputs, output_lots)):
             if index == len(output_lots) - 1:
@@ -263,13 +273,14 @@ def create_transformation(db: Session, data, actor: User):
                 remaining_stage_cost -= allocated_cost
             else:
                 allocated_cost = Decimal("0.00")
-            db.add(CostEntry(
-                lot_id=output_lot.id,
-                transformation_id=transform.id,
-                category="processing",
-                amount_cop=allocated_cost,
-            ))
-        if not output_lots and total_stage_cost > 0:
+            if costo_registrado:
+                db.add(CostEntry(
+                    lot_id=output_lot.id,
+                    transformation_id=transform.id,
+                    category="processing",
+                    amount_cop=allocated_cost,
+                ))
+        if not output_lots and costo_registrado:
             db.add(CostEntry(
                 lot_id=lot.id,
                 transformation_id=transform.id,
@@ -306,7 +317,7 @@ def create_transformation(db: Session, data, actor: User):
                 "input_quantity": _quantity(data.input_quantity),
                 "output_quantity": _quantity(data.output_quantity),
                 "output_lot_ids": [output_lot.id for output_lot in output_lots],
-                "processing_cost_cop": _money(total_stage_cost),
+                "processing_cost_cop": _money(total_stage_cost) if costo_registrado else None,
                 "sale_price_cop_per_unit": _money(data.sale_price_cop_per_unit)
                 if data.sale_price_cop_per_unit is not None else None,
             },
