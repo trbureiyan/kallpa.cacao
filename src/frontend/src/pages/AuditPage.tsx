@@ -1,17 +1,18 @@
 import { useState } from "react"
-import { useLiveQuery } from "dexie-react-hooks"
 import { Badge, Button, Icon } from "@/components/ui"
 import { DataTable, PageHead } from "@/components/shared"
-import { db } from "@/db/dexieDb"
-import { obtenerLogsAuditoria } from "@/features/auditoria/api/auditoriaDb"
+import { useAuth } from "@/context/AuthContext"
+import { useAuditoria } from "@/features/auditoria/useAuditoria"
+import { useFilasInventario } from "@/features/inventario/useFilasInventario"
 import { ModalCambioEstado } from "@/features/estados/components/ModalCambioEstado"
 
 export function AuditPage() {
   const [showModal, setShowModal] = useState(false)
 
-  // Consultas reactivas: al cambiar un estado la tabla se actualiza sola
-  const logs = useLiveQuery(() => obtenerLogsAuditoria(), [], [])
-  const lotes = useLiveQuery(async () => (await db.recepciones.toArray()).map((l) => l.lotCode), [], [])
+  const { modo, rol } = useAuth()
+  const { logs, error, recargar } = useAuditoria(modo)
+  const { filas, recargar: recargarInventario } = useFilasInventario(modo, rol)
+  const lotes = filas.map((f) => f.codigo)
 
   return (
     <>
@@ -36,11 +37,21 @@ export function AuditPage() {
         </div>
       </div>
 
+      {error && (
+        <div className="validation danger mt-6" role="alert">
+          <Icon name="alert" />
+          <div>
+            <strong>No se pudo cargar la auditoría</strong>
+            <span>{error}</span>
+          </div>
+        </div>
+      )}
+
       <section className="card mt-6">
         <div className="card-head">
           <div>
             <div className="section-title">Historial de cambios e incidencias</div>
-            <p>Actividad registrada en IndexedDB / Servidor</p>
+            <p>{modo === "api" ? "Actividad registrada en el servidor" : "Actividad registrada en este dispositivo"}</p>
           </div>
           <Badge tone="slate">
             <Icon name="clock" size={14} /> Actualizado
@@ -93,7 +104,11 @@ export function AuditPage() {
           loteInicial={lotes[0]}
           nuevoInicial="BLOQUEADO"
           onClose={() => setShowModal(false)}
-          onDone={() => setShowModal(false)}
+          onDone={() => {
+            setShowModal(false)
+            recargar()
+            recargarInventario()
+          }}
         />
       )}
     </>

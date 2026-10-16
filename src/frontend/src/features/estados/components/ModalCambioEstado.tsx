@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Button, Field, Icon } from '@/components/ui'
 import { useAuth } from '@/context/AuthContext'
 import { ErrorDominio } from '@/utils/errores'
+import { cambiarEstadoApi } from '../api/estadosApi'
 import { cambiarEstadoLote } from '../api/estadosDb'
 
 type Accion = 'LIBERADO' | 'BLOQUEADO'
@@ -16,7 +17,7 @@ interface Props {
 
 // Único formulario de cambio de estado: lo usan Inventario y Auditoría.
 export function ModalCambioEstado({ lotes, loteInicial, nuevoInicial, onClose, onDone }: Props) {
-  const { rol, nombreUsuario } = useAuth()
+  const { rol, nombreUsuario, modo } = useAuth()
   const [lotCode, setLotCode] = useState(loteInicial)
   const [nuevo, setNuevo] = useState<Accion>(nuevoInicial)
   const [motivo, setMotivo] = useState('')
@@ -34,7 +35,9 @@ export function ModalCambioEstado({ lotes, loteInicial, nuevoInicial, onClose, o
   const confirmar = async () => {
     setError(null)
     try {
-      await cambiarEstadoLote({ lotCode, nuevo, motivo, rol: rol ?? 'OPERADOR', usuario: nombreUsuario })
+      const cambio = { lotCode, nuevo, motivo, rol: rol ?? 'OPERADOR' }
+      if (modo === 'api') await cambiarEstadoApi(cambio)
+      else await cambiarEstadoLote({ ...cambio, usuario: nombreUsuario })
       onDone()
     } catch (e) {
       setError(

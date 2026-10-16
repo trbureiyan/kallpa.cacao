@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext"
 import { ModalCambioEstado } from "@/features/estados/components/ModalCambioEstado"
 import { useFilasInventario } from "@/features/inventario/useFilasInventario"
 import { filtrarFilas, generarCsv } from "@/features/reportes/csv"
+import { descargarCsvApi } from "@/features/reportes/exportApi"
 import type { EstadoLote } from "@/types/app"
 import { ahoraISO } from "@/utils/clock"
 import { formatearCOP, formatearKg } from "@/utils/formato"
@@ -21,7 +22,8 @@ export function InventoryPage() {
   const [busqueda, setBusqueda] = useState("")
   const [cambio, setCambio] = useState<{ lotCode: string; nuevo: "LIBERADO" | "BLOQUEADO" } | null>(null)
 
-  const { filas: todas, cargando, error } = useFilasInventario(modo, rol)
+  const { filas: todas, cargando, error, recargar } = useFilasInventario(modo, rol)
+  const [errorExport, setErrorExport] = useState<string | null>(null)
 
   const origenes = [...new Set(todas.map((f) => f.origen))].sort()
   const filas = filtrarFilas(todas, { origen: origenFiltro || undefined, estado: estadoFiltro || undefined }).filter((f) =>
@@ -33,14 +35,24 @@ export function InventoryPage() {
   const costoPromedio = conCosto.length ? conCosto.reduce((a, f) => a + (f.costoUnitario ?? 0), 0) / conCosto.length : null
   const valorStock = conCosto.reduce((a, f) => a + f.disponibleKg * (f.costoUnitario ?? 0), 0)
 
-  const exportarCSV = () => {
-    const blob = new Blob([generarCsv(filas)], { type: "text/csv;charset=utf-8" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `inventario_${ahoraISO().slice(0, 10)}.csv`
-    link.click()
-    URL.revokeObjectURL(url)
+  const exportarCSV = async () => {
+    setErrorExport(null)
+    try {
+      // en modo API el CSV es el del servidor; en modo local se arma con las filas de pantalla
+      const texto =
+        modo === "api"
+          ? await descargarCsvApi({ origen: origenFiltro || undefined, estado: estadoFiltro || undefined })
+          : generarCsv(filas)
+      const blob = new Blob([texto], { type: "text/csv;charset=utf-8" })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `inventario_${ahoraISO().slice(0, 10)}.csv`
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      setErrorExport(e instanceof Error ? e.message : "No se pudo exportar el CSV. Intente de nuevo.")
+    }
   }
 
   return (
@@ -51,7 +63,7 @@ export function InventoryPage() {
         text="Existencias derivadas del libro de movimientos, con costos calculados."
         action={
           esAdmin ? (
-            <Button variant="secondary" onClick={exportarCSV}>
+            <Button variant="secondary" onClick={() => void exportarCSV()}>
               <Icon name="download" /> Exportar CSV
             </Button>
           ) : undefined
@@ -79,12 +91,12 @@ export function InventoryPage() {
         </div>
       </div>
 
-      {error && (
+      {(error || errorExport) && (
         <div className="validation danger mt-6" role="alert">
           <Icon name="alert" />
           <div>
             <strong>No se pudo cargar el inventario</strong>
-            <span>{error}</span>
+            <span>{error ?? errorExport}</span>
           </div>
         </div>
       )}
@@ -120,7 +132,7 @@ export function InventoryPage() {
         </div>
 
         <DataTable
-          headers={["Lote", ...(esLocal ? ["Productor"] : []), "Origen", "Recibido", "Consumido", "Disponible", "Estado", "Costo unitario", ...(esAdmin && esLocal ? ["Acciones"] : [])]}
+          headers={["Lote", ...(esLocal ? ["Productor"] : []), "Origen", "Recibido", "Consumido", "Disponible", "Estado", "Costo unitario", ...(esAdmin ? ["Acciones"] : [])]}
         >
           {filas.length === 0 ? (
             <tr>
@@ -141,8 +153,7 @@ export function InventoryPage() {
                   <ChipEstado estado={f.estado} />
                 </td>
                 <td>{f.costoUnitario === null ? "—" : `${formatearCOP(f.costoUnitario)}/kg`}</td>
-                {/* [DECISION] en modo API el cambio de estado se reactiva con la tarea de estados; hasta entonces escribiría en Dexie */}
-                {esAdmin && esLocal && (
+                {esAdmin && (
                   <td>
                     <div className="row-actions">
                       {f.estado !== "LIBERADO" && (
@@ -168,7 +179,10 @@ export function InventoryPage() {
           loteInicial={cambio.lotCode}
           nuevoInicial={cambio.nuevo}
           onClose={() => setCambio(null)}
-          onDone={() => setCambio(null)}
+          onDone={() => {
+            setCambio(null)
+            recargar()
+          }}
         />
       )}
     </>
