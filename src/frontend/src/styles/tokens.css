@@ -1,0 +1,126 @@
+/* KallpaCacao — tokens de diseño v0.1
+ * Fuente de verdad visual. Pegar en src/styles/tokens.css e importar una sola vez.
+ * Los ratios de contraste de abajo fueron calculados con la fórmula WCAG 2.x
+ * (script en documentos/01_branding_kallpacacao.md, sección 6), no estimados.
+ * Regla: los componentes consumen SOLO tokens semánticos (--color-*), nunca primitivos.
+ */
+/* Fuentes: autoalojadas con @fontsource, importadas en main.tsx. Sin CDN. */
+
+:root {
+  /* ---------- 1. PRIMITIVOS ---------- */
+  --p-papel-50:  #FFFBF4;
+  --p-papel-100: #F6F0E6;
+  --p-papel-200: #EDE4D5;
+  --p-cacao-950: #2B1B14;
+  --p-cacao-700: #5A463B;
+  --p-cacao-600: #6B574B;
+  --p-cacao-400: #8C7A6B;
+  --p-mazorca-600: #B8420F;
+  --p-mazorca-700: #9A3509;
+  --p-mazorca-100: #F6DCCB;
+  --p-ambar-700: #8A5A00;
+  --p-ambar-100: #F8E7BF;
+  --p-hoja-700:  #2F6B3A;
+  --p-hoja-100:  #DDEBD9;
+  --p-ladrillo-700: #A62B1F;
+  --p-ladrillo-100: #F4D6D0;
+  --p-red-700:   #1F5F7A;
+
+  /* escala de espaciado (base 4 px) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+
+  /* radios: poco redondeo, el lenguaje es de etiqueta y registro */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-pill: 999px;
+
+}
+
+/* Semánticos, fuentes y escala de texto: Tailwind v4 genera bg-fondo, text-texto, font-mono...
+   "inline" evita duplicar: las utilidades leen los primitivos de :root. */
+@theme inline {
+  --font-display: "Fraunces Variable", Georgia, "Times New Roman", serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --text-3xl: 2.75rem;
+
+  /* superficies */
+  --color-fondo:        var(--p-papel-100);
+  --color-superficie:   var(--p-papel-50);
+  --color-hundido:      var(--p-papel-200);   /* campos de formulario, filas alternas */
+
+  /* texto */
+  --color-texto:        var(--p-cacao-950);   /* 14.59:1 sobre fondo */
+  --color-texto-suave:  var(--p-cacao-700);   /*  7.80:1 sobre fondo */
+  --color-texto-tenue:  var(--p-cacao-600);   /*  6.00:1 sobre fondo; mínimo permitido para texto */
+  --color-texto-sobre-acento: var(--p-papel-100); /* 4.84:1 sobre acento */
+
+  /* bordes */
+  --color-borde:        var(--p-papel-200);   /* decorativo, no porta información */
+  --color-borde-fuerte: var(--p-cacao-400);   /* 3.62:1 fondo, 3.98:1 superficie: límite de campos (UI >= 3:1) */
+
+  /* acento y foco */
+  --color-acento:        var(--p-mazorca-600); /* 4.84:1 fondo, 5.32:1 superficie */
+  --color-acento-hover:  var(--p-mazorca-700); /* 7.05:1 con texto claro encima */
+  --color-acento-suave:  var(--p-mazorca-100);
+  --color-acento-suave-texto: var(--p-mazorca-700); /* 5.55:1 sobre acento-suave. NO usar --color-acento aquí: 4.19:1 falla */
+  --color-foco:          var(--p-mazorca-600); /* 4.84:1 fondo; anillo de 2 px + offset 2 px */
+
+  /* estados del producto (RF09) */
+  --color-pendiente:        var(--p-ambar-700);     /* 5.23:1 fondo */
+  --color-pendiente-fondo:  var(--p-ambar-100);     /* 4.85:1 con su texto */
+  --color-liberado:         var(--p-hoja-700);      /* 5.64:1 fondo */
+  --color-liberado-fondo:   var(--p-hoja-100);      /* 5.16:1 con su texto */
+  --color-bloqueado:        var(--p-ladrillo-700);  /* 6.20:1 fondo */
+  --color-bloqueado-fondo:  var(--p-ladrillo-100);  /* 5.15:1 con su texto */
+
+  /* conectividad (diferenciador) */
+  --color-sync-pendiente: var(--p-ambar-700);
+  --color-sync-ok:        var(--p-hoja-700);
+  --color-sync-sin-red:   var(--p-red-700);         /* 6.22:1 fondo */
+  --color-sync-error:     var(--p-ladrillo-700);
+}
+
+:root {
+  /* ---------- 3. COMPONENTE (solo donde duele) ---------- */
+  --sello-borde: 1.5px solid var(--color-texto);
+  --sello-radio: var(--radius-sm);
+  --sello-fuente: var(--font-mono);
+  --sello-tracking: 0.04em;
+
+  --boton-alto: 2.75rem;          /* 44 px: objetivo táctil mínimo en móvil */
+  --boton-radio: var(--radius-md);
+  --campo-alto: 2.75rem;
+  --foco-anillo: 2px solid var(--color-foco);
+  --foco-offset: 2px;
+
+  --sombra-tarjeta: 0 1px 0 rgb(43 27 20 / 0.08);
+}
+
+/* Foco visible global: requisito de E06 (navegación por teclado) */
+:focus-visible {
+  outline: var(--foco-anillo);
+  outline-offset: var(--foco-offset);
+}
+
+/* Respetar preferencia de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

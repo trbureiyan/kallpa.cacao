@@ -13,11 +13,11 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'AgroCacao Huila - Trazabilidad',
-        short_name: 'AgroCacao',
+        name: 'KallpaCacao - Trazabilidad',
+        short_name: 'KallpaCacao',
         description: 'PWA Offline-First para captura de cacao en campo',
-        theme_color: '#059669',
-        background_color: '#090d16',
+        theme_color: '#F6F0E6',
+        background_color: '#F6F0E6',
         display: 'standalone',
         icons: [
           {
@@ -34,20 +34,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // solo subconjunto latin: el español no usa los demás y cada uno pesa en red limitada
+        globIgnores: ['**/*-latin-ext-*.woff2', '**/*-vietnamese-*.woff2', '**/*-cyrillic*.woff2', '**/*-greek*.woff2'],
         navigateFallback: 'index.html', // <--- AQUÍ: Garantiza que recargar offline devuelva la PWA
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365,
-              },
-            },
-          },
-        ],
       },
       devOptions: {
         enabled: true,

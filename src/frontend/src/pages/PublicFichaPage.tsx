@@ -41,7 +41,7 @@ export const PublicFichaPage: React.FC = () => {
 
       <footer className="public-footer">
         <div>
-          <strong>AgroCacao Huila</strong>
+          <strong>KallpaCacao</strong>
           <p>Trazabilidad del cacao del Huila</p>
         </div>
       </footer>

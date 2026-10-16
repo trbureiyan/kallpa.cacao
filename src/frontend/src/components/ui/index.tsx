@@ -227,18 +227,18 @@ export function Logo({ light = false }: { light?: boolean }) {
       </div>
       <div>
         <div
-          className={`font-extrabold tracking-tight text-lg leading-none ${
-            light ? "text-white" : "text-slate-900"
+          className={`font-display font-semibold text-xl leading-none ${
+            light ? "text-superficie" : "text-texto"
           }`}
         >
-          AgroCacao <span className="text-emerald-600">Huila</span>
+          Kallpa<span className={light ? "text-acento-suave" : "text-acento"}>Cacao</span>
         </div>
         <div
-          className={`text-[10px] font-bold uppercase tracking-[.18em] mt-1 ${
-            light ? "text-emerald-200" : "text-slate-400"
+          className={`text-xs font-medium mt-1 ${
+            light ? "text-acento-suave" : "text-texto-suave"
           }`}
         >
-          Trazabilidad con origen
+          Cada lote cuenta su historia
         </div>
       </div>
     </div>

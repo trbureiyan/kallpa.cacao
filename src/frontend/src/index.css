@@ -1,25 +1,10 @@
 @import 'tailwindcss';
-
-@theme {
-  --color-emerald-50: #ecfdf5;
-  --color-emerald-100: #d1fae5;
-  --color-emerald-200: #a7f3d0;
-  --color-emerald-300: #6ee7b7;
-  --color-emerald-600: #059669;
-  --color-emerald-700: #047857;
-  --color-emerald-800: #065f46;
-  --color-emerald-900: #064e3b;
-  --color-cocoa-50: #fdf8f3;
-  --color-cocoa-100: #f4e7d8;
-  --color-cocoa-600: #92400e;
-  --color-cocoa-700: #78350f;
-  --color-cocoa-900: #451a03;
-}
+@import './styles/tokens.css';
 
 /* --- RESET GLOBAL --- */
 * { box-sizing: border-box; }
-html { background: #f8fafc; }
-body { margin: 0; min-width: 320px; color: #0f172a; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f8fafc; }
+html { background: var(--color-fondo); }
+body { margin: 0; min-width: 320px; color: var(--color-texto); font-family: var(--font-body); font-size: var(--text-base); background: var(--color-fondo); }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .55; }
