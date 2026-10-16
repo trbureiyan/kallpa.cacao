@@ -131,6 +131,7 @@ class PublicProduct(BaseModel):
     output_quantity: float
     unit: str
     status: str
+    availability: str
     status_reason: str | None
     origin: str
     received_on: date

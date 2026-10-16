@@ -9,6 +9,25 @@ from app.services.traceability import trace_lot
 router = APIRouter(prefix="/lots", tags=["Lotes y trazabilidad"])
 
 
+def _change_lot_status(lot: Lot, data: StatusChange, db: Session, actor: User):
+    before = {"status": lot.status, "reason": lot.status_reason}
+    link = db.query(TransformationOutput).filter_by(lot_id=lot.id).first()
+    product = db.get(Transformation, link.transformation_id) if link else None
+    lot.status = data.status
+    lot.status_reason = data.reason
+    if product and product.output_code == lot.code:
+        product.output_status = data.status
+        product.status_reason = data.reason
+    db.add(AuditEvent(actor_id=actor.id, entity_type="lot", entity_id=str(lot.id), action="status_changed",
+                      before_value=before, after_value={"status": data.status, "reason": data.reason}))
+    if product:
+        db.add(AuditEvent(actor_id=actor.id, entity_type="product", entity_id=lot.code, action="status_changed",
+                          before_value=before, after_value={"status": data.status, "reason": data.reason,
+                                                            "lot_code": lot.code}))
+    db.commit()
+    return {"code": lot.code, "status": lot.status, "reason": lot.status_reason}
+
+
 @router.get("/{lot_id}")
 def get_lot(lot_id: int, db: Session = Depends(get_db), actor: User = Depends(current_user)):
     lot = db.get(Lot, lot_id)
@@ -56,18 +75,14 @@ def change_product_status(output_code: str, data: StatusChange, db: Session = De
     if not lot:
         raise HTTPException(404, "Producto no encontrado")
     link = db.query(TransformationOutput).filter_by(lot_id=lot.id).first()
-    product = db.get(Transformation, link.transformation_id) if link else None
-    if not product:
+    if not link:
         raise HTTPException(404, "El producto no tiene un lote de salida disponible")
-    before = {"status": lot.status, "reason": lot.status_reason}
-    if product.output_code == lot.code:
-        product.output_status = data.status
-        product.status_reason = data.reason
-    lot.status = data.status
-    lot.status_reason = data.reason
-    db.add(AuditEvent(actor_id=actor.id, entity_type="product", entity_id=output_code, action="status_changed", before_value=before,
-                      after_value={"status": data.status, "reason": data.reason, "lot_code": lot.code}))
-    db.add(AuditEvent(actor_id=actor.id, entity_type="lot", entity_id=str(lot.id), action="status_changed", before_value=before,
-                      after_value={"status": data.status, "reason": data.reason, "product_code": output_code}))
-    db.commit()
-    return {"code": lot.code, "status": lot.status, "reason": lot.status_reason}
+    return _change_lot_status(lot, data, db, actor)
+
+
+@router.patch("/{lot_id}/status")
+def change_lot_status(lot_id: int, data: StatusChange, db: Session = Depends(get_db), actor: User = Depends(admin_only)):
+    lot = db.get(Lot, lot_id)
+    if not lot:
+        raise HTTPException(404, "Lote no encontrado")
+    return _change_lot_status(lot, data, db, actor)

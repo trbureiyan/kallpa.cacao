@@ -1,0 +1,64 @@
+# E08 - IA y fuentes
+
+## Cambios en la captura offline y su sincronizacion
+
+- Herramienta: ChatGPT (OpenAI), agente de codigo.
+- Proposito: consolidar la PWA en `src/frontend/`, corregir la actualizacion de recepciones en conflicto y asignar el codigo legible del lote en el servidor al sincronizar.
+- Archivos afectados: `src/frontend/`, `backend/app/api/receptions.py`, `backend/app/schemas/api.py`, `backend/docker-compose.yml`, `backend/README.md`, `README.md`, `tests/backend/integration/test_offline_receptions.py`.
+- Revision humana requerida: comprobar la asignacion de codigos `CACxxx`, los reintentos idempotentes, la correccion de conflictos y el flujo de captura sin red antes de la demostracion.
+
+## Dependencias existentes del frontend
+
+No se agregaron dependencias. Se trasladaron las dependencias ya presentes en `frontend/package-lock.json` a `src/frontend/package-lock.json`, fijando sus versiones exactas. Fuentes y licencias declaradas por los paquetes: React y React DOM 19.3.1 (MIT), Vite 6.4.4 (MIT), `@vitejs/plugin-react` 4.7.0 (MIT), `vite-plugin-pwa` 0.21.2 (MIT), `idb` 8.0.4 (ISC) y `lucide-react` 0.468.0 (ISC). Fuentes de version y licencia: https://www.npmjs.com/package/react, https://www.npmjs.com/package/react-dom, https://www.npmjs.com/package/vite, https://www.npmjs.com/package/@vitejs/plugin-react, https://www.npmjs.com/package/vite-plugin-pwa, https://www.npmjs.com/package/idb y https://www.npmjs.com/package/lucide-react.
+
+## Suite inicial de pruebas automatizadas del backend
+
+- Herramienta: ChatGPT (OpenAI), agente de codigo.
+- Proposito: agregar verificaciones Pytest para recepciones, cantidades invalidas, calculo/alerta de merma, idempotencia de recepciones reenviadas desde el flujo offline, permisos por rol y migraciones Alembic.
+- Archivos afectados: `backend/tests/`, `backend/requirements-dev.txt`, `backend/README.md`.
+- Dependencias agregadas para desarrollo: Pytest y HTTPX, declaradas por separado de las dependencias de ejecucion de la API.
+- Revision humana requerida: confirmar la correspondencia de cada caso con el RF oficial, especialmente el umbral de merma y RF08/RF09. La prueba idempotente valida el contrato del servidor al reintentar una captura; no automatiza IndexedDB ni sustituye una prueba de navegador sin red.
+- Resultado observado: `python -m pytest -q` completo con 9 pruebas aprobadas. La version instalada de Starlette emitio una advertencia de deprecacion sobre su TestClient y HTTPX; no fallo ninguna prueba.
+
+## Control manual de sincronizacion para ensayos de campo
+
+- Herramienta: ChatGPT (OpenAI), agente de codigo.
+- Proposito: permitir pausar/reanudar el envio automatico desde la interfaz y dejar recepciones visiblemente en cola durante una demostracion, incluso cuando el navegador puede seguir accediendo a servicios locales por `localhost`.
+- Archivos afectados: `src/frontend/src/App.tsx`.
+- Revision humana requerida: comprobar en el navegador el cambio de estados Pendiente/Sincronizado, la persistencia de la pausa tras recargar y el reenvio al reanudar. El control pausa la sincronizacion de la aplicacion; no desconecta el dispositivo ni reemplaza el ensayo real con DevTools/PWA sin red.
+
+## Revision de estado y plan de verificacion
+
+- Herramienta: ChatGPT (OpenAI), agente de codigo.
+- Proposito: contrastar los RF indicados con la implementacion, ejecutar comprobaciones automatizadas y de lectura contra la pila local, y documentar brechas y siguientes pasos.
+- Archivos afectados: `concurso/Revision_funcional_y_plan_siguiente.txt`, `documentos/E08_IA_y_fuentes.md`.
+- Revision humana requerida: revisar el estado de cada RF con el equipo y repetir las pruebas manuales en un entorno de datos descartable; no se hicieron escrituras ni reinicios sobre la base PostgreSQL activa.
+- Resultado observado: 9 pruebas Pytest aprobadas, build frontend exitoso, API/frontend/PostgreSQL activos, Alembic en head, login de ambos roles, control de acceso 403 y CSV disponible. Las transformaciones solo se verificaron en la base aislada de pruebas; no se ensayaron desconexion real ni reinicio completo con recuperacion de datos.
+
+## Lotes de salida y trazabilidad de transformaciones
+
+- Herramienta: ChatGPT (OpenAI), agente de codigo.
+- Proposito: completar el flujo desde la recepcion de materia prima hasta un lote procesado, conservando su origen y sus movimientos.
+- Archivos afectados: `backend/app/models/lot.py`, `backend/app/models/transformation_output.py`, `backend/app/models/__init__.py`, `backend/app/schemas/api.py`, `backend/app/services/transformation.py`, `backend/app/services/traceability.py`, `backend/app/api/lots.py`, `backend/app/api/public.py`, `backend/app/api/inventory.py`, `backend/migrations/versions/c2a7f4b89d10_materialize_transformation_output_lots.py`, `backend/tests/test_transformacion_salida_trazable.py`, `backend/tests/test_migraciones_alembic.py`, `backend/README.md`.
+- Proposito tecnico: persistir tipo de producto y relacion transformacion-salida; crear uno o varios lotes, consumo, produccion, costos y auditoria en una transaccion; recorrer trazabilidad aguas arriba y aguas abajo. La migracion nueva tambien materializa salidas positivas de transformaciones anteriores.
+- Verificacion: `python -m pytest -q` desde `backend/`: 12 pruebas aprobadas. Incluye recepcion de 100 kg, transformacion a 80 kg, varias salidas, saldos, movimientos, alerta del 20%, trazabilidad a productor/origen, reintento idempotente, rollback por colision de codigo y migracion con datos previos en SQLite temporal.
+- Revision humana requerida: probar API y migracion en una base de ensayo respaldada antes de actualizar la base de datos existente. No se aplico la migracion a la base PostgreSQL activa ni se reiniciaron los contenedores.
+
+## Idempotencia, bloqueo y concurrencia del inventario
+
+- Herramienta: ChatGPT (OpenAI), agente de codigo.
+- Proposito: definir reintentos de transformacion sin ambiguedad, impedir operaciones parciales con stock insuficiente, bloquear consumo de materia prima/productos restringidos y probar bloqueo de fila concurrente en PostgreSQL.
+- Archivos afectados: `backend/app/models/transformation.py`, `backend/app/schemas/api.py`, `backend/app/services/transformation.py`, `backend/app/api/lots.py`, `backend/app/api/public.py`, `backend/migrations/versions/d843a91c5e2b_transformation_idempotency_fingerprint.py`, `backend/tests/test_transformacion_salida_trazable.py`, `backend/tests/test_permisos_roles.py`, `backend/tests/test_concurrencia_postgres.py`, `backend/tests/test_migraciones_alembic.py`, `backend/README.md`.
+- Regla de idempotencia: mismo `idempotency_key` y mismo payload devuelve el resultado previo; la misma clave con payload distinto responde HTTP 409. Los cambios de payload nunca vuelven a consumir inventario.
+- Regla de bloqueo: el bloqueo conserva el saldo y el historial, pero impide transformar el lote hasta su liberacion administrativa con motivo. Un producto procesado bloqueado muestra `not_available`; solo el estado `released` indica disponibilidad publica. Aun no hay endpoint de ventas, por lo que no se registra ni se puede ensayar despacho de ventas.
+- Verificacion: suite local `python -m pytest -q`: 14 aprobadas y una prueba PostgreSQL omitida si falta `TEST_POSTGRES_URL`. Aparte, la prueba concurrente paso (`1 passed`) en un contenedor PostgreSQL 16 desechable, una base/schema de prueba aislados y sin volumen persistente. En la carrera de dos consumos de 7 kg contra 10 kg, uno tuvo exito, el otro recibio 409 y el saldo final fue 3 kg.
+- Revision humana requerida: migrar una instancia de ensayo respaldada antes de actualizar la base PostgreSQL persistente del proyecto. No se aplicaron migraciones ni se escribieron datos en esa base activa. Revisar la advertencia existente deprecacion TestClient/HTTPX; no afecta el resultado de las pruebas.
+
+## Vistas de inventario, alertas, economia y ficha publica
+
+- Herramienta: ChatGPT (OpenAI), agente de codigo.
+- Proposito: extender la PWA React para cubrir los recorridos visuales de inventario, filtros, exportacion CSV, alertas explicadas, indicadores economicos, consulta publica y cambio administrativo de estados.
+- Archivos afectados: `src/frontend/src/App.tsx`, `src/frontend/src/api.ts`, `src/frontend/src/BusinessViews.tsx`, `src/frontend/src/styles.css`, `src/frontend/README.md`, `backend/app/api/economics.py`, `backend/README.md`.
+- Comportamiento: operadores autenticados consultan/filtran inventario; solo el administrador ve exportacion y controles de estado. Las alertas y la economia solo aparecen en navegacion admin y sus endpoints siguen usando `admin_only`. La ficha publica no necesita token, acepta el enlace `?producto=CODIGO`, no expone costos/contactos y comunica disponibilidad segun estado.
+- Resultado observado: `npm run build` desde `src/frontend/` completo TypeScript y Vite y genero los recursos PWA. No se hizo una prueba visual manual en navegador ni se probaron llamadas contra la API desplegada en esta tarea.
+- Revision humana requerida: ensayar pantallas en escritorio y movil con los dos roles, probar CSV/filtros, y verificar que operador reciba 403 si invoca directamente rutas administrativas. La seguridad depende del backend, aunque el frontend oculte los controles.
