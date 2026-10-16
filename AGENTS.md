@@ -486,3 +486,10 @@ Docstrings solo en funciones pÃºblicas de `rules.py` y de servicios: quÃ© hace, 
 - Nunca mostrar trazas, cÃ³digos internos ni mensajes de la base de datos.
 - TÃ©rminos del dominio exactamente como en Domain Language; sin sinÃ³nimos nuevos.
 - La ficha pÃºblica jamÃ¡s menciona costos internos, mÃ¡rgenes ni datos privados del productor.
+
+## Implementación de pantallas conectadas (2026-10-16)
+
+- La aplicación activa compone recepción offline, `WorkspaceViews.tsx`, `UsersView.tsx` y `BusinessViews.tsx` desde `App.tsx`. Las pantallas heredadas desconectadas se guardan en `src/frontend/design-reference/legacy/` y no forman parte del build.
+- La cola offline se limita a recepciones. Las transformaciones conservan clave idempotente y payload en `sessionStorage` hasta confirmar respuesta; usuarios, analítica, inventario, estados y auditoría son datos del servidor.
+- La API incorpora `/users` (admin), `GET /transformations`, `/analytics/dashboard` (admin) y el municipio nullable de usuario vía migración `b6d1ef3a9204`. Esa migración está creada, pero no se aplicó a PostgreSQL persistente.
+- Los umbrales de alerta se configuran por entorno; la alerta de costo está apagada si no se define `COST_ALERT_THRESHOLD_COP_PER_KG`.

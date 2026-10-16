@@ -47,14 +47,16 @@ type View = 'inventory' | 'economics' | 'audit'
 const currency = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
 const number = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 3 })
 
+const statusLabels: Record<string, string> = { pending: 'Pendiente', released: 'Liberado', blocked: 'Bloqueado' }
+
 function formatValue(value: unknown) {
   if (value === null || value === undefined) return '—'
   if (typeof value === 'object') return JSON.stringify(value)
   return String(value)
 }
 
-export default function BusinessViews({ token }: { token: string }) {
-  const [view, setView] = useState<View>('inventory')
+export default function BusinessViews({ token, initialView = 'inventory' }: { token: string; initialView?: View }) {
+  const [view, setView] = useState<View>(initialView)
   const [lots, setLots] = useState<Lot[]>([])
   const [economics, setEconomics] = useState<Economy[]>([])
   const [events, setEvents] = useState<AuditEvent[]>([])
@@ -65,6 +67,8 @@ export default function BusinessViews({ token }: { token: string }) {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => { setView(initialView) }, [initialView])
 
   const request = useCallback(async <T,>(path: string, init: RequestInit = {}): Promise<T> => {
     const response = await fetch(apiUrl(path), {
@@ -197,11 +201,11 @@ export default function BusinessViews({ token }: { token: string }) {
           <tbody>{lots.map((lot) => <tr key={lot.id}>
             <td><strong>{lot.code}</strong></td><td>{lot.origin}</td><td>{number.format(lot.received_quantity)} {lot.unit}</td>
             <td>{number.format(lot.consumed_quantity)} {lot.unit}</td><td>{number.format(lot.available_quantity)} {lot.unit}</td>
-            <td><span className={`business-status status-${lot.status}`}>{lot.status}</span></td>
+            <td><span className={`business-status status-${lot.status}`}>{statusLabels[lot.status] || lot.status}</span></td>
             <td>{currency.format(lot.costs_cop)}</td>
             <td><div className="business-status-action"><input aria-label={`Motivo del cambio para ${lot.code}`} value={reasonByLot[lot.id] || ''} onChange={(event) => setReasonByLot((current) => ({ ...current, [lot.id]: event.target.value }))} placeholder="Motivo obligatorio" />
               <select aria-label={`Nuevo estado para ${lot.code}`} value={lot.status} onChange={(event) => void changeStatus(lot, event.target.value)}>
-                <option value={lot.status}>{lot.status}</option>{['pending', 'released', 'blocked'].filter((item) => item !== lot.status).map((item) => <option key={item} value={item}>{item}</option>)}
+                <option value={lot.status}>{statusLabels[lot.status] || lot.status}</option>{['pending', 'released', 'blocked'].filter((item) => item !== lot.status).map((item) => <option key={item} value={item}>{statusLabels[item]}</option>)}
               </select></div></td>
           </tr>)}</tbody>
         </table>{lots.length === 0 && <p className="business-empty">No hay lotes para esos filtros.</p>}</div>

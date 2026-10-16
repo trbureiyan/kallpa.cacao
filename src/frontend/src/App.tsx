@@ -3,6 +3,10 @@ import { Activity, ArrowDownToLine, Check, CheckCircle2, CloudOff, CloudUpload, 
 import { fetchFarms, isHttpError, login, sendReception } from './api'
 import { getFarms, getReceptions, saveFarms, saveReception, type Farm, type LocalReception, type QueueState, type ReceptionPayload } from './db'
 import BusinessViews from './BusinessViews'
+import WorkspaceViews from './WorkspaceViews'
+import UsersView from './UsersView'
+
+type AppPage = 'dashboard' | 'recepcion' | 'transformacion' | 'trazabilidad' | 'inventario' | 'alertas' | 'economia' | 'auditoria' | 'usuarios' | 'publico'
 
 type Identity = { username: string; full_name: string; role: string }
 type DemoSession = { identity: Identity; token: string }
@@ -48,6 +52,7 @@ function statusLabel(state: QueueState) {
 }
 
 function App() {
+  const [activePage, setActivePage] = useState<AppPage>(() => new URLSearchParams(window.location.search).has('producto') ? 'publico' : 'recepcion')
   const [identity, setIdentity] = useState<Identity | null>(() => readCachedIdentity())
   const [token, setToken] = useState(() => sessionStorage.getItem(tokenKey) || '')
   const [farms, setFarms] = useState<Farm[]>([])
@@ -60,7 +65,6 @@ function App() {
   const [loginError, setLoginError] = useState('')
   const [notice, setNotice] = useState('')
   const [farmId, setFarmId] = useState('')
-  const [lotCode, setLotCode] = useState('')
   const [receivedAt, setReceivedAt] = useState(localDateTimeValue())
   const [quantity, setQuantity] = useState('')
   const [purchaseTotal, setPurchaseTotal] = useState('')
@@ -90,7 +94,7 @@ function App() {
         await refreshLocalData()
         try {
           const result = await sendReception(token, record.payload)
-          await saveReception({ ...record, state: 'synced', server_lot_id: result.lot_id,
+          await saveReception({ ...record, state: 'synced', server_lot_id: result.lot_id, server_lot_code: result.lot_code,
             server_reception_id: result.reception_id, error: undefined })
         } catch (error) {
           if (isHttpError(error, 401)) {
@@ -195,7 +199,6 @@ function App() {
     const idempotencyKey = crypto.randomUUID()
     const payload: ReceptionPayload = {
       idempotency_key: idempotencyKey,
-      lot_code: lotCode.trim(),
       farm_id: Number(farmId),
       received_at: withLocalOffset(receivedAt),
       quantity_kg: quantity,
@@ -207,7 +210,6 @@ function App() {
     }
     await saveReception(queued)
     await refreshLocalData()
-    setLotCode('')
     setReceivedAt(localDateTimeValue())
     setQuantity('')
     setPurchaseTotal('')
@@ -219,7 +221,6 @@ function App() {
 
   async function correctConflict(record: LocalReception) {
     setFarmId(String(record.payload.farm_id))
-    setLotCode(record.payload.lot_code)
     setReceivedAt(toLocalInput(new Date(record.payload.received_at)))
     setQuantity(record.payload.quantity_kg)
     setPurchaseTotal(record.payload.purchase_total_cop)
@@ -234,10 +235,26 @@ function App() {
     setNotice('Sesión cerrada. Los registros guardados en este dispositivo se conservan.')
   }
 
+  const navigation: Array<{ id: AppPage; label: string; roles?: string[] }> = [
+    { id: 'dashboard', label: 'Inicio' }, { id: 'recepcion', label: 'Recepción' },
+    { id: 'transformacion', label: 'Transformación' }, { id: 'trazabilidad', label: 'Trazabilidad' },
+    { id: 'inventario', label: 'Inventario' }, { id: 'alertas', label: 'Alertas', roles: ['admin'] },
+    { id: 'economia', label: 'Economía', roles: ['admin'] }, { id: 'auditoria', label: 'Auditoría', roles: ['admin'] },
+    { id: 'usuarios', label: 'Usuarios', roles: ['admin'] }, { id: 'publico', label: 'Ficha pública' },
+  ]
+  function openPage(page: AppPage) {
+    if (page !== 'recepcion' && page !== 'publico' && !token) {
+      setNotice('Inicia sesión con conexión para consultar esta pantalla desde el servidor.')
+      return
+    }
+    setActivePage(page)
+    setNotice('')
+  }
+
   return (
     <main className="app-shell">
       <header className="topbar">
-        <a className="brand" href="#inicio" aria-label="Cacao en campo, inicio">
+        <a className="brand" href="#inicio" onClick={() => setActivePage('recepcion')} aria-label="Cacao en campo, inicio">
           <span className="brand-mark"><Sprout size={22} strokeWidth={2.2} /></span>
           <span><strong>cacao</strong><small>en campo</small></span>
         </a>
@@ -247,10 +264,18 @@ function App() {
             <span>{online ? 'Con conexión' : 'Sin conexión'}</span>
           </div>
           {identity && <div className="user-chip"><span className="avatar">{identity.full_name.slice(0, 1).toUpperCase()}</span><span>{identity.full_name}</span></div>}
+          {identity && pendingCount > 0 && <button className="queue-pill" onClick={() => openPage('recepcion')}><CloudUpload size={14} /> {pendingCount} pendiente{pendingCount === 1 ? '' : 's'}</button>}
+          {identity && token && <button className="header-sync" onClick={() => void syncPending()} disabled={!online || syncing || pendingCount === 0}>{syncing ? 'Enviando…' : 'Sincronizar'}</button>}
         </div>
       </header>
 
-      <section className="hero" id="inicio">
+      {identity && <nav className="app-navigation" aria-label="Navegación principal">
+        {navigation.filter((item) => !item.roles || item.roles.includes(identity.role)).map((item) => <button key={item.id} className={activePage === item.id ? 'app-nav-item active' : 'app-nav-item'} onClick={() => openPage(item.id)}>{item.label}</button>)}
+      </nav>}
+      {!online && <div className="offline-banner" role="status"><WifiOff size={16} /> Modo offline: las recepciones se guardan en este dispositivo y se sincronizan al recuperar conexión.</div>}
+      {activePage === 'publico' && !identity && <button className="public-entry" type="button" onClick={() => setActivePage('recepcion')}>Volver al acceso de operador y administrador</button>}
+
+      {(activePage === 'recepcion' || !identity) && <section className="hero" id="inicio">
         <div className="hero-copy">
           <div className="eyebrow"><span className="eyebrow-dot" /> BITÁCORA DE COSECHA</div>
           <h1>El campo no<br /><em>espera señal.</em></h1>
@@ -262,9 +287,9 @@ function App() {
           <div className="cacao-pod pod-one">✳</div><div className="cacao-pod pod-two">✳</div>
           <div className="art-label"><MapPin size={13} /> Huila, Colombia</div>
         </div>
-      </section>
+      </section>}
 
-      {(!identity || (online && identity && !token)) && (
+      {activePage !== 'publico' && (!identity || (online && identity && !token)) && (
         <section className="login-card">
           <div className="section-icon"><LockKeyhole size={19} /></div>
           <div className="login-copy"><h2>{identity ? 'Conecta para sincronizar' : 'Prepara el dispositivo'}</h2><p>{identity ? 'Vuelve a autenticarte para enviar registros. Las recepciones locales se conservan mientras tanto.' : 'Inicia sesión con conexión para descargar las fincas. Después podrás capturar recepciones sin cobertura.'}</p></div>
@@ -273,11 +298,13 @@ function App() {
             <label>Contraseña<input autoComplete="current-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
             <button className="button button-dark" type="submit" disabled={!online}><LogIn size={16} /> Iniciar sesión</button>
             {loginError && <p className="form-error" role="alert">{loginError}</p>}
+            <div className="demo-login"><strong>Acceso de demostración</strong><button type="button" onClick={() => { setUsername('operador'); setPassword('Operador123!') }}>Usar operador de campo</button><button type="button" onClick={() => { setUsername('admin'); setPassword('Admin123!') }}>Usar administrador</button></div>
           </form>
+          <button className="public-entry" type="button" onClick={() => openPage('publico')}>¿Eres comprador? Consultar ficha pública</button>
         </section>
       )}
 
-      {identity && (
+      {identity && activePage === 'recepcion' && (
         <div className="workspace">
           <section className="capture-card">
             <div className="section-heading">
@@ -292,9 +319,6 @@ function App() {
                     <option value="">Selecciona una finca</option>
                     {farms.map((farm) => <option key={farm.id} value={farm.id}>{farm.name} · {farm.region}</option>)}
                   </select>
-                </label>
-                <label className="field">Código del lote
-                  <input value={lotCode} onChange={(event) => setLotCode(event.target.value.toUpperCase())} placeholder="CAC004" minLength={2} maxLength={40} required />
                 </label>
                 <label className="field">Fecha y hora
                   <input type="datetime-local" value={receivedAt} onChange={(event) => setReceivedAt(event.target.value)} required />
@@ -342,7 +366,7 @@ function App() {
                   const farm = farms.find((item) => item.id === record.payload.farm_id)
                   return <article className={`record-row ${record.state === 'conflict' ? 'has-conflict' : ''}`} key={record.local_id}>
                     <div className="record-icon">{record.state === 'synced' ? <CheckCircle2 size={19} /> : record.state === 'conflict' ? <Activity size={19} /> : <ArrowDownToLine size={19} />}</div>
-                    <div className="record-main"><div className="record-title"><strong>{record.payload.lot_code}</strong><span className={`status status-${record.state}`}>{record.state === 'syncing' && <LoaderCircle className="spin" size={12} />}{statusLabel(record.state)}</span></div>
+                    <div className="record-main"><div className="record-title"><strong>{record.server_lot_code || `Código pendiente · ${record.local_id.slice(0, 6)}`}</strong><span className={`status status-${record.state}`}>{record.state === 'syncing' && <LoaderCircle className="spin" size={12} />}{statusLabel(record.state)}</span></div>
                       <span className="record-origin"><MapPin size={12} />{farm ? `${farm.name} · ${farm.region}` : `Finca #${record.payload.farm_id}`}</span>
                       {record.error && <span className="record-error">{record.error}</span>}
                     </div>
@@ -357,7 +381,17 @@ function App() {
         </div>
       )}
 
-      {identity?.role === 'admin' && token && <BusinessViews token={token} />}
+      {identity && token && activePage === 'dashboard' && <WorkspaceViews page="dashboard" token={token} role={identity.role} />}
+      {identity && token && activePage === 'transformacion' && <WorkspaceViews page="transformacion" token={token} role={identity.role} />}
+      {identity && token && activePage === 'trazabilidad' && <WorkspaceViews page="trazabilidad" token={token} role={identity.role} />}
+      {identity && token && activePage === 'inventario' && (identity.role === 'admin'
+        ? <BusinessViews token={token} initialView="inventory" />
+        : <WorkspaceViews page="inventario" token={token} role={identity.role} />)}
+      {identity && token && activePage === 'alertas' && identity.role === 'admin' && <WorkspaceViews page="alertas" token={token} role={identity.role} />}
+      {identity && token && activePage === 'economia' && identity.role === 'admin' && <BusinessViews token={token} initialView="economics" />}
+      {identity && token && activePage === 'auditoria' && identity.role === 'admin' && <BusinessViews token={token} initialView="audit" />}
+      {identity && token && activePage === 'usuarios' && identity.role === 'admin' && <UsersView token={token} />}
+      {activePage === 'publico' && <WorkspaceViews page="publico" token="" role="public" />}
 
       <footer className="footer"><span><Sprout size={15} /> Trazabilidad que nace en el territorio</span><span>Los registros pendientes viven en este dispositivo hasta sincronizar.</span></footer>
     </main>

@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     access_token_minutes: int = 60
     cors_origins: str = "http://localhost:3000,http://localhost:5173"
     seed_demo_data: bool = True
+    loss_alert_threshold_percent: float = 15.0
+    cost_alert_threshold_cop_per_kg: float | None = None
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

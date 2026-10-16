@@ -8,6 +8,7 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.models import (
     AuditEvent,
     CostEntry,
@@ -111,6 +112,17 @@ def _result(db: Session, transformation: Transformation) -> dict:
         .filter(TransformationOutput.transformation_id == transformation.id)
         .all()
     )
+    input_quantity = float(transformation.input_quantity)
+    output_quantity = sum(float(lot.received_quantity) for lot, _ in outputs)
+    loss_percent = ((input_quantity - output_quantity) / input_quantity * 100) if input_quantity > 0 else None
+    loss_alert = None
+    if loss_percent is not None and loss_percent > settings.loss_alert_threshold_percent:
+        loss_alert = {
+            "type": "merma",
+            "rule": f"Merma mayor al {settings.loss_alert_threshold_percent:g}%",
+            "cause": f"Entrada {input_quantity:g} {transformation.unit}; salida {output_quantity:g} {transformation.unit}",
+            "value_percent": round(loss_percent, 2),
+        }
     return {
         "id": transformation.id,
         "idempotency_key": transformation.idempotency_key,
@@ -118,8 +130,10 @@ def _result(db: Session, transformation: Transformation) -> dict:
         "stage": transformation.stage,
         "responsible_id": transformation.responsible_id,
         "occurred_at": transformation.occurred_at,
-        "input_quantity": float(transformation.input_quantity),
-        "output_quantity": sum(float(lot.received_quantity) for lot, _ in outputs),
+        "input_quantity": input_quantity,
+        "output_quantity": output_quantity,
+        "loss_percent": loss_percent,
+        "loss_alert": loss_alert,
         "unit": transformation.unit,
         "incident": transformation.incident,
         "output_code": outputs[0][0].code if outputs else transformation.output_code,
@@ -311,3 +325,16 @@ def create_transformation(db: Session, data, actor: User):
         raise
 
     return _result(db, db.get(Transformation, transform_id))
+
+
+def list_transformations(db: Session) -> list[dict]:
+    rows = (db.query(Transformation, User.full_name)
+            .join(User, User.id == Transformation.responsible_id)
+            .order_by(Transformation.occurred_at.desc(), Transformation.id.desc())
+            .all())
+    result = []
+    for transformation, responsible_name in rows:
+        item = _result(db, transformation)
+        item["responsible_name"] = responsible_name
+        result.append(item)
+    return result

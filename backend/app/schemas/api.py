@@ -1,6 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
+from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
@@ -16,6 +17,68 @@ class Token(BaseModel):
 class Login(BaseModel):
     username: str
     password: str
+
+
+MUNICIPALITIES = {"Rivera", "Campoalegre", "Algeciras"}
+
+
+class UserCreate(BaseModel):
+    username: str = Field(min_length=3, max_length=80)
+    full_name: str = Field(min_length=2, max_length=160)
+    password: str = Field(min_length=8, max_length=128)
+    role: Literal["operator", "admin"]
+    municipality: str | None = Field(default=None, max_length=80)
+    active: bool = True
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if "@" not in normalized or normalized.startswith("@") or normalized.endswith("@"):
+            raise ValueError("Ingrese un correo válido")
+        return normalized
+
+    @field_validator("municipality")
+    @classmethod
+    def validate_municipality(cls, value: str | None) -> str | None:
+        if value is not None and value not in MUNICIPALITIES:
+            raise ValueError("Municipio fuera del catálogo del proyecto")
+        return value
+
+
+class UserUpdate(BaseModel):
+    username: str | None = Field(default=None, min_length=3, max_length=80)
+    full_name: str | None = Field(default=None, min_length=2, max_length=160)
+    password: str | None = Field(default=None, min_length=8, max_length=128)
+    role: Literal["operator", "admin"] | None = None
+    municipality: str | None = Field(default=None, max_length=80)
+    active: bool | None = None
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        normalized = value.strip().lower()
+        if "@" not in normalized or normalized.startswith("@") or normalized.endswith("@"):
+            raise ValueError("Ingrese un correo válido")
+        return normalized
+
+    @field_validator("municipality")
+    @classmethod
+    def validate_municipality(cls, value: str | None) -> str | None:
+        if value is not None and value not in MUNICIPALITIES:
+            raise ValueError("Municipio fuera del catálogo del proyecto")
+        return value
+
+
+class UserOut(ORMModel):
+    id: int
+    username: str
+    full_name: str
+    role: str
+    active: bool
+    municipality: str | None
 
 
 class ProducerCreate(BaseModel):

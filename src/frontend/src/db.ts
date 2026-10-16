@@ -5,7 +5,6 @@ export type QueueState = 'pending' | 'syncing' | 'synced' | 'conflict' | 'needs-
 
 export type ReceptionPayload = {
   idempotency_key: string
-  lot_code: string
   farm_id: number
   received_at: string
   quantity_kg: string
@@ -19,6 +18,7 @@ export type LocalReception = {
   saved_at: string
   state: QueueState
   server_lot_id?: number
+  server_lot_code?: string
   server_reception_id?: number
   error?: string
 }

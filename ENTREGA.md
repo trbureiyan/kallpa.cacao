@@ -117,3 +117,9 @@ Validacion realizada en esta revision: desde `backend/`, `python -m pytest -q` t
 6. Confirmar marca, integrantes y responsabilidades; registrar hash y etiqueta final después de congelar y verificar la versión.
 
 La guía oficial pide que la solución funcione en computador y móvil. En esta revisión no hay evidencia suficiente para certificar esa experiencia; la falta de evidencia no equivale a afirmar que la interfaz móvil sea un fallo. El reto también establece un paquete documental de hasta 15 páginas, sin contar pitch ni resultados de pruebas. Una puntuación mínima indicada por la guía no garantiza ganar.
+
+## Actualización técnica: integración de pantallas
+
+Se conectaron las pantallas activas de panel, transformación, trazabilidad, inventario, alertas, economía, auditoría, administración de usuarios y ficha pública con FastAPI. La recepción conserva su cola IndexedDB. Los prototipos que dependían de Dexie/React Router ausentes se archivaron en `src/frontend/design-reference/legacy/`; la interfaz activa no depende de esos módulos.
+
+Verificación ejecutada en esta revisión: `npm run build` finalizó con TypeScript, Vite y PWA; `python -m compileall -q app`, importación de FastAPI y `alembic heads` finalizaron, con `b6d1ef3a9204` como head. No se ejecutó Pytest ni se hizo recorrido manual de navegador. La nueva migración de municipio de usuario no se aplicó a la base PostgreSQL persistente. La matriz de requisitos sigue necesitando evidencia manual de cada flujo.
