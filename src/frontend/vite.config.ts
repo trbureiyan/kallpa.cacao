@@ -11,29 +11,21 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['favicon.svg'],
       manifest: {
         name: 'KallpaCacao - Trazabilidad',
         short_name: 'KallpaCacao',
         description: 'PWA Offline-First para captura de cacao en campo',
-        theme_color: '#F8FAFC',
-        background_color: '#F8FAFC',
+        theme_color: '#F3F9F4',
+        background_color: '#F3F9F4',
         display: 'standalone',
         icons: [
-          {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-          },
+          // un solo SVG vectorial: sirve a cualquier tamaño y evita PNG generados a mano
+          { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
         // solo subconjunto latin: el español no usa los demás y cada uno pesa en red limitada
         globIgnores: ['**/*-latin-ext-*.woff2', '**/*-vietnamese-*.woff2', '**/*-cyrillic*.woff2', '**/*-greek*.woff2'],
         navigateFallback: 'index.html', // <--- AQUÍ: Garantiza que recargar offline devuelva la PWA

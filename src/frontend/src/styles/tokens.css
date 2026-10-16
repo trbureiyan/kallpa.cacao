@@ -1,36 +1,26 @@
-/* KallpaCacao — tokens de diseño v0.2
- * Paleta actualizada por decisión del equipo:
- * - Theme: Emerald Green (#059669)
- * - Cocoa Brown (#78350F)
- * - Neutral Slate Gray (#F8FAFC)
- * - Alert Amber (#D97706)
- * - Alert Red (#DC2626)
+/* KallpaCacao — tokens de diseño v0.3
+ * Paleta del negocio: escala de verdes (neutros, texto y acento salen de la misma escala).
+ * Ámbar y rojo se conservan solo como colores de estado (pendiente, bloqueado, error).
  *
- * Los ratios de contraste de abajo fueron calculados con la fórmula WCAG 2.x.
+ * Los ratios de contraste los verifica tokens.test.ts con la fórmula WCAG 2.x.
  * Regla: los componentes consumen SOLO tokens semánticos (--color-*), nunca primitivos.
  */
 /* Fuentes: autoalojadas con @fontsource, importadas en main.tsx. Sin CDN. */
 
 :root {
   /* ---------- 1. PRIMITIVOS (Nueva paleta del equipo) ---------- */
-  /* Neutral Slate Gray (#F8FAFC) */
-  --p-slate-50:  #F8FAFC;
-  --p-slate-100: #F1F5F9;
-  --p-slate-200: #E2E8F0;
-  --p-slate-400: #94A3B8;
-  --p-slate-500: #64748B;
+  /* Escala de verdes */
+  --p-verde-50:  #F3F9F4;
+  --p-verde-100: #E3F1E6;
+  --p-verde-200: #C9E3CF;
+  --p-verde-300: #A3CDAD;
+  --p-verde-500: #4A9560;
+  --p-verde-600: #2F7D47;
+  --p-verde-700: #236339;
+  --p-verde-800: #1A4D2C;
+  --p-verde-900: #12381F;
+  --p-verde-950: #0A2414;
   --p-blanco:    #FFFFFF;
-
-  /* Cocoa Brown (#78350F) */
-  --p-cacao-950: #451A03;
-  --p-cacao-800: #78350F;
-  --p-cacao-700: #92400E;
-
-  /* Emerald Green (#059669) - Theme principal */
-  --p-emerald-600: #059669;
-  --p-emerald-700: #047857;
-  --p-emerald-800: #065F46;
-  --p-emerald-100: #D1FAE5;
 
   /* Alert Amber (#D97706) */
   --p-amber-600: #D97706;
@@ -77,38 +67,38 @@
   --text-3xl: 2.75rem;
 
   /* superficies (Neutral Slate Gray) */
-  --color-fondo:        var(--p-slate-50);    /* #F8FAFC - Neutral Slate Gray */
-  --color-superficie:   var(--p-blanco);      /* #FFFFFF */
-  --color-hundido:      var(--p-slate-100);   /* #F1F5F9 - campos de formulario, filas alternas */
+  --color-fondo:        var(--p-verde-50);
+  --color-superficie:   var(--p-blanco);
+  --color-hundido:      var(--p-verde-100);   /* campos de formulario, filas alternas */
 
-  /* texto (Cocoa Brown) */
-  --color-texto:        var(--p-cacao-950);   /* #451A03 - 14.31:1 sobre fondo */
-  --color-texto-suave:  var(--p-cacao-800);   /* #78350F - Cocoa Brown (8.67:1 sobre fondo) */
-  --color-texto-tenue:  var(--p-cacao-700);   /* #92400E - 6.78:1 sobre fondo */
-  --color-texto-sobre-acento: var(--p-blanco);/* 5.48:1 sobre acento */
+  /* texto */
+  --color-texto:        var(--p-verde-950);
+  --color-texto-suave:  var(--p-verde-800);
+  --color-texto-tenue:  var(--p-verde-700);
+  --color-texto-sobre-acento: var(--p-blanco);
 
   /* bordes */
-  --color-borde:        var(--p-slate-200);   /* #E2E8F0 - decorativo */
-  --color-borde-fuerte: var(--p-slate-500);   /* #64748B - 4.55:1 fondo: límite de campos (UI >= 3:1) */
+  --color-borde:        var(--p-verde-200);   /* decorativo */
+  --color-borde-fuerte: var(--p-verde-500);   /* límite de campos (UI >= 3:1) */
 
-  /* acento y foco (Emerald Green) */
-  --color-acento:        var(--p-emerald-700); /* #047857 - 5.24:1 fondo, 5.48:1 con texto blanco */
-  --color-acento-hover:  var(--p-emerald-800); /* #065F46 - 7.68:1 con texto blanco */
-  --color-acento-suave:  var(--p-emerald-100); /* #D1FAE5 */
-  --color-acento-suave-texto: var(--p-emerald-800); /* #065F46 - 6.78:1 sobre acento-suave */
-  --color-foco:          var(--p-emerald-600); /* #059669 - Emerald Green (3.60:1 fondo UI >= 3:1) */
+  /* acento y foco */
+  --color-acento:        var(--p-verde-700);
+  --color-acento-hover:  var(--p-verde-900);
+  --color-acento-suave:  var(--p-verde-100);
+  --color-acento-suave-texto: var(--p-verde-800);
+  --color-foco:          var(--p-verde-600);
 
   /* estados del producto (RF09) */
   --color-pendiente:        var(--p-amber-700);     /* #B45309 - Alert Amber calibrado (4.51:1 con su fondo) */
   --color-pendiente-fondo:  var(--p-amber-100);     /* #FEF3C7 */
-  --color-liberado:         var(--p-emerald-800);   /* #065F46 - Emerald Green (6.78:1 con su fondo) */
-  --color-liberado-fondo:   var(--p-emerald-100);   /* #D1FAE5 */
+  --color-liberado:         var(--p-verde-800);
+  --color-liberado-fondo:   var(--p-verde-100);
   --color-bloqueado:        var(--p-red-700);       /* #B91C1C - Alert Red calibrado (5.30:1 con su fondo) */
   --color-bloqueado-fondo:  var(--p-red-100);       /* #FEE2E2 */
 
   /* conectividad (diferenciador) */
   --color-sync-pendiente: var(--p-amber-700);
-  --color-sync-ok:        var(--p-emerald-700);
+  --color-sync-ok:        var(--p-verde-700);
   --color-sync-sin-red:   var(--p-teal-700);        /* #0F766E - 5.23:1 fondo */
   --color-sync-error:     var(--p-red-700);
 }
@@ -126,7 +116,7 @@
   --foco-anillo: 2px solid var(--color-foco);
   --foco-offset: 2px;
 
-  --sombra-tarjeta: 0 1px 0 rgb(69 26 3 / 0.08);
+  --sombra-tarjeta: 0 1px 2px rgb(10 36 20 / 0.06), 0 4px 12px rgb(10 36 20 / 0.04);
 }
 
 /* Foco visible global: requisito de E06 (navegación por teclado) */

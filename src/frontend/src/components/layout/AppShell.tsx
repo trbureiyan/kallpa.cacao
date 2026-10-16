@@ -65,7 +65,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-fondo flex">
       <a href="#contenido" className="skip-link">Saltar al contenido</a>
       {/* 1. Barra Lateral Vertical Fija (Desktop) */}
-      <aside className="w-64 bg-superficie border-r border-borde min-h-screen flex flex-col justify-between p-4 shrink-0 hidden md:flex">
+      <aside className="w-64 bg-superficie border-r border-borde sticky top-0 h-screen overflow-y-auto flex-col justify-between p-4 shrink-0 hidden md:flex">
         <div>
           {/* Logo del sistema */}
           <button
@@ -114,6 +114,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
         </div>
 
+        <p className="px-3 pt-4 text-xs text-texto-tenue border-t border-borde">
+          Datos simulados. II Hackathon USCO.
+        </p>
       </aside>
 
       {/* 2. Área Principal de Trabajo (Header Superior + Contenido) */}
@@ -162,6 +165,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         <main id="contenido" tabIndex={-1} className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8 pb-24 md:pb-8">
           {children}
         </main>
+
+        <footer className="app-footer">
+          <span>KallpaCacao · Trazabilidad del cacao del Huila</span>
+          <span>Datos simulados</span>
+        </footer>
       </div>
 
       {/* 3. Navegación Móvil Inferior */}

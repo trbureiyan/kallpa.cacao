@@ -1,6 +1,6 @@
 import React, { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, ChevronRight } from 'lucide-react';
+import { Eye, EyeOff, ChevronRight, User, Lock, Loader2, TriangleAlert, ShieldCheck, WifiOff, Route } from 'lucide-react';
 import { Logo } from '@/components/ui';
 import { estadoConexion } from '@/components/ui/conexion';
 import { IndicadorConexion } from '@/components/ui/marca';
@@ -8,6 +8,7 @@ import { useNetwork } from '@/context/NetworkContext';
 import { useAuth } from '@/context/AuthContext';
 import { MODO_LOCAL_PERMITIDO } from '@/context/fuente';
 import { prefetchRuta } from '@/utils/prefetch';
+import portada from '@/assets/login-cacao.webp';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -18,6 +19,8 @@ export const LoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [enviando, setEnviando] = useState(false);
+  const [verClave, setVerClave] = useState(false);
+  const [mayusculas, setMayusculas] = useState(false);
 
   const entrar = async (u: string, c: string, forzarLocal = false) => {
     setEnviando(true);
@@ -36,18 +39,27 @@ export const LoginPage: React.FC = () => {
   return (
     <main className="login-shell">
       <section className="login-story" aria-label="Presentación">
-        <div className="max-w-xl">
+        <img className="login-story-img" src={portada} alt="" aria-hidden="true" />
+        <div className="login-story-body">
           <Logo light />
-          <h1 className="display-title mt-16">Cada lote cuenta su historia.</h1>
-          <p className="mt-6 text-lg">
-            Registro de recepción, transformación y venta del cacao de la asociación, con origen verificable.
-          </p>
+          <div>
+            <h1 className="display-title">Cada lote cuenta su historia.</h1>
+            <p className="login-lead">
+              Registro de recepción, transformación y venta del cacao de la asociación, con origen verificable.
+            </p>
+            <ul className="login-points">
+              <li><Route size={18} aria-hidden="true" /> Trazabilidad por lote, del productor a la ficha comercial</li>
+              <li><WifiOff size={18} aria-hidden="true" /> Recepción con conectividad limitada</li>
+              <li><ShieldCheck size={18} aria-hidden="true" /> Cambios de estado auditados</li>
+            </ul>
+          </div>
+          <p className="login-story-foot">Proyecto de la II Hackathon USCO. Datos simulados.</p>
         </div>
       </section>
 
       <section className="login-panel">
-        <div className="w-full max-w-md mx-auto">
-          <div className="flex items-center justify-between gap-4 mb-8">
+        <div className="login-card">
+          <div className="login-head">
             <h2 className="page-title">Iniciar sesión</h2>
             <IndicadorConexion estado={estadoConexion({ enLinea: isOnline, pendientes: 0, error: false })} pendientes={0} />
           </div>
@@ -60,32 +72,54 @@ export const LoginPage: React.FC = () => {
             )}
             <div>
               <label className="field-label" htmlFor="usuario">Usuario</label>
-              <input
-                id="usuario"
-                className="input"
-                type="text"
-                value={usuario}
-                onChange={(e) => setUsuario(e.target.value)}
-                autoComplete="username"
-                required
-              />
+              <div className="input-icon">
+                <User size={18} aria-hidden="true" />
+                <input
+                  id="usuario"
+                  className="input"
+                  type="text"
+                  value={usuario}
+                  onChange={(e) => setUsuario(e.target.value)}
+                  autoComplete="username"
+                  required
+                />
+              </div>
             </div>
 
             <div>
               <label className="field-label" htmlFor="clave">Contraseña</label>
-              <input
-                id="clave"
-                className="input"
-                type="password"
-                value={clave}
-                onChange={(e) => setClave(e.target.value)}
-                autoComplete="current-password"
-                required
-              />
+              <div className="input-icon">
+                <Lock size={18} aria-hidden="true" />
+                <input
+                  id="clave"
+                  className="input input-con-boton"
+                  type={verClave ? 'text' : 'password'}
+                  value={clave}
+                  onChange={(e) => setClave(e.target.value)}
+                  onKeyUp={(e) => setMayusculas(e.getModifierState('CapsLock'))}
+                  onBlur={() => setMayusculas(false)}
+                  autoComplete="current-password"
+                  required
+                />
+                <button
+                  type="button"
+                  className="input-toggle"
+                  onClick={() => setVerClave((v) => !v)}
+                  aria-label={verClave ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  aria-pressed={verClave}
+                >
+                  {verClave ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+                </button>
+              </div>
+              {mayusculas && (
+                <p className="field-hint" role="status">
+                  <TriangleAlert size={14} aria-hidden="true" /> Las mayúsculas están activadas.
+                </p>
+              )}
             </div>
 
             <button type="submit" className="btn btn-primary w-full" disabled={enviando}>
-              {enviando ? 'Verificando…' : 'Iniciar sesión'}
+              {enviando ? (<><Loader2 size={18} className="spin" aria-hidden="true" /> Verificando…</>) : 'Iniciar sesión'}
             </button>
           </form>
 
@@ -135,6 +169,10 @@ export const LoginPage: React.FC = () => {
             <ChevronRight size={16} aria-hidden="true" />
           </button>
         </div>
+        <footer className="login-foot">
+          <span>KallpaCacao</span>
+          <span>Trazabilidad del cacao del Huila</span>
+        </footer>
       </section>
     </main>
   );

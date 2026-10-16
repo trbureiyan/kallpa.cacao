@@ -24,8 +24,9 @@ export const PublicFichaPage: React.FC = () => {
         </button>
       </header>
 
+      <div className="public-main">
       <form
-        className="max-w-4xl mx-auto my-4 flex items-end gap-2"
+        className="public-search"
         onSubmit={(e) => {
           e.preventDefault();
           setSearchParams(codigo.trim() ? { lote: codigo.trim() } : {});
@@ -41,14 +42,19 @@ export const PublicFichaPage: React.FC = () => {
       {lotCodeParam ? (
         <PublicFichaCard lotCode={lotCodeParam} />
       ) : (
-        <p className="max-w-4xl mx-auto text-texto-suave">Escriba el código del lote para ver su ficha comercial.</p>
+        <p className="public-empty">Escriba el código del lote para ver su ficha comercial.</p>
       )}
+
+      </div>
 
       <footer className="public-footer">
         <div>
           <strong>KallpaCacao</strong>
           <p>Trazabilidad del cacao del Huila</p>
         </div>
+        <p className="footer-note">
+          Esta ficha muestra solo información autorizada para compradores. Datos simulados del reto de la II Hackathon USCO.
+        </p>
       </footer>
     </div>
   );
