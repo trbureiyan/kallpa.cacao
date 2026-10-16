@@ -62,11 +62,12 @@ El CI (`.github/workflows/ci.yml`) corre las tres primeras filas en cada push.
 Script: `scripts/respaldo.py` (solo biblioteca estándar). Cubre SQLite; para PostgreSQL use `pg_dump`/`pg_restore`.
 
 ```bash
-python scripts/respaldo.py backup                                   # datos/runtime/cacao.db -> datos/respaldo/cacao_<fecha>.db + .json
+python scripts/respaldo.py backup                                   # la base de la API -> datos/respaldo/cacao_<fecha>.db + .json
 python scripts/respaldo.py verify datos/respaldo/cacao_<fecha>.json # compara la base activa con el respaldo
 python scripts/respaldo.py restore datos/respaldo/cacao_<fecha>.db --confirmar   # DETENGA LA API ANTES
 ```
 
+- La base se toma de `--db` o se resuelve como la API: variable `DATABASE_URL`, luego `backend/.env`, luego la única de `datos/runtime/cacao.db` y `backend/cacao.db` que exista (si hay dos, pide `--db`). El script imprime siempre `Base: <ruta>`: **compruebe que es la que usa su API**. Si exportó `DATABASE_URL` en otra terminal, expórtela también aquí o use `--db`.
 - El `.json` guarda el checksum SHA-256 del archivo y, por tabla, la cantidad de filas y un hash de identificadores y de contenido.
 - `backup` es idempotente: si nada cambió desde el último respaldo, no crea otro.
 - `restore` exige `--confirmar`, verifica el checksum, guarda el estado previo en `datos/respaldo/pre_restauracion_*.db`, reemplaza la base de forma atómica y verifica el resultado.
