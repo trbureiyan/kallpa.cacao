@@ -1,0 +1,6 @@
+# GNU Make y los scripts de shell fallan con finales de linea CRLF (el "\r" queda dentro de la receta).
+# Se fuerza LF solo en estos archivos; el resto del repositorio conserva su comportamiento actual.
+Makefile text eol=lf
+*.sh text eol=lf
+Dockerfile text eol=lf
+**/Dockerfile text eol=lf
