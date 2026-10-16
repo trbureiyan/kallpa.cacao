@@ -19,11 +19,6 @@ export function generarCsv(filas: FilaResumen[]): string {
   return [ENCABEZADO, ...lineas].join('\r\n')
 }
 
-export function filtrarLotes<T extends { origin: string; status?: EstadoLote }>(
-  lotes: T[],
-  f: { origen?: string; estado?: EstadoLote },
-): T[] {
-  return lotes.filter(
-    (l) => (!f.origen || l.origin === f.origen) && (!f.estado || (l.status ?? 'PENDIENTE') === f.estado),
-  )
+export function filtrarFilas(filas: FilaResumen[], f: { origen?: string; estado?: EstadoLote }): FilaResumen[] {
+  return filas.filter((x) => (!f.origen || x.origen === f.origen) && (!f.estado || x.estado === f.estado))
 }

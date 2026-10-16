@@ -3,10 +3,15 @@ import type { EstadoLote } from '@/types/app'
 import { calcularCostoUnitario } from '@/utils/calculations'
 
 export interface FilaResumen {
+  /** Solo modo API: id numérico del lote en el servidor */
+  id?: number
+  /** Solo modo local: la API de inventario no trae el nombre del productor */
+  productor?: string
   codigo: string
   origen: string
-  recibidoKg: number
-  consumidoKg: number
+  /** null = el rol no ve ese dato (el operador no recibe recibido ni consumido) */
+  recibidoKg: number | null
+  consumidoKg: number | null
   disponibleKg: number
   estado: EstadoLote
   costoUnitario: number | null

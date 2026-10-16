@@ -1,13 +1,11 @@
 import { useState } from "react"
-import { useLiveQuery } from "dexie-react-hooks"
 import { Button, Icon } from "@/components/ui"
 import { ChipEstado, SelloLote } from "@/components/ui/marca"
 import { DataTable, PageHead } from "@/components/shared"
 import { useAuth } from "@/context/AuthContext"
-import { db } from "@/db/dexieDb"
 import { ModalCambioEstado } from "@/features/estados/components/ModalCambioEstado"
-import { filtrarLotes, generarCsv } from "@/features/reportes/csv"
-import { construirFilas } from "@/features/reportes/resumen"
+import { useFilasInventario } from "@/features/inventario/useFilasInventario"
+import { filtrarFilas, generarCsv } from "@/features/reportes/csv"
 import type { EstadoLote } from "@/types/app"
 import { ahoraISO } from "@/utils/clock"
 import { formatearCOP, formatearKg } from "@/utils/formato"
@@ -15,23 +13,20 @@ import { formatearCOP, formatearKg } from "@/utils/formato"
 const TODOS = ""
 
 export function InventoryPage() {
-  const { rol } = useAuth()
+  const { rol, modo } = useAuth()
+  const esLocal = modo === "local"
   const esAdmin = rol === "ADMINISTRADOR"
   const [origenFiltro, setOrigenFiltro] = useState(TODOS)
   const [estadoFiltro, setEstadoFiltro] = useState<"" | EstadoLote>(TODOS)
   const [busqueda, setBusqueda] = useState("")
   const [cambio, setCambio] = useState<{ lotCode: string; nuevo: "LIBERADO" | "BLOQUEADO" } | null>(null)
 
-  const lotes = useLiveQuery(() => db.recepciones.toArray(), [], [])
-  const movimientos = useLiveQuery(() => db.movimientos.toArray(), [], [])
-  const procesos = useLiveQuery(() => db.procesos.toArray(), [], [])
+  const { filas: todas, cargando, error } = useFilasInventario(modo, rol)
 
-  const origenes = [...new Set(lotes.map((l) => l.origin))].sort()
-  const filtrados = filtrarLotes(lotes, { origen: origenFiltro || undefined, estado: estadoFiltro || undefined }).filter(
-    (l) => l.lotCode.toLowerCase().includes(busqueda.toLowerCase()),
+  const origenes = [...new Set(todas.map((f) => f.origen))].sort()
+  const filas = filtrarFilas(todas, { origen: origenFiltro || undefined, estado: estadoFiltro || undefined }).filter((f) =>
+    f.codigo.toLowerCase().includes(busqueda.toLowerCase()),
   )
-  const filas = construirFilas(filtrados, movimientos, procesos)
-  const estadoPorCodigo = new Map(filas.map((f) => [f.codigo, f]))
 
   const totalDisponible = filas.reduce((a, f) => a + f.disponibleKg, 0)
   const conCosto = filas.filter((f) => f.costoUnitario !== null)
@@ -84,6 +79,16 @@ export function InventoryPage() {
         </div>
       </div>
 
+      {error && (
+        <div className="validation danger mt-6" role="alert">
+          <Icon name="alert" />
+          <div>
+            <strong>No se pudo cargar el inventario</strong>
+            <span>{error}</span>
+          </div>
+        </div>
+      )}
+
       <section className="card mt-6">
         <div className="filterbar">
           <div className="section-title">Existencias por lote</div>
@@ -115,53 +120,51 @@ export function InventoryPage() {
         </div>
 
         <DataTable
-          headers={["Lote", "Productor", "Origen", "Recibido", "Consumido", "Disponible", "Estado", "Costo unitario", ...(esAdmin ? ["Acciones"] : [])]}
+          headers={["Lote", ...(esLocal ? ["Productor"] : []), "Origen", "Recibido", "Consumido", "Disponible", "Estado", "Costo unitario", ...(esAdmin && esLocal ? ["Acciones"] : [])]}
         >
-          {filtrados.length === 0 ? (
+          {filas.length === 0 ? (
             <tr>
-              <td colSpan={esAdmin ? 9 : 8} className="text-center py-4 text-texto-suave">
-                No se encontraron lotes con esos filtros.
+              <td colSpan={9} className="text-center py-4 text-texto-suave">
+                {cargando ? "Cargando existencias…" : "No se encontraron lotes con esos filtros."}
               </td>
             </tr>
           ) : (
-            filtrados.map((lote) => {
-              const f = estadoPorCodigo.get(lote.lotCode)!
-              return (
-                <tr key={lote.lotCode}>
-                  <td><SelloLote codigo={lote.lotCode} /></td>
-                  <td>{lote.producer}</td>
-                  <td>{lote.origin}</td>
-                  <td>{formatearKg(f.recibidoKg)}</td>
-                  <td>{formatearKg(f.consumidoKg)}</td>
-                  <td>{formatearKg(f.disponibleKg)}</td>
+            filas.map((f) => (
+              <tr key={f.codigo}>
+                <td><SelloLote codigo={f.codigo} /></td>
+                {esLocal && <td>{f.productor}</td>}
+                <td>{f.origen}</td>
+                <td>{f.recibidoKg === null ? "—" : formatearKg(f.recibidoKg)}</td>
+                <td>{f.consumidoKg === null ? "—" : formatearKg(f.consumidoKg)}</td>
+                <td>{formatearKg(f.disponibleKg)}</td>
+                <td>
+                  <ChipEstado estado={f.estado} />
+                </td>
+                <td>{f.costoUnitario === null ? "—" : `${formatearCOP(f.costoUnitario)}/kg`}</td>
+                {/* [DECISION] en modo API el cambio de estado se reactiva con la tarea de estados; hasta entonces escribiría en Dexie */}
+                {esAdmin && esLocal && (
                   <td>
-                    <ChipEstado estado={f.estado} />
+                    <div className="row-actions">
+                      {f.estado !== "LIBERADO" && (
+                        <button onClick={() => setCambio({ lotCode: f.codigo, nuevo: "LIBERADO" })}>Liberar</button>
+                      )}
+                      {f.estado !== "BLOQUEADO" && (
+                        <button className="danger" onClick={() => setCambio({ lotCode: f.codigo, nuevo: "BLOQUEADO" })}>
+                          Bloquear
+                        </button>
+                      )}
+                    </div>
                   </td>
-                  <td>{f.costoUnitario === null ? "—" : `${formatearCOP(f.costoUnitario)}/kg`}</td>
-                  {esAdmin && (
-                    <td>
-                      <div className="row-actions">
-                        {f.estado !== "LIBERADO" && (
-                          <button onClick={() => setCambio({ lotCode: lote.lotCode, nuevo: "LIBERADO" })}>Liberar</button>
-                        )}
-                        {f.estado !== "BLOQUEADO" && (
-                          <button className="danger" onClick={() => setCambio({ lotCode: lote.lotCode, nuevo: "BLOQUEADO" })}>
-                            Bloquear
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              )
-            })
+                )}
+              </tr>
+            ))
           )}
         </DataTable>
       </section>
 
       {cambio && (
         <ModalCambioEstado
-          lotes={lotes.map((l) => l.lotCode)}
+          lotes={todas.map((f) => f.codigo)}
           loteInicial={cambio.lotCode}
           nuevoInicial={cambio.nuevo}
           onClose={() => setCambio(null)}

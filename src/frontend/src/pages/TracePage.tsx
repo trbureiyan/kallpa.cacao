@@ -2,6 +2,8 @@ import { useState } from "react"
 import { Button, Icon } from "@/components/ui"
 import { ChipEstado, SelloLote } from "@/components/ui/marca"
 import { PageHead, Timeline } from "@/components/shared"
+import { useAuth } from "@/context/AuthContext"
+import { obtenerTrazabilidadApi } from "@/features/trazabilidad/api/trazabilidadApi"
 import { obtenerTrazabilidadLote, type TraceInfo } from "@/features/trazabilidad/api/trazabilidadDb"
 import { formatearKg } from "@/utils/formato"
 
@@ -9,9 +11,18 @@ export function TracePage() {
   const [codigo, setCodigo] = useState("")
   const [consultado, setConsultado] = useState(false)
   const [traza, setTraza] = useState<TraceInfo | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const { modo, rol } = useAuth()
 
   const buscar = async () => {
-    setTraza(await obtenerTrazabilidadLote(codigo.trim()))
+    setError(null)
+    try {
+      const c = codigo.trim()
+      setTraza(modo === "api" && rol ? await obtenerTrazabilidadApi(rol, c) : await obtenerTrazabilidadLote(c))
+    } catch (e) {
+      setTraza(null)
+      setError(e instanceof Error ? e.message : "No se pudo consultar el lote. Intente de nuevo.")
+    }
     setConsultado(true)
   }
 
@@ -50,7 +61,13 @@ export function TracePage() {
         </section>
       )}
 
-      {consultado && !traza && (
+      {error && (
+        <section className="card mt-6" role="alert">
+          <p className="p-4">{error}</p>
+        </section>
+      )}
+
+      {consultado && !traza && !error && (
         <section className="card mt-6" role="alert">
           <p className="p-4">
             No se encontró el lote {codigo.trim() || "indicado"}. El código no existe en el registro. Revise que esté

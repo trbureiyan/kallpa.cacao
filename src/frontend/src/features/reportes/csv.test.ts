@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { generarCsv, filtrarLotes } from './csv'
+import { generarCsv, filtrarFilas } from './csv'
 import { construirFilas } from './resumen'
 
 const fila = { codigo: 'CAC001', origen: 'Rivera', recibidoKg: 100, consumidoKg: 100, disponibleKg: 0, estado: 'PENDIENTE', costoUnitario: 20000 } as const
@@ -29,16 +29,15 @@ describe('generarCsv', () => {
   })
 })
 
-describe('filtrarLotes', () => {
-  const lotes = [
-    { origin: 'Rivera', status: 'LIBERADO' as const },
-    { origin: 'Rivera', status: 'BLOQUEADO' as const },
-    { origin: 'Algeciras', status: 'LIBERADO' as const },
-    { origin: 'Rivera' },
+describe('filtrarFilas', () => {
+  const filas = [
+    { ...fila, codigo: 'A', origen: 'Rivera', estado: 'LIBERADO' as const },
+    { ...fila, codigo: 'B', origen: 'Rivera', estado: 'BLOQUEADO' as const },
+    { ...fila, codigo: 'C', origen: 'Algeciras', estado: 'LIBERADO' as const },
   ]
-  it('sin filtros devuelve todo', () => expect(filtrarLotes(lotes, {})).toHaveLength(4))
-  it('por origen y estado combinados', () => expect(filtrarLotes(lotes, { origen: 'Rivera', estado: 'LIBERADO' })).toHaveLength(1))
-  it('un lote sin estado cuenta como PENDIENTE', () => expect(filtrarLotes(lotes, { estado: 'PENDIENTE' })).toEqual([{ origin: 'Rivera' }]))
+  it('sin filtros devuelve todo', () => expect(filtrarFilas(filas, {})).toHaveLength(3))
+  it('por origen y estado combinados', () =>
+    expect(filtrarFilas(filas, { origen: 'Rivera', estado: 'LIBERADO' }).map((f) => f.codigo)).toEqual(['A']))
 })
 
 describe('construirFilas', () => {

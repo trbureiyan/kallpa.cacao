@@ -41,7 +41,7 @@ export function Timeline({ steps }: { steps: { title: string; description: strin
             <strong>{step.title}</strong>
             <p>{step.description}</p>
           </div>
-          <time>{step.date}</time>
+          {step.date && <time>{step.date}</time>}
         </div>
       ))}
     </div>
