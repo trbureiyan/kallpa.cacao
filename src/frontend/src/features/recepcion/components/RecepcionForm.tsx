@@ -1,7 +1,10 @@
 import { useState, type FormEvent } from "react"
-import { db } from "@/db/dexieDb"
+import { useAuth } from "@/context/AuthContext"
 import { sincronizarRecepcionesPendientes } from "../api/recepcionSync"
+import { guardarRecepcionLocal } from "../api/recepcionDb"
 import { Button, Field, Icon } from "@/components/ui"
+import { ErrorDominio } from "@/utils/errores"
+import { parsearNumero } from "@/utils/formato"
 
 interface RecepcionFormProps {
   isOnline?: boolean
@@ -9,77 +12,45 @@ interface RecepcionFormProps {
 }
 
 export function RecepcionForm({ isOnline = false, onSuccess }: RecepcionFormProps) {
-  const [lotCode, setLotCode] = useState("CAC129")
+  const { nombreUsuario } = useAuth()
   const [producer, setProducer] = useState("Productor A · Ana Torres")
   const [origin, setOrigin] = useState("Rivera")
   const [date, setDate] = useState(() => new Date().toLocaleDateString("sv-SE"))
-  const [qty, setQty] = useState("250")
+  const [qty, setQty] = useState("")
   const [unit, setUnit] = useState("kg")
 
-  const [saved, setSaved] = useState(false)
+  const [savedCode, setSavedCode] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  const invalid = Number(qty) <= 0 || !lotCode.trim()
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError(null)
-
-    if (invalid) {
-      setError("La cantidad debe ser mayor a cero y el código del lote es obligatorio.")
-      return
-    }
-
     setLoading(true)
 
     try {
-      const idempotencyKey = crypto.randomUUID()
-      const quantityNum = Number(qty)
-
-      // 1. Guardar en Dexie (IndexedDB)
-      await db.recepciones.add({
-        idempotencyKey,
-        lotCode,
+      const lote = await guardarRecepcionLocal({
         producer,
         origin,
         date,
-        quantity: quantityNum,
-        availableQty: quantityNum,
+        quantity: parsearNumero(qty),
         unit,
-        syncStatus: "PENDING",
-        status: "PENDIENTE",
+        usuario: nombreUsuario,
       })
 
-      // 2. Registrar evento de auditoría
-      await db.auditLogs.add({
-        timestamp: new Date().toISOString(),
-        user: producer || "Operador Campo",
-        action: "EDICIÓN",
-        fieldChanged: "recepciones",
-        previousValue: "N/A",
-        newValue: `Lote ${lotCode} (${quantityNum} ${unit})`,
-        lotCode,
-        reason: "Registro de recepción en campo",
-      })
+      // Si hay conexión se intenta sincronizar; si falla, el lote queda pendiente sin perderse
+      if (isOnline) await sincronizarRecepcionesPendientes().catch(() => undefined)
 
-      // 3. Si está en línea, intentar sincronizar de inmediato
-      if (isOnline) {
-        await sincronizarRecepcionesPendientes()
-      }
-
-      if (onSuccess) onSuccess()
-
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
-
-      // Sugerir siguiente código correlativo de lote
-      const numActual = Number.parseInt(lotCode.replace(/\D/g, ""), 10) || 129
-      setLotCode(`CAC${numActual + 1}`)
-      setQty("250")
-    } catch (err: any) {
-      console.error("Error al guardar recepción:", err)
-      setError(err?.message || "Error al guardar el lote en el dispositivo.")
+      onSuccess?.()
+      setSavedCode(lote.lotCode)
+      setTimeout(() => setSavedCode(null), 4000)
+      setQty("")
+    } catch (err) {
+      setError(
+        err instanceof ErrorDominio
+          ? err.message
+          : "No se guardó el lote. Ocurrió un error inesperado y no se registró nada. Intente de nuevo.",
+      )
     } finally {
       setLoading(false)
     }
@@ -95,9 +66,9 @@ export function RecepcionForm({ isOnline = false, onSuccess }: RecepcionFormProp
         <div className="step-badge">01</div>
       </div>
 
-      {saved && (
-        <div className="success-toast mb-4">
-          <Icon name="check" /> Lote guardado correctamente{" "}
+      {savedCode && (
+        <div className="success-toast mb-4" role="status">
+          <Icon name="check" /> Lote {savedCode} guardado correctamente{" "}
           {isOnline
             ? "e intento de sincronización enviado."
             : "en el dispositivo (IndexedDB)."}
@@ -105,25 +76,16 @@ export function RecepcionForm({ isOnline = false, onSuccess }: RecepcionFormProp
       )}
 
       {error && (
-        <div className="validation danger mb-4">
+        <div className="validation danger mb-4" role="alert">
           <Icon name="alert" />
           <div>
-            <strong>Error de validación</strong>
+            <strong>No se guardó el lote</strong>
             <span>{error}</span>
           </div>
         </div>
       )}
 
       <div className="form-grid">
-        <Field label="Código del lote">
-          <input
-            className="input"
-            value={lotCode}
-            onChange={(e) => setLotCode(e.target.value)}
-            required
-          />
-        </Field>
-
         <Field label="Productor">
           <select
             className="input"
@@ -169,9 +131,9 @@ export function RecepcionForm({ isOnline = false, onSuccess }: RecepcionFormProp
           <div className="input-unit">
             <input
               className="input"
-              type="number"
-              min="0.01"
-              step="any"
+              type="text"
+              inputMode="decimal"
+              placeholder="Ej. 100 o 12,5"
               value={qty}
               onChange={(e) => setQty(e.target.value)}
               required
@@ -207,15 +169,12 @@ export function RecepcionForm({ isOnline = false, onSuccess }: RecepcionFormProp
         <Button
           type="button"
           variant="ghost"
-          onClick={() => {
-            setQty("0")
-            setLotCode("")
-          }}
+          onClick={() => setQty("")}
         >
           Limpiar
         </Button>
 
-        <Button type="submit" disabled={invalid || loading}>
+        <Button type="submit" disabled={loading}>
           <Icon name={isOnline ? "sync" : "box"} />
           {loading
             ? "Guardando..."

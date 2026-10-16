@@ -1,81 +1,96 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Badge, Button, Icon } from "@/components/ui"
 import { PageHead, Timeline } from "@/components/shared"
-import { db, type RecepcionOffline } from "@/db/dexieDb"
+import { obtenerTrazabilidadLote, type TraceInfo } from "@/features/trazabilidad/api/trazabilidadDb"
+import { formatearKg } from "@/utils/formato"
 
 export function TracePage() {
-  const [codigoBusqueda, setCodigoBusqueda] = useState("CAC128")
-  const [loteActual, setLoteActual] = useState<RecepcionOffline | null>(null)
+  const [codigo, setCodigo] = useState("")
+  const [consultado, setConsultado] = useState(false)
+  const [traza, setTraza] = useState<TraceInfo | null>(null)
 
-  const buscarLote = async (code: string) => {
-    const encontrado = await db.recepciones.where("lotCode").equals(code).first()
-    setLoteActual(encontrado || null)
+  const buscar = async () => {
+    setTraza(await obtenerTrazabilidadLote(codigo.trim()))
+    setConsultado(true)
   }
-
-  useEffect(() => {
-    buscarLote(codigoBusqueda)
-  }, [])
 
   return (
     <>
       <PageHead
         eyebrow="RF03 · Cadena de custodia"
         title="Trazabilidad del lote"
-        text="Consulta el recorrido completo desde la finca hasta el producto final."
+        text="Consulte el recorrido desde la recepción hasta el producto terminado."
         action={
-          <div className="trace-search flex items-center gap-2">
-            <div className="relative flex-1">
+          <form
+            className="trace-search flex items-center gap-2"
+            onSubmit={(e) => {
+              e.preventDefault()
+              void buscar()
+            }}
+          >
+            <label className="relative flex-1">
+              <span className="sr-only">Código del lote</span>
               <Icon name="search" className="absolute left-3 top-3 text-slate-400" />
               <input
                 className="input pl-9"
-                value={codigoBusqueda}
-                onChange={(e) => setCodigoBusqueda(e.target.value)}
-                placeholder="Código de lote..."
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value)}
+                placeholder="Código de lote, por ejemplo CAC001"
               />
-            </div>
-            <Button onClick={() => buscarLote(codigoBusqueda)}>Consultar</Button>
-          </div>
+            </label>
+            <Button type="submit">Consultar</Button>
+          </form>
         }
       />
 
-      <div className="trace-summary">
-        <div className="lot-emblem">
-          <Icon name="leaf" size={30} />
-        </div>
-        <div>
-          <Badge tone={loteActual?.status === "BLOQUEADO" ? "red" : "green"}>
-            {loteActual?.status || "LOTE EN PROCESO"}
-          </Badge>
-          <div className="text-2xl font-extrabold text-slate-900 mt-2">
-            {loteActual?.lotCode || codigoBusqueda}
-          </div>
-          <p>Cacao seco premium · Cosecha 2025</p>
-        </div>
-        <div className="trace-meta">
-          <span>
-            Origen<strong>{loteActual?.origin || "Rivera"}, Huila</strong>
-          </span>
-          <span>
-            Peso actual<strong>{loteActual?.availableQty ?? loteActual?.quantity ?? 256} kg</strong>
-          </span>
-          <span>
-            Calidad<strong>Premium A</strong>
-          </span>
-        </div>
-      </div>
+      {!consultado && (
+        <section className="card mt-6">
+          <p className="p-4 text-slate-500">Escriba el código de un lote para ver su recorrido.</p>
+        </section>
+      )}
 
-      <section className="card mt-6">
-        <div className="card-head">
-          <div>
-            <div className="section-title">Recorrido histórico</div>
-            <p>Cadena de custodia verificada</p>
+      {consultado && !traza && (
+        <section className="card mt-6" role="alert">
+          <p className="p-4">
+            No se encontró el lote {codigo.trim() || "indicado"}. El código no existe en el registro. Revise que esté
+            bien escrito, por ejemplo CAC001.
+          </p>
+        </section>
+      )}
+
+      {traza && (
+        <>
+          <div className="trace-summary">
+            <div className="lot-emblem">
+              <Icon name="leaf" size={30} />
+            </div>
+            <div>
+              <Badge tone={traza.status === "BLOQUEADO" ? "red" : traza.status === "LIBERADO" ? "green" : "amber"}>
+                {traza.status}
+              </Badge>
+              <div className="text-2xl font-extrabold text-slate-900 mt-2">{traza.lotCode}</div>
+            </div>
+            <div className="trace-meta">
+              <span>
+                Origen<strong>{traza.origin}</strong>
+              </span>
+              <span>
+                Disponible<strong>{formatearKg(traza.availableQty)}</strong>
+              </span>
+            </div>
           </div>
-          <Badge tone="green">
-            <Icon name="shield" size={14} /> Trazabilidad verificada
-          </Badge>
-        </div>
-        <Timeline />
-      </section>
+
+          <section className="card mt-6">
+            <div className="card-head">
+              <div>
+                <div className="section-title">Recorrido histórico</div>
+                <p>Construido solo con los registros guardados</p>
+              </div>
+            </div>
+            <Timeline steps={traza.steps} />
+          </section>
+        </>
+      )}
     </>
   )
 }

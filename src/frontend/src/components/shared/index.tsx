@@ -28,52 +28,20 @@ export function PageHead({
   )
 }
 
-export function Timeline() {
-  const steps = [
-    [
-      "Origen en finca",
-      "Finca El Porvenir · Rivera, Huila",
-      "18 mayo, 2025",
-      "sprout",
-    ],
-    [
-      "Recepción del lote",
-      "CAC128 · Peso neto: 320 kg",
-      "20 mayo · 08:42",
-      "box",
-    ],
-    [
-      "Fermentación",
-      "6 días · Merma registrada: 8,4%",
-      "20–26 mayo",
-      "process",
-    ],
-    ["Secado solar", "Humedad final certificada: 7,2%", "27–30 mayo", "home"],
-    [
-      "Producto final",
-      "Cacao seco premium · Lote liberado",
-      "31 mayo, 2025",
-      "certificate",
-    ],
-  ]
-
+export function Timeline({ steps }: { steps: { title: string; description: string; date: string; icon: IconName }[] }) {
   return (
     <div className="timeline">
-      {steps.map(([title, text, date, icon], i) => (
-        <div className="timeline-step" key={title}>
-          <div
-            className={`timeline-icon ${
-              i === steps.length - 1 ? "current" : ""
-            }`}
-          >
-            <Icon name={icon as IconName} />
+      {steps.map((step, i) => (
+        <div className="timeline-step" key={`${step.title}-${i}`}>
+          <div className={`timeline-icon ${i === steps.length - 1 ? "current" : ""}`}>
+            <Icon name={step.icon} />
           </div>
           <div className="timeline-content">
             <small>Paso {String(i + 1).padStart(2, "0")}</small>
-            <strong>{title}</strong>
-            <p>{text}</p>
+            <strong>{step.title}</strong>
+            <p>{step.description}</p>
           </div>
-          <time>{date}</time>
+          <time>{step.date}</time>
         </div>
       ))}
     </div>

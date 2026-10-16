@@ -1,7 +1,8 @@
 import type { ReactNode } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { Badge, Button, Icon, Logo } from "@/components/ui"
-import { useAuth, type RolUsuario } from "@/context/AuthContext"
+import { useAuth } from "@/context/AuthContext"
+import { rutasPermitidas } from "@/context/rutas"
 import { useNetwork } from "@/context/NetworkContext"
 import type { IconName } from "@/types/app"
 
@@ -9,13 +10,12 @@ interface NavItem {
   name: string
   path: string
   icon: IconName
-  roles: RolUsuario[]
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const { rol, nombreUsuario, setRol } = useAuth()
+  const { rol, nombreUsuario, cerrarSesion } = useAuth()
   const { isOnline } = useNetwork()
 
   const navigation: NavItem[] = [
@@ -23,39 +23,34 @@ export function AppShell({ children }: { children: ReactNode }) {
       name: "Recepción",
       path: "/recepcion",
       icon: "box",
-      roles: ["OPERADOR", "ADMINISTRADOR"],
     },
     {
       name: "Transformación",
       path: "/transformacion",
       icon: "process",
-      roles: ["OPERADOR", "ADMINISTRADOR"],
     },
     {
       name: "Trazabilidad",
       path: "/trazabilidad",
       icon: "route",
-      roles: ["OPERADOR", "ADMINISTRADOR"],
     },
     {
       name: "Inventario",
       path: "/inventario",
       icon: "warehouse",
-      roles: ["ADMINISTRADOR"],
     },
     {
       name: "Auditoría",
       path: "/auditoria",
       icon: "shield",
-      roles: ["ADMINISTRADOR"],
     },
   ]
 
   // Filtrar ítems de menú según el rol activo
-  const visibleNav = navigation.filter((item) => item.roles.includes(rol))
+  const visibleNav = navigation.filter((item) => rutasPermitidas(rol).includes(item.path))
 
   const handleLogout = () => {
-    setRol("OPERADOR")
+    cerrarSesion()
     navigate("/login")
   }
 

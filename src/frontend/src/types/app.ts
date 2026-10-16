@@ -1,4 +1,6 @@
-export type Role = 'operator' | 'admin';
+export type RolUsuario = 'OPERADOR' | 'ADMINISTRADOR';
+
+export type EstadoLote = 'PENDIENTE' | 'LIBERADO' | 'BLOQUEADO';
 
 export type IconName =
   | 'leaf'

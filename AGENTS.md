@@ -108,7 +108,7 @@ Crear módulos y directorios solo cuando se vayan a usar de inmediato. No dejar 
 | `make backup` | Copia el archivo SQLite a `datos/respaldo/` con checksum | Idempotente |
 | `make restore` | Restaura un respaldo | Ver Dangerous Commands |
 
-Los targets del `Makefile` existen pero aún están vacíos. Completarlos antes de documentarlos en `README.md`. Comandos de typecheck, lint y build del frontend: por definir.
+Los targets del `Makefile` existen pero aún están vacíos. Completarlos antes de documentarlos en `README.md`. Frontend (desde `src/frontend/`): `pnpm test` (vitest), `pnpm exec tsc -b` (tipos), `pnpm exec eslint .` (lint), `pnpm build`. Backend: por definir.
 
 ### Dangerous Commands
 
@@ -182,6 +182,9 @@ Document known landmines here. Be specific: name the files, describe the behavio
 - **[Offline]**: alcance limitado a la RECEPCIÓN de lotes. UUID técnico generado en el cliente; el servidor asigna el código legible (`CACxxx`) al sincronizar. Sincronización idempotente. Si a la hora 14 RF01–RF12 no recorren el flujo con pruebas, el offline se reduce o se descarta.
 - **[Incidencia hora 12]**: bloquear CAC001, identificar origen y explicar cantidades afectadas, sin borrar historial. Requiere tarjeta de cambio (`documentos/cambios/CC-001`), ajuste de un criterio de aceptación y prueba de regresión en `tests/backend/regresion/`. Bloquear es un cambio de estado auditado, nunca un borrado.
 - **[CSV]**: el CSV (RF11) y los cálculos autoritativos se generan en el servidor, solo para administrador.
+- **[Frontend sin backend, fase 1]**: hasta integrar el backend, el frontend ejecuta las reglas contra Dexie (`features/*/api/*Db.ts`) como respaldo local. Esto contradice «el frontend nunca decide» y es transitorio: en la fase 2 cada servicio llama primero a la API y Dexie queda como cola de recepciones. La rama `frontend` es la fuente de verdad de los contratos; lo que difiera en la rama `backend` se adapta del lado del backend.
+- **[Vocabulario vigente]**: los campos y estados del frontend están en inglés/mayúsculas (`lotCode`, `producer`, `status` con `PENDIENTE|LIBERADO|BLOQUEADO`) y la rama `backend` también usa nombres en inglés. Se acordó mantenerlos en lugar de migrar a español; esta entrada reemplaza lo dicho en Domain Language sobre nombres idénticos en español.
+- **[Usuarios demo locales]**: `context/usuariosDemo.ts` guarda usuarios de demostración solo para el modo sin backend. La autenticación real pasa al servidor en la fase 2 y ese archivo se elimina.
 - **[Datos sintéticos]**: solo datos sintéticos. Sin contraseñas, claves ni información privada en el repo ni en herramientas de IA.
 - **[Dependencias no confirmadas]**: FastAPI y SQLite están recomendados pero pendientes de confirmación del equipo. No instalar dependencias hasta que se confirmen.
 
@@ -358,7 +361,7 @@ Las funciones puras de `rules.py` se escriben primero con su prueba.
 
 ### Test conventions
 
-- Framework: pytest para el backend (`TestClient` de FastAPI para integración, base SQLite temporal por prueba). Frontend: por definir.
+- Framework: pytest para el backend (`TestClient` de FastAPI para integración, base SQLite temporal por prueba). Frontend: vitest con `fake-indexeddb` y `jsdom`; pruebas junto al código (`*.test.ts`), una base Dexie limpia por prueba (`src/test/limpiarDb.ts`).
 - Ubicación: `tests/backend/{unit,integration,regresion,rendimiento}/`; casos manuales en `tests/casos_manuales.md`.
 - Hora: usar `core/clock.py` sustituible; las pruebas nunca dependen del reloj real.
 - Mocking: sin servicios externos reales. Entradas externas simuladas se identifican expresamente.

@@ -8,14 +8,15 @@ import { PageHead } from '@/components/shared';
 
 export const DashboardPage: React.FC = () => {
   const { isOnline } = useNetwork();
-  const { rol } = useAuth();
+  const { rol, cerrarSesion } = useAuth();
   const navigate = useNavigate();
 
   const lotes = useLiveQuery(() => db.recepciones.toArray(), [], []);
   const procesos = useLiveQuery(() => db.procesos.toArray(), [], []);
   const auditLogs = useLiveQuery(() => db.auditLogs.reverse().limit(5).toArray(), [], []);
 
-  const totalKg = (lotes || []).reduce((acc, curr) => acc + (curr.availableQty ?? curr.quantity), 0);
+  const movimientos = useLiveQuery(() => db.movimientos.toArray(), [], []);
+  const totalKg = (movimientos || []).reduce((acc, m) => acc + (m.tipo === 'RECIBIDO' ? m.kg : -m.kg), 0);
   const pendientesSync = (lotes || []).filter((l) => l.syncStatus === 'PENDING').length;
 
   return (
@@ -25,7 +26,7 @@ export const DashboardPage: React.FC = () => {
         title={`Panel Principal (${rol})`}
         text="Monitoreo de operaciones en campo, inventario y sincronización."
         action={
-          <button onClick={() => navigate('/login')} className="btn btn-ghost">
+          <button onClick={() => { cerrarSesion(); navigate('/login'); }} className="btn btn-ghost">
             Cerrar Sesión
           </button>
         }

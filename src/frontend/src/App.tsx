@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { NetworkProvider, useNetwork } from '@/context/NetworkContext';
-import { AuthProvider } from '@/context/AuthContext';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { rutasPermitidas } from '@/context/rutas';
 import { AppShell } from '@/components/layout/AppShell';
 
 // Importación del script de datos semilla (Seed Data)
@@ -20,6 +21,12 @@ import { AuditPage } from '@/pages/AuditPage';
 // Envoltorio de rutas autenticadas con la barra de navegación (AppShell)
 function ProtectedLayout() {
   const { isOnline } = useNetwork();
+  const { rol } = useAuth();
+  const { pathname } = useLocation();
+
+  // Sin sesión se vuelve al login; una ruta no permitida para el rol lleva al resumen.
+  if (!rol) return <Navigate to="/login" replace />;
+  if (!rutasPermitidas(rol).includes(pathname)) return <Navigate to="/dashboard" replace />;
 
   return (
     <AppShell>
@@ -38,8 +45,7 @@ function ProtectedLayout() {
         <Route path="/trazabilidad" element={<TracePage />} />
         <Route path="/inventario" element={<InventoryPage />} />
         <Route path="/auditoria" element={<AuditPage />} />
-        <Route path="*" element={<Navigate to="/recepcion" replace />} />
-      </Routes>
+              </Routes>
     </AppShell>
   );
 }

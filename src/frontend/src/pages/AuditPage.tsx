@@ -1,55 +1,17 @@
-import { useState, useEffect } from "react"
-import { Badge, Button, Field, Icon } from "@/components/ui"
+import { useState } from "react"
+import { useLiveQuery } from "dexie-react-hooks"
+import { Badge, Button, Icon } from "@/components/ui"
 import { DataTable, PageHead } from "@/components/shared"
-import { db, type AuditEntry } from "@/db/dexieDb"
-import { useAuth } from "@/context/AuthContext"
+import { db } from "@/db/dexieDb"
+import { obtenerLogsAuditoria } from "@/features/auditoria/api/auditoriaDb"
+import { ModalCambioEstado } from "@/features/estados/components/ModalCambioEstado"
 
-export function AuditPage({ onAction }: { onAction?: () => void }) {
-  const { nombreUsuario } = useAuth()
-  const [logs, setLogs] = useState<AuditEntry[]>([])
+export function AuditPage() {
   const [showModal, setShowModal] = useState(false)
-  
-  const [targetLot, setTargetLot] = useState("CAC128")
-  const [actionType, setActionType] = useState<"BLOQUEO" | "LIBERACIÓN">("BLOQUEO")
-  const [motivo, setMotivo] = useState("")
 
-  const cargarLogs = async () => {
-    const guardados = await db.auditLogs.reverse().toArray()
-    setLogs(guardados)
-  }
-
-  useEffect(() => {
-    cargarLogs()
-  }, [])
-
-  const handleEjecutarAccion = async () => {
-    if (!motivo.trim()) return
-
-    const lote = await db.recepciones.where("lotCode").equals(targetLot).first()
-
-    // Registrar en auditoría inmutable
-    await db.auditLogs.add({
-      timestamp: new Date().toISOString(),
-      user: nombreUsuario || "Administrador",
-      action: actionType,
-      fieldChanged: "status",
-      previousValue: lote?.status || "PENDIENTE",
-      newValue: actionType === "BLOQUEO" ? "BLOQUEADO" : "LIBERADO",
-      lotCode: targetLot,
-      reason: motivo,
-    })
-
-    if (lote && lote.idLocal !== undefined) {
-      await db.recepciones.update(lote.idLocal, {
-        status: actionType === "BLOQUEO" ? "BLOQUEADO" : "LIBERADO",
-      })
-    }
-
-    setShowModal(false)
-    setMotivo("")
-    await cargarLogs()
-    if (onAction) onAction()
-  }
+  // Consultas reactivas: al cambiar un estado la tabla se actualiza sola
+  const logs = useLiveQuery(() => obtenerLogsAuditoria(), [], [])
+  const lotes = useLiveQuery(async () => (await db.recepciones.toArray()).map((l) => l.lotCode), [], [])
 
   return (
     <>
@@ -125,62 +87,14 @@ export function AuditPage({ onAction }: { onAction?: () => void }) {
         </DataTable>
       </section>
 
-      {showModal && (
-        <div className="modal-backdrop">
-          <div className="modal">
-            <div className="modal-head">
-              <h3 className="section-title">Gestionar estado del lote</h3>
-              <button onClick={() => setShowModal(false)} className="icon-button">
-                ✕
-              </button>
-            </div>
-
-            <div className="modal-body space-y-4">
-              <Field label="Código del lote">
-                <input
-                  className="input"
-                  value={targetLot}
-                  onChange={(e) => setTargetLot(e.target.value)}
-                />
-              </Field>
-
-              <Field label="Acción a realizar">
-                <select
-                  className="input"
-                  value={actionType}
-                  onChange={(e) => setActionType(e.target.value as any)}
-                >
-                  <option value="BLOQUEO">Bloquear Lote (Incidencia de Calidad)</option>
-                  <option value="LIBERACIÓN">Liberar Lote (Conforme para venta)</option>
-                </select>
-              </Field>
-
-              <Field label="Motivo o Justificación (Obligatorio)">
-                <textarea
-                  className="input min-h-20"
-                  placeholder="Describe la razón técnica o la observación..."
-                  value={motivo}
-                  onChange={(e) => setMotivo(e.target.value)}
-                  required
-                />
-              </Field>
-            </div>
-
-            <div className="modal-actions">
-              <Button variant="ghost" onClick={() => setShowModal(false)}>
-                Cancelar
-              </Button>
-
-              <Button
-                disabled={!motivo.trim()}
-                className={actionType === 'BLOQUEO' ? 'btn-danger' : 'btn-primary'}
-                onClick={handleEjecutarAccion}
-              >
-                Confirmar {actionType}
-              </Button>
-            </div>
-          </div>
-        </div>
+      {showModal && lotes.length > 0 && (
+        <ModalCambioEstado
+          lotes={lotes}
+          loteInicial={lotes[0]}
+          nuevoInicial="BLOQUEADO"
+          onClose={() => setShowModal(false)}
+          onDone={() => setShowModal(false)}
+        />
       )}
     </>
   )

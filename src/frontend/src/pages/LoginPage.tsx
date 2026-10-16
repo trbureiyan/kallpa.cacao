@@ -1,8 +1,7 @@
-import React, { type FormEvent } from 'react';
+import React, { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNetwork } from '@/context/NetworkContext';
 import { useAuth } from '@/context/AuthContext';
-import type { Role } from '@/types/app';
 import { 
   Wifi, 
   WifiOff, 
@@ -17,16 +16,20 @@ import {
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { isOnline } = useNetwork();
-  const { setRol } = useAuth();
+  const { iniciarSesion } = useAuth();
+  const [usuario, setUsuario] = useState('');
+  const [clave, setClave] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
-  const handleEnter = (role: Role) => {
-    setRol(role === 'admin' ? 'ADMINISTRADOR' : 'OPERADOR');
-    navigate('/dashboard');
+  const entrar = (u: string, c: string) => {
+    if (iniciarSesion(u, c)) navigate('/dashboard');
+    else setError('No se pudo iniciar sesión. El usuario o la contraseña no coinciden. Revise los datos o use un acceso de prueba.');
   };
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    handleEnter('operator');
+    setError(null);
+    entrar(usuario, clave);
   };
 
   return (
@@ -88,26 +91,37 @@ export const LoginPage: React.FC = () => {
           </div>
 
           <form onSubmit={submit} className="space-y-4">
+            {error && (
+              <div className="validation danger" role="alert">
+                <span>{error}</span>
+              </div>
+            )}
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1" htmlFor="usuario">
                 Usuario
               </label>
               <input
+                id="usuario"
                 className="input"
                 type="text"
-                defaultValue="operador.rivera"
+                value={usuario}
+                onChange={(e) => setUsuario(e.target.value)}
+                autoComplete="username"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1" htmlFor="clave">
                 Contraseña
               </label>
               <input
+                id="clave"
                 className="input"
                 type="password"
-                defaultValue="12345678"
+                value={clave}
+                onChange={(e) => setClave(e.target.value)}
+                autoComplete="current-password"
                 required
               />
             </div>
@@ -134,13 +148,13 @@ export const LoginPage: React.FC = () => {
               <Users size={16} /> Acceso Rápido de Prueba
             </div>
             <div className="text-xs text-amber-700 mt-1 mb-3">
-              Evaluación Jurado · Selecciona un perfil
+              Datos de demostración · Seleccione un perfil
             </div>
             
             <div className="space-y-2">
               <button
                 type="button"
-                onClick={() => handleEnter('operator')}
+                onClick={() => entrar('operador', 'demo-operador')}
                 className="w-full p-2.5 bg-white border border-amber-300 rounded-lg text-amber-900 font-medium text-xs flex justify-between items-center hover:bg-amber-100/50 transition-colors"
               >
                 <span>Operador</span>
@@ -149,7 +163,7 @@ export const LoginPage: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => handleEnter('admin')}
+                onClick={() => entrar('admin', 'demo-admin')}
                 className="w-full p-2.5 bg-amber-800 text-white rounded-lg font-medium text-xs flex justify-between items-center hover:bg-amber-900 transition-colors"
               >
                 <span>Administrador</span>
