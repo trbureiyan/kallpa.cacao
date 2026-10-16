@@ -48,7 +48,7 @@ En la evaluación debe quedar en `false`.
 |---|---|---|
 | Frontend (tipos, lint, unitarias, build) | `cd src/frontend && pnpm exec tsc -b && pnpm exec eslint . && pnpm test && pnpm build` | `src/frontend/src/**/*.test.ts(x)` |
 | Backend | `cd backend && .venv/Scripts/python -m pytest -q` | `backend/tests/` (la de concurrencia en PostgreSQL se omite sin `TEST_POSTGRES_URL`) |
-| Respaldo, restauración y rendimiento | `backend/.venv/Scripts/python -m pytest tests -q` (desde la raíz) | `tests/backend/integration/`, `tests/backend/rendimiento/` |
+| Respaldo, restauración, rendimiento y regresión de la hora 12 | `backend/.venv/Scripts/python -m pytest tests -q` (desde la raíz) | `tests/backend/integration/`, `tests/backend/rendimiento/`, `tests/backend/regresion/` |
 | Contrato frontend–API **real** | con la API en `:8000`: `cd src/frontend && E2E_API=1 pnpm exec vitest run src/test/contrato.e2e.test.ts` | `src/frontend/src/test/contrato.e2e.test.ts` |
 
 La prueba de contrato recorre recepción, transformación 100 → 80 kg, costo y margen, bloqueo, ficha pública, auditoría,
@@ -113,4 +113,5 @@ Además, solo se verifica a mano:
 - `backend/requirements.txt` usa rangos de versión y no hay lockfile.
 - `make backup`, `make restore` y `make perf` están deshabilitados a propósito en el `Makefile`; use los scripts de las secciones 4 y 5.
 - `make setup` usa `npm ci`, pero el frontend usa pnpm.
-- Faltan los 15 casos de `tests/casos_manuales.md`, la tarjeta de cambio `documentos/cambios/CC-001` y la prueba de regresión de la hora 12 en `tests/backend/regresion/`.
+- Faltan los 15 casos de `tests/casos_manuales.md` y la tarjeta de cambio `documentos/cambios/CC-001` (con el criterio de aceptación ajustado). La prueba automática de la incidencia ya existe: `tests/backend/regresion/test_incidencia_cac001.py` (REG-001).
+- La prueba REG-001 fija el comportamiento actual: bloquear CAC001 no bloquea por sí solo los productos derivados. Si el equipo decide propagar el bloqueo (marco §8), esa prueba debe actualizarse junto con el cambio.

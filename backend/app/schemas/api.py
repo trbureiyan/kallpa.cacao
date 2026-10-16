@@ -54,6 +54,14 @@ class UserUpdate(BaseModel):
     municipality: str | None = Field(default=None, max_length=80)
     active: bool | None = None
 
+    @model_validator(mode="after")
+    def sin_nulos_en_campos_obligatorios(self):
+        # solo municipality admite null (quita la asignación); password en null se ignora como si no se enviara
+        for campo in ("username", "full_name", "role", "active"):
+            if campo in self.model_fields_set and getattr(self, campo) is None:
+                raise ValueError(f"{campo} no puede ser null; omita el campo si no quiere cambiarlo")
+        return self
+
     @field_validator("username")
     @classmethod
     def validate_username(cls, value: str | None) -> str | None:
