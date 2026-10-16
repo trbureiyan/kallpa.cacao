@@ -1,18 +1,23 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { registrarAlExpirar } from '@/api/axiosClient';
+import { guardarToken } from '@/api/token';
 import type { RolUsuario } from '@/types/app';
-import { autenticar } from './usuariosDemo';
+import { MODO_LOCAL_PERMITIDO, resolverSesion, type ModoFuente } from './fuente';
 
 export type { RolUsuario };
 
 interface Sesion {
   rol: RolUsuario;
   nombre: string;
+  modo: ModoFuente;
 }
 
 interface AuthContextType {
   rol: RolUsuario | null;
   nombreUsuario: string;
-  iniciarSesion: (usuario: string, clave: string) => boolean;
+  modo: ModoFuente;
+  /** Devuelve el mensaje de error listo para mostrar, o null si entró. */
+  iniciarSesion: (usuario: string, clave: string, opciones?: { forzarLocal?: boolean }) => Promise<string | null>;
   cerrarSesion: () => void;
 }
 
@@ -40,30 +45,41 @@ function guardarSesion(s: Sesion | null) {
 const AuthContext = createContext<AuthContextType>({
   rol: null,
   nombreUsuario: '',
-  iniciarSesion: () => false,
+  modo: 'api',
+  iniciarSesion: async () => null,
   cerrarSesion: () => {},
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [sesion, setSesion] = useState<Sesion | null>(leerSesion);
 
-  const iniciarSesion = (usuario: string, clave: string): boolean => {
-    const encontrada = autenticar(usuario, clave);
-    if (!encontrada) return false;
-    const nueva = { rol: encontrada.rol, nombre: encontrada.nombre };
-    guardarSesion(nueva);
-    setSesion(nueva);
-    return true;
-  };
-
   const cerrarSesion = () => {
+    guardarToken(null);
     guardarSesion(null);
     setSesion(null);
   };
 
+  // un 401 con token (sesión vencida) cierra la sesión; las recepciones pendientes viven en Dexie y no se tocan
+  useEffect(() => {
+    registrarAlExpirar(cerrarSesion);
+    return () => registrarAlExpirar(() => {});
+  }, []);
+
+  const iniciarSesion: AuthContextType['iniciarSesion'] = async (usuario, clave, opciones) => {
+    try {
+      const r = await resolverSesion(usuario.trim(), clave, { permitirLocal: MODO_LOCAL_PERMITIDO, forzarLocal: opciones?.forzarLocal });
+      const nueva: Sesion = { rol: r.rol, nombre: r.nombre, modo: r.modo };
+      guardarSesion(nueva);
+      setSesion(nueva);
+      return null;
+    } catch (e) {
+      return e instanceof Error ? e.message : 'No se pudo iniciar sesión. Ocurrió un error inesperado. Intente de nuevo.';
+    }
+  };
+
   return (
     <AuthContext.Provider
-      value={{ rol: sesion?.rol ?? null, nombreUsuario: sesion?.nombre ?? '', iniciarSesion, cerrarSesion }}
+      value={{ rol: sesion?.rol ?? null, nombreUsuario: sesion?.nombre ?? '', modo: sesion?.modo ?? 'api', iniciarSesion, cerrarSesion }}
     >
       {children}
     </AuthContext.Provider>

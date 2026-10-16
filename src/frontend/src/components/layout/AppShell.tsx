@@ -20,7 +20,7 @@ interface NavItem {
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const { rol, nombreUsuario, cerrarSesion } = useAuth()
+  const { rol, nombreUsuario, modo, cerrarSesion } = useAuth()
   const { isOnline } = useNetwork()
   const pendientes = useLiveQuery(() => db.recepciones.where("syncStatus").equals("PENDING").count(), [], 0)
   const hayError = useLiveQuery(async () => (await db.recepciones.where("syncStatus").equals("ERROR").count()) > 0, [], false)
@@ -134,6 +134,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             </button>
 
             <IndicadorConexion estado={estadoConexion({ enLinea: isOnline, pendientes, error: hayError })} pendientes={pendientes} />
+            {modo === "local" && (
+              <span className="badge" title="Los datos de este modo viven solo en este dispositivo">
+                Modo local
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-4">

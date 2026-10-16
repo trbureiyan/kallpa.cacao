@@ -6,6 +6,7 @@ import { estadoConexion } from '@/components/ui/conexion';
 import { IndicadorConexion } from '@/components/ui/marca';
 import { useNetwork } from '@/context/NetworkContext';
 import { useAuth } from '@/context/AuthContext';
+import { MODO_LOCAL_PERMITIDO } from '@/context/fuente';
 import { prefetchRuta } from '@/utils/prefetch';
 
 export const LoginPage: React.FC = () => {
@@ -16,15 +17,20 @@ export const LoginPage: React.FC = () => {
   const [clave, setClave] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const entrar = (u: string, c: string) => {
-    if (iniciarSesion(u, c)) navigate('/dashboard');
-    else setError('No se pudo iniciar sesión. El usuario o la contraseña no coinciden. Revise los datos o use un acceso de prueba.');
+  const [enviando, setEnviando] = useState(false);
+
+  const entrar = async (u: string, c: string, forzarLocal = false) => {
+    setEnviando(true);
+    const mensaje = await iniciarSesion(u, c, { forzarLocal });
+    setEnviando(false);
+    if (mensaje) setError(mensaje);
+    else navigate('/dashboard');
   };
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-    entrar(usuario, clave);
+    void entrar(usuario, clave);
   };
 
   return (
@@ -78,23 +84,24 @@ export const LoginPage: React.FC = () => {
               />
             </div>
 
-            <button type="submit" className="btn btn-primary w-full">
-              Iniciar sesión
+            <button type="submit" className="btn btn-primary w-full" disabled={enviando}>
+              {enviando ? 'Verificando…' : 'Iniciar sesión'}
             </button>
           </form>
 
           <p className="offline-auth">
-            Con conectividad limitada puede ingresar con las credenciales guardadas en este dispositivo.
+            Con servidor disponible se valida su usuario en él. Sin conexión solo es posible entrar al modo local de demostración, si está habilitado.
           </p>
 
+          {MODO_LOCAL_PERMITIDO && (
           <div className="demo-card">
             <h3 className="section-title">Acceso de prueba</h3>
-            <p className="demo-note">Datos de demostración. Seleccione un perfil.</p>
+            <p className="demo-note">Modo local sin servidor, con datos de demostración. Seleccione un perfil.</p>
 
             <div className="demo-actions">
               <button
                 type="button"
-                onClick={() => entrar('operador', 'demo-operador')}
+                onClick={() => entrar('operador', 'demo-operador', true)}
                 onMouseEnter={() => prefetchRuta('/dashboard')}
                 onFocus={() => prefetchRuta('/dashboard')}
                 className="btn btn-secondary"
@@ -103,7 +110,7 @@ export const LoginPage: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => entrar('admin', 'demo-admin')}
+                onClick={() => entrar('admin', 'demo-admin', true)}
                 onMouseEnter={() => prefetchRuta('/dashboard')}
                 onFocus={() => prefetchRuta('/dashboard')}
                 className="btn btn-secondary"
@@ -112,6 +119,7 @@ export const LoginPage: React.FC = () => {
               </button>
             </div>
           </div>
+          )}
 
           <button
             type="button"
