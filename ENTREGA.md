@@ -6,7 +6,7 @@
 
 - Repositorio: [trbureiyan/kallpa.cacao](https://github.com/trbureiyan/kallpa.cacao).
 - Rama consultada: `backend`.
-- Hash de referencia consultado: `ac28407753288d5d4f490fe17b6cd94849e58058`. No está identificado como commit final ni como etiqueta de entrega.
+- Hash de referencia observado: `bac1ab59af580a1e6190aebaecbdae652df6fa9f`. No está identificado como commit final ni como etiqueta de entrega.
 - Nombre: el repositorio se llama `kallpa.cacao`; la interfaz se ha denominado `AgroCacao Huila`. El equipo debe acordar la marca que usará en la presentación.
 - Equipo registrado en el marco de planificación: Graffe (David), Alejandro, Brayan y Emanuel. Confirmar nombres completos y responsabilidades antes de entregar.
 - Usuarios de demostración sembrados localmente: `operador` / `Operador123!` y `admin` / `Admin123!`. Son credenciales ficticias de desarrollo; no usarlas en un servicio público.
@@ -73,7 +73,7 @@ Pruebas automatizadas, también desde `backend/`:
 python -m pytest -q
 ```
 
-Validacion realizada en esta revision: desde `backend/`, `python -m pytest -q` termino con 18 pruebas aprobadas, 1 omitida (prueba de concurrencia PostgreSQL sin `TEST_POSTGRES_URL`) y 1 advertencia deprecada de Starlette/TestClient. Desde `src/frontend/`, `npm run build` termino correctamente con TypeScript y Vite. No se ejecutaron migraciones ni pruebas manuales contra la base persistente del proyecto.
+Verificación ejecutada el 16-10-2026 en el commit de referencia `bac1ab59af580a1e6190aebaecbdae652df6fa9f`: `python -m pytest -q` terminó con 18 aprobadas, 1 omitida y 1 advertencia Starlette/TestClient; la prueba PostgreSQL de concurrencia se ejecutó por separado en un contenedor temporal con `tmpfs` y pasó (1 aprobada). `npm run build` pasó. `/health`, `/docs` y la raíz web respondieron HTTP 200; Alembic en el servicio actual reportó `b6d1ef3a9204 (head)`. No se completó en esta revisión el recorrido visual integral, el ensayo de restauración ni la medición de 100 registros.
 
 ## 6. Estado de RF y evidencia
 
@@ -88,7 +88,7 @@ Validacion realizada en esta revision: desde `backend/`, `python -m pytest -q` t
 | RF07 Persistencia | SQLAlchemy, Alembic, PostgreSQL | Informe de reinicio en base PostgreSQL aislada con conteos comparados. | Falta adjuntar pasos de restauración y comprobación de integridad. |
 | RF08 Inventario | `services/inventory.py`, movimientos e idempotencia | Pruebas de exceso, repetición e informe de concurrencia PostgreSQL. | Consolidar comandos, entorno y saldos observados en E05/E07. |
 | RF09 Estados | `api/lots.py`, permisos backend | `test_permisos_roles.py`; informe de 403 para operador y motivo obligatorio. | Registrar bloqueo → operación rechazada → ficha pública no disponible. |
-| RF10 Auditoria | `models/audit.py`, `api/lots.py`, migracion `e4219b1a7c30` | Actor, fecha, accion, valores anterior/nuevo; guardas ORM y triggers impiden update/delete. | Pruebas SQLite y ensayo temporal PostgreSQL 16 pasan. Falta aplicar con respaldo a la base de entrega y conservar evidencia. |
+| RF10 Auditoria | `models/audit.py`, `api/lots.py`, migracion `e4219b1a7c30` | Actor, fecha, accion, valores anterior/nuevo; guardas ORM y triggers impiden update/delete. La instancia Compose observada esta en Alembic head. | Pruebas SQLite y ensayo temporal PostgreSQL 16 pasan; falta guardar evidencia manual de consulta de auditoria en el flujo completo. |
 | RF11 Filtros/CSV | `api/inventory.py`, `api/exports.py`, `src/frontend/src/BusinessViews.tsx` | Vista admin filtra por origen/estado y muestra costos por lote; CSV incluye campos requeridos; backend rechaza operador con 403. | Pytest verifica filtros, montos y autorizacion. Falta recorrido visual manual. |
 | RF12 Balance | `api/economics.py`, `services/economics.py`, `src/frontend/src/BusinessViews.tsx` | CostEntry unico; formula/unidades/politica visibles; salida/precio cero no divide; UI muestra indicadores. | Pytest reproduce COP 20.000/kg y margen 20 % con COP 1.600.000, 80 kg y COP 25.000/kg. Falta evidencia visual/manual. |
 
@@ -102,7 +102,7 @@ Validacion realizada en esta revision: desde `backend/`, `python -m pytest -q` t
 | E04 Producto y código | `backend/`, `src/frontend/` | Backend y frontend canónico disponibles; build frontend verificado. Falta recorrido visual manual integrado en escritorio y móvil. |
 | E05 Pruebas | `documentos/E05_pruebas.md`, `tests/casos_manuales.md`, `backend/tests/` | Hay un plan de 15 casos y un ensayo adicional offline; están pendientes de ejecución documentada con esperado, obtenido, estado y evidencia. Las pruebas automatizadas existen, con resultados históricos en el informe. |
 | E06 Usabilidad | `documentos/E06_usabilidad.md` | Vacío. Falta prueba real de dos tareas, hallazgos y mejora antes/después. |
-| E07 Operación | `documentos/E07_operacion.md`, README | Parcial: comandos existentes; instalación limpia y restauración deben probarse y registrarse. |
+| E07 Operación | `documentos/E07_operacion.md`, README | Instrucciones de desarrollo y respaldo redactadas; instalación limpia y restauración aislada siguen sin ejecutarse. |
 | E08 IA y fuentes | `documentos/E08_IA_y_fuentes.md` | Existe bitácora; requiere actualizar resultados, revisión humana y componentes de la versión final. |
 | E09 Piloto y pitch | `documentos/E09_piloto.md`, `pitch/` | Documento vacío; falta propuesta concreta de precio/costos y presentación de máximo cinco diapositivas. |
 | E10 Índice | `ENTREGA.md` | Este borrador; completar con hash final, evidencias y enlaces definitivos. |
@@ -110,7 +110,7 @@ Validacion realizada en esta revision: desde `backend/`, `python -m pytest -q` t
 ## 8. Límites y próximos pasos
 
 1. Recorrer visualmente el frontend en escritorio y móvil contra la API y PostgreSQL, incluida la cola de recepción offline.
-2. Aplicar la migración `e4219b1a7c30` únicamente en una base de ensayo respaldada; no se ha ejecutado sobre la base persistente del proyecto.
+2. La instancia Compose observada ya reporta Alembic `b6d1ef3a9204 (head)`; no recrear ni borrar el volumen. La restauración sigue pendiente de probar en una instancia aislada.
 3. Completar E01, E06, E07 y E09; ejecutar los 15 casos de E05 y completar sus resultados. Revisar E02 y E03 con el equipo.
 4. Ejecutar 15 casos manuales, guardar evidencia, medir trazabilidad con 100 registros y probar backup/restore en base aislada.
 5. Documentar la incidencia de CAC001: hora, impacto, decisión, cambio y regresión realmente ejecutados.
@@ -122,4 +122,4 @@ La guía oficial pide que la solución funcione en computador y móvil. En esta 
 
 Se conectaron las pantallas activas de panel, transformación, trazabilidad, inventario, alertas, economía, auditoría, administración de usuarios y ficha pública con FastAPI. La recepción conserva su cola IndexedDB. Los prototipos que dependían de Dexie/React Router ausentes se archivaron en `src/frontend/design-reference/legacy/`; la interfaz activa no depende de esos módulos.
 
-Verificación ejecutada en esta revisión: `npm run build` finalizó con TypeScript, Vite y PWA; `python -m compileall -q app`, importación de FastAPI y `alembic heads` finalizaron, con `b6d1ef3a9204` como head. No se ejecutó Pytest ni se hizo recorrido manual de navegador. La nueva migración de municipio de usuario no se aplicó a la base PostgreSQL persistente. La matriz de requisitos sigue necesitando evidencia manual de cada flujo.
+Verificación ejecutada el 16-10-2026: build PWA `npm run build` exitoso; suite backend 18 aprobadas/1 omitida (concurrencia aparte: 1 aprobada en PostgreSQL temporal); `/health`, `/docs` y frontend respondieron HTTP 200; Alembic actual `b6d1ef3a9204 (head)`. El chequeo HTTP no certifica el recorrido visual. Siguen pendientes las pruebas manuales, la restauración y la medición de rendimiento.

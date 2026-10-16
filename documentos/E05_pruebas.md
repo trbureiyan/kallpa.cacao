@@ -12,10 +12,10 @@ Comando, desde `backend/`:
 python -m pytest -q
 ```
 
-Resultado ejecutado en esta revision: `python -m pytest -q` desde `backend/` termino con 18 aprobadas, 1 omitida y 1 advertencia deprecada de Starlette/TestClient. La omitida es la prueba opcional de concurrencia PostgreSQL, que requiere `TEST_POSTGRES_URL`. Esta ejecucion usa bases temporales; no migro ni escribio en la base persistente del proyecto. La carrera PostgreSQL previamente descrita es evidencia historica y debe repetirse en instancia desechable para validar esta version.
+Resultado del 16-10-2026, commit de referencia `bac1ab59af580a1e6190aebaecbdae652df6fa9f`: `python -m pytest -q` terminó con 18 aprobadas, 1 omitida y 1 advertencia deprecada de Starlette/TestClient. La omitida fue concurrencia PostgreSQL porque la suite ordinaria no tenía `TEST_POSTGRES_URL`. Después se ejecutó `tests/test_concurrencia_postgres.py` contra PostgreSQL 16 temporal en un contenedor con `tmpfs`: 1 aprobada; dos consumos concurrentes de 7 kg sobre 10 kg produjeron un único consumo y saldo final de 3 kg. El contenedor fue eliminado. La suite SQLite no escribió en la base persistente.
 Ensayo de migracion PostgreSQL 16 ejecutado en un contenedor temporal con `tmpfs`, sin volumen persistente: se aplico `d843a91c5e2b`, se insertaron datos sinteticos, se hizo upgrade a `e4219b1a7c30`, se verificaron costos migrados, columnas duplicadas retiradas y triggers PostgreSQL contra UPDATE/DELETE; el downgrade restauro campos/valores y el upgrade final volvio a head. El contenedor temporal se elimino. No se uso ni modifico la base persistente del proyecto.
 
-La comprobación de navegador/IndexedDB reportada por el usuario debe repetirse en la versión que se entregará y conservar capturas antes y después de sincronizar. La prueba de interacción visual, restauración del respaldo y medición con 100 registros todavía no tienen evidencia adjunta.
+El build de producción `npm run build` pasó el 16-10-2026. La raíz web, `/health` y `/docs` respondieron HTTP 200; Alembic en el servicio actual reportó `b6d1ef3a9204 (head)`. Esto es una comprobación HTTP, no un recorrido visual completo. La comprobación de navegador/IndexedDB offline debe repetirse en la versión de entrega con capturas. Restauración y medición con 100 registros siguen sin evidencia.
 
 ## Casos manuales
 

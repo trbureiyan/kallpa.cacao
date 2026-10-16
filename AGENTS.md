@@ -4,7 +4,7 @@
 > **Directiva de Interacción:** El agente se refiere al proyecto como `kallpa.cacao` y trata al equipo de la hackathon como la parte principal. El equipo es responsable de explicar cada línea en la defensa: preferir soluciones simples y legibles sobre soluciones ingeniosas. Si algo del reto es ambiguo, preguntar; no inventar requisitos ni resultados de pruebas. Si una prueba falla, reportarlo tal cual.
 
 `kallpa.cacao` | MVP de trazabilidad, transformación y comercialización de cacao para una asociación cacaotera ficticia del Huila (II Hackathon de Programación USCO, reto "Cacao con historia, calidad y valor"). Produce lotes trazables, inventario, merma y costos, y una ficha comercial pública.
-Stack `[DECIDIDO]` por ahora (marco §7): React + TypeScript + Tailwind (Vite) · Python FastAPI · PostgreSQL · SQLAlchemy + Alembic · Pytest. Monolito modular: el backend sirve el build del frontend como estáticos.
+Stack `[DECIDIDO]` por ahora: React + TypeScript + Tailwind (Vite) / Python FastAPI / PostgreSQL / SQLAlchemy + Alembic / Pytest. Monolito modular en logica; Compose despliega PostgreSQL, API FastAPI y frontend Nginx en servicios separados.
 
 Contexto del evento:
 
@@ -12,7 +12,7 @@ Contexto del evento:
 - Caso y datos 100 % simulados. Sin datos reales, sin secretos.
 - Especificación completa del reto: `.docs/reto_cacao.md`. Es normativa; si este archivo y el reto chocan, gana el reto y se corrige este archivo.
 - Marco del proyecto: `.docs/00_marco_del_proyecto.md`. Decisiones del equipo; resumen operativo y reglas de uso en la sección siguiente.
-- `.docs/` existe y no se modifica sin preguntar.
+- En este checkout inspeccionado, `.docs/` no existe. La especificacion esta en `concurso/Reto_Oficial_Devurity_Agroindustria.pdf`; no reconstruir decisiones del marco ausente ni crear `.docs/` sin acuerdo.
 
 ---
 
@@ -141,9 +141,9 @@ kallpa.cacao/
 └── AGENTS.md
 ```
 
-Crear módulos y directorios solo cuando se vayan a usar de inmediato. No dejar directorios vacíos sin propósito. El árbol de arriba es el destino; no todo existe todavía. El scaffolding actual está vacío (stubs de 0 bytes), así que antes de proponer nada inspeccionar `src/` y respetar lo que haya agregado el equipo.
+Crear modulos solo cuando se vayan a usar. El arbol de arriba es el destino; no todo existe. El backend activo esta en `backend/`; `src/backend/` contiene stubs vacios. Inspeccionar el codigo activo antes de proponer cambios.
 
-`src/frontend/` is the canonical frontend and the Docker Compose build context. The root `frontend/` folder is a retained legacy copy; do not develop there.
+`backend/` is the API source and Docker Compose build context. `src/frontend/` is the canonical frontend and frontend build context. The root `frontend/` folder is a retained legacy copy; do not develop there.
 
 **Layer architecture:** `Request → router (require_role) → service → rules (funciones puras) / models → DB`. El frontend solo muestra: consume la API y nunca decide.
 

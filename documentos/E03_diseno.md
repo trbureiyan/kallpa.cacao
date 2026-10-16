@@ -25,7 +25,7 @@ flowchart LR
     MIG --> DB
 ```
 
-FastAPI registra routers para autenticación, recepciones, transformaciones, lotes/trazabilidad, inventario, economía, alertas, ficha pública y exportaciones. El frontend canónico React/PWA incluye captura offline e interfaces administrativas. El build está verificado; el recorrido visual y la integración contra servicios en ejecución siguen pendientes.
+FastAPI registra routers para autenticación, recepciones, transformaciones, lotes/trazabilidad, inventario, economía, alertas, ficha pública, exportaciones, usuarios y analítica. Compose despliega PostgreSQL, API FastAPI y frontend Nginx como servicios separados. El build pasó el 16-10-2026 y las rutas HTTP básicas respondieron 200; falta el recorrido visual completo en escritorio y móvil.
 
 ## Modelo de datos implementado
 
@@ -78,7 +78,7 @@ Entidades principales: `User`, `Producer`, `Farm`, `Lot`, `Reception`, `Transfor
 | Administrador | Operaciones del operador, cambios de estado, economía, alertas, auditoría y CSV. | Las rutas aplican autorización en backend. |
 | Comprador público | Consultar ficha por código sin autenticación. | Recibe únicamente datos aprobados; un producto bloqueado no aparece disponible. |
 
-La administración de usuarios, ventas y analítica agregada no se presenta como capacidad disponible en la API de esta rama. El panel de esta tarea cubre inventario, filtros/CSV, economía y auditoría.
+La API incluye administración de usuarios y `GET /api/v1/analytics/dashboard` para indicadores administrativos. No se implementa el ciclo de ventas. El frontend incluye vistas para inventario, filtros/CSV, economía, auditoría y usuarios.
 
 ## Diferenciador offline y límites
 
@@ -94,4 +94,4 @@ El alcance que se ha ensayado es captura de recepciones sin conexión y sincroni
 
 ## Diferencias entre diseño y estado entregable
 
-Esta copia contiene el frontend canónico React/PWA y vistas para recepción, inventario administrativo con filtros/CSV, economía y auditoría. El build de producción pasa. Falta el recorrido visual manual en navegador y las llamadas contra API/PostgreSQL ejecutándose en el entorno final.
+La PWA canónica está en `src/frontend/`; la API ejecutada está en `backend/`. El build de producción pasó el 16-10-2026 y la web/API respondieron HTTP 200 en una comprobación básica. Aún falta el recorrido manual de tareas en escritorio y móvil, la prueba offline de entrega y la verificación de restauración.

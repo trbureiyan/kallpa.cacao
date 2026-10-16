@@ -4,7 +4,7 @@
 
 `kallpa.cacao` es el nombre del repositorio y `AgroCacao Huila` aparece como nombre de la interfaz. El equipo debe confirmar si conservará ambos nombres. El MVP está dirigido a una asociación cacaotera simulada: operador de campo, administrador y comprador público. Los datos de demostración son ficticios.
 
-El flujo principal es recibir un lote, transformarlo, consultar su trazabilidad y existencias, calcular merma/costos, y permitir que un administrador controle el estado del producto y consulte la ficha pública. El sistema está planteado como aplicación web/PWA para equipos de escritorio y móviles. En la rama actual `backend`, el código frontend no está completo: varios archivos fuente aparecen vacíos; su ejecución visual debe verificarse en la versión que contenga el frontend.
+El flujo principal es recibir un lote, transformarlo, consultar su trazabilidad y existencias, calcular merma/costos, y permitir que un administrador controle el estado del producto y consulte la ficha pública. La aplicación web/PWA se ejecuta en computador y móvil. El frontend canónico está en `src/frontend/`; la API activa está en `backend/`. `src/backend/` contiene stubs vacíos y `frontend/` es una copia heredada; no usar esos árboles para desarrollar.
 
 ## Requisitos oficiales
 

@@ -1,29 +1,61 @@
 # kallpa.cacao
 
-Backend para un MVP de trazabilidad de cacao: recepción, lotes, transformación, inventario, alertas, economía y consulta pública. El repositorio está en la rama `backend`.
+MVP web/PWA para registrar recepciones de cacao, transformaciones, inventario, trazabilidad, costos y fichas públicas de una asociación ficticia del Huila. Todos los datos de demostración son sintéticos.
 
-## Iniciar la API y PostgreSQL con Docker
+## Fuentes activas
 
-Desde PowerShell, en `backend/`:
+- API: `backend/app/` (FastAPI, SQLAlchemy, Alembic).
+- PWA: `src/frontend/` (React, TypeScript, Vite y service worker).
+- Despliegue Compose: PostgreSQL, API y frontend Nginx en servicios separados. `src/backend/` contiene scaffolding vacío y `frontend/` es una copia heredada; no desarrollar en esos dos árboles.
+
+## Ejecutar la aplicación completa
+
+Requiere Docker Desktop con el motor Linux iniciado. Desde PowerShell:
 
 ```powershell
-docker compose up --build db api
+cd backend
+docker compose up --build
 ```
 
+- Aplicación web (build de producción): <http://localhost:8080>
 - API: <http://localhost:8000>
 - Swagger: <http://localhost:8000/docs>
 - Salud: <http://localhost:8000/health>
+- PostgreSQL: `localhost:5433` (base `cacao`, solo para herramientas locales)
 
-Las credenciales sintéticas de demostración son `operador` / `Operador123!` y `admin` / `Admin123!`. No exponga esas credenciales ni la configuración local a Internet.
+Compose conserva PostgreSQL en el volumen `postgres_data`. `docker compose down` elimina contenedores y red, pero conserva ese volumen. **No ejecutes `docker compose down -v`** si necesitas conservar los datos.
 
-La pila incluye el frontend canónico React/PWA en `src/frontend`; el build de producción está verificado. Falta recorrer manualmente las vistas administrativas en escritorio y móvil contra API y PostgreSQL en ejecución. Consulte [backend/README.md](backend/README.md) para rutas de economía, inventario administrativo, auditoría y CSV; [ENTREGA.md](ENTREGA.md) registra estado y evidencia.
+Las cuentas de demostración son `operador` / `Operador123!` y `admin` / `Admin123!`. Son credenciales locales sintéticas; no expongas este Compose a Internet ni reutilices esas claves.
 
-## Ejecutar las pruebas del backend
+## Desarrollo de la PWA
 
-Desde `backend/`, con las dependencias de desarrollo instaladas:
+Desde otra terminal, en `src/frontend/`:
+
+```powershell
+npm ci
+npm run dev -- --host 0.0.0.0
+```
+
+Vite usa normalmente el puerto 5173. La URL `localhost` y la URL de red (IP del computador) son orígenes distintos y pueden mantener cachés de service worker diferentes. Si una muestra una versión anterior, revisa el service worker de ese origen en DevTools; conserva IndexedDB si hay recepciones pendientes.
+
+Para compilar el build de producción:
+
+```powershell
+npm run build
+```
+
+## Pruebas
+
+Desde `backend/`:
 
 ```powershell
 python -m pytest -q
 ```
 
-La prueba de concurrencia PostgreSQL se ejecuta aparte y requiere una base de ensayo aislada. No use la base persistente de demostración para ensayos destructivos.
+Las pruebas ordinarias usan una base SQLite temporal. La prueba de concurrencia PostgreSQL requiere `TEST_POSTGRES_URL` apuntando a una base de ensayo aislada cuyo nombre incluya `test`; no la apuntes a la base de demostración.
+
+## Alcance y estado de verificación
+
+La captura offline se limita a recepciones. Transformaciones y cambios de estado requieren conexión. No hay ciclo de ventas implementado. El build y pruebas automatizadas no sustituyen los recorridos manuales RF01–RF12, la validación móvil ni la prueba de restauración; esos resultados se registran en [E05](documentos/E05_pruebas.md) y [ENTREGA](ENTREGA.md).
+
+El `Makefile` existe, pero sus objetivos no tienen recetas todavía; usa los comandos anteriores.

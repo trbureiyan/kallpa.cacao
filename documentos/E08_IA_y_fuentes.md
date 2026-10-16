@@ -87,3 +87,12 @@ No se agregaron dependencias. Se trasladaron las dependencias ya presentes en `f
 - Revisi髇 humana requerida: probar la migraci髇 en una base de ensayo respaldada antes de activar la API contra datos persistentes; revisar creaci髇/desactivaci髇 de usuarios y municipio asociado; recorrer las vistas en escritorio/m髒il y verificar que el operador reciba 403 en rutas administrativas. Confirmar que las consultas anal韙icas representan las reglas aceptadas por el equipo.
 
 Ajuste de alcance de esta implementaci贸n: `src/frontend/src/db.ts` ahora guarda el c贸digo legible que devuelve el servidor al sincronizar una recepci贸n; antes de ese momento la interfaz muestra una referencia local pendiente, porque el contrato genera el c贸digo CAC en FastAPI. Tambi茅n se agregaron `GET /public/products/{code}/traceability` y la alerta de merma en la respuesta de transformaci贸n. No se requiere instalar una biblioteca QR; la ficha comparte un enlace directo con el c贸digo del producto.
+
+
+## Revision de estado, pruebas y documentacion (2026-10-16)
+
+- Herramienta: ChatGPT (OpenAI), agente de codigo.
+- Proposito: contrastar fuentes activas y evidencia con el reto; documentar suite, build, estado HTTP y migracion observados.
+- Archivos afectados: README.md, AGENTS.md, documentos/E02_requisitos.md, documentos/E03_diseno.md, documentos/E05_pruebas.md, documentos/E07_operacion.md, ENTREGA.md, este archivo.
+- Revision humana requerida: validar que las rutas fuente (backend/ y src/frontend/) sigan siendo las acordadas; repetir la prueba offline en navegador y la restauracion en una base aislada; completar casos manuales y verificar informacion de equipo/piloto.
+- Verificacion observada: pytest 18 passed / 1 skipped / 1 warning; concurrencia PostgreSQL temporal 1 passed; build Vite/TypeScript/PWA exitoso; HTTP 200 en web, /health y /docs; Alembic b6d1ef3a9204 (head). No se modifico la base persistente durante estas pruebas.
