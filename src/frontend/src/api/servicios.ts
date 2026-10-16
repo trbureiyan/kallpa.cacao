@@ -5,6 +5,35 @@ import type {
   RecepcionEnvio, RecepcionResultado, TransformacionEnvio, TransformacionResultado, Trazabilidad, Usuario,
 } from './tipos'
 import type { EstadoLote } from '@/shared/etiquetas'
+import { db } from '@/db/dexieDb'
+
+/**
+ * Respaldo de lectura: con servidor, guarda la respuesta; sin servidor (sin respuesta HTTP), devuelve la
+ * última guardada. Un error con respuesta (401, 403, 422...) NO usa respaldo: es una decisión del servidor.
+ * Las escrituras nunca pasan por aquí.
+ */
+function usuarioGuardado(): string {
+  try {
+    return (JSON.parse(localStorage.getItem('kallpa.usuario') ?? 'null') as { username?: string } | null)?.username ?? ''
+  } catch {
+    return ''
+  }
+}
+
+async function conRespaldo<T>(clave: string, leer: () => Promise<T>): Promise<T> {
+  // La clave incluye el usuario para no mostrar datos de otra sesión en el mismo dispositivo.
+  const k = `${usuarioGuardado()}|${clave}`
+  try {
+    const datos = await leer()
+    void db.cacheApi.put({ clave: k, datos, guardadoEn: Date.now() }).catch(() => undefined)
+    return datos
+  } catch (error) {
+    if ((error as { response?: unknown }).response) throw error
+    const guardado = await db.cacheApi.get(k).catch(() => undefined)
+    if (guardado) return guardado.datos as T
+    throw error
+  }
+}
 
 export async function iniciarSesion(username: string, password: string): Promise<string> {
   // El login de FastAPI (OAuth2PasswordRequestForm) espera formulario, no JSON.
@@ -14,14 +43,14 @@ export async function iniciarSesion(username: string, password: string): Promise
 }
 export const obtenerUsuarioActual = async () => (await axiosClient.get<Usuario>('/auth/me')).data
 
-export const listarFincas = async () => (await axiosClient.get<Finca[]>('/farms')).data
+export const listarFincas = () => conRespaldo('fincas', async () => (await axiosClient.get<Finca[]>('/farms')).data)
 export const enviarRecepcion = async (datos: RecepcionEnvio) =>
   (await axiosClient.post<RecepcionResultado>('/receptions', datos)).data
 
-export const listarLotes = async (filtros: { origin?: string; status?: string } = {}) =>
-  (await axiosClient.get<Lote[]>('/lots', { params: filtros })).data
-export const obtenerTrazabilidad = async (loteId: number) =>
-  (await axiosClient.get<Trazabilidad>(`/lots/${loteId}/traceability`)).data
+export const listarLotes = (filtros: { origin?: string; status?: string } = {}) =>
+  conRespaldo(`lotes:${JSON.stringify(filtros)}`, async () => (await axiosClient.get<Lote[]>('/lots', { params: filtros })).data)
+export const obtenerTrazabilidad = (loteId: number) =>
+  conRespaldo(`traza:${loteId}`, async () => (await axiosClient.get<Trazabilidad>(`/lots/${loteId}/traceability`)).data)
 
 export const registrarTransformacion = async (datos: TransformacionEnvio) =>
   (await axiosClient.post<TransformacionResultado>('/transformations', datos)).data
@@ -29,12 +58,12 @@ export const registrarTransformacion = async (datos: TransformacionEnvio) =>
 export const cambiarEstadoLote = async (loteId: number, status: EstadoLote, reason: string) =>
   (await axiosClient.patch<{ code: string; status: EstadoLote; reason: string }>(`/lots/${loteId}/status`, { status, reason })).data
 
-export const inventarioAdmin = async (filtros: { origin?: string; status?: string } = {}) =>
-  (await axiosClient.get<InventarioAdmin[]>('/inventory/admin', { params: filtros })).data
-export const auditoriaDeLote = async (loteId: number) =>
-  (await axiosClient.get<EventoAuditoria[]>(`/lots/${loteId}/audit`)).data
-export const listarAlertas = async () => (await axiosClient.get<Alerta[]>('/alerts')).data
-export const listarEconomia = async () => (await axiosClient.get<Economia[]>('/economics')).data
+export const inventarioAdmin = (filtros: { origin?: string; status?: string } = {}) =>
+  conRespaldo(`inventario:${JSON.stringify(filtros)}`, async () => (await axiosClient.get<InventarioAdmin[]>('/inventory/admin', { params: filtros })).data)
+export const auditoriaDeLote = (loteId: number) =>
+  conRespaldo(`auditoria:${loteId}`, async () => (await axiosClient.get<EventoAuditoria[]>(`/lots/${loteId}/audit`)).data)
+export const listarAlertas = () => conRespaldo('alertas', async () => (await axiosClient.get<Alerta[]>('/alerts')).data)
+export const listarEconomia = () => conRespaldo('economia', async () => (await axiosClient.get<Economia[]>('/economics')).data)
 
 /** El CSV lo genera el servidor (solo administrador); aquí solo se descarga con el token. */
 export async function descargarCsvLotes(filtros: { origin?: string; status?: string } = {}) {
@@ -47,5 +76,5 @@ export async function descargarCsvLotes(filtros: { origin?: string; status?: str
   URL.revokeObjectURL(url)
 }
 
-export const obtenerFichaPublica = async (codigo: string) =>
-  (await axiosClient.get<FichaPublica>(`/public/products/${encodeURIComponent(codigo)}`)).data
+export const obtenerFichaPublica = (codigo: string) =>
+  conRespaldo(`ficha:${codigo}`, async () => (await axiosClient.get<FichaPublica>(`/public/products/${encodeURIComponent(codigo)}`)).data)

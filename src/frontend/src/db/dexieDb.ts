@@ -17,6 +17,14 @@ export interface RecepcionCola {
   mensajeError?: string
 }
 
+// Última respuesta buena de cada lectura del servidor (solo datos reales ya recibidos, nunca inventados).
+// Sirve de respaldo cuando el servidor no responde.
+export interface LecturaCache {
+  clave: string
+  datos: unknown
+  guardadoEn: number
+}
+
 // Copia de lectura del catálogo de fincas para poder capturar sin conexión.
 export interface FincaCache {
   id: number
@@ -28,6 +36,7 @@ export interface FincaCache {
 export class CacaoOfflineDB extends Dexie {
   colaRecepciones!: Table<RecepcionCola, string>
   fincas!: Table<FincaCache, number>
+  cacheApi!: Table<LecturaCache, string>
 
   constructor() {
     super('CacaoOfflineDB')
@@ -46,6 +55,7 @@ export class CacaoOfflineDB extends Dexie {
     })
     // v4: RecepcionForm ordena por region; Dexie exige que el campo esté indexado (sin esto lanza SchemaError).
     this.version(4).stores({ fincas: 'id, region' })
+    this.version(5).stores({ cacheApi: 'clave' })
   }
 }
 

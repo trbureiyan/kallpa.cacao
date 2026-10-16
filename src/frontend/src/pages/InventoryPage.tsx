@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Badge, Button, Icon } from "@/components/ui"
 import { PageHead } from "@/components/shared"
-import { descargarCsvLotes, inventarioAdmin, listarAlertas, listarEconomia } from "@/api/servicios"
+import { descargarCsvLotes, inventarioAdmin, listarAlertas, listarEconomia, listarLotes } from "@/api/servicios"
 import { mensajeError } from "@/api/axiosClient"
 import { InventoryTable } from "@/features/inventario/components/InventoryTable"
 import { CambioEstadoModal } from "@/features/estados/components/CambioEstadoModal"
@@ -14,6 +14,7 @@ export function InventoryPage() {
   const [origen, setOrigen] = useState("")
   const [estado, setEstado] = useState("")
   const [seleccion, setSeleccion] = useState<InventarioAdmin | null>(null)
+  const [busqueda, setBusqueda] = useState("")
   const [errorCsv, setErrorCsv] = useState<string | null>(null)
 
   const filtros = { origin: origen || undefined, status: estado || undefined }
@@ -21,7 +22,10 @@ export function InventoryPage() {
   const alertas = useQuery({ queryKey: ["alertas"], queryFn: listarAlertas })
   const economia = useQuery({ queryKey: ["economia"], queryFn: listarEconomia })
 
-  const lotes = inventario.data ?? []
+  const todos = useQuery({ queryKey: ["lotes"], queryFn: () => listarLotes() })
+  const origenes = [...new Set((todos.data ?? []).map((l) => l.origin))].sort()
+  // La búsqueda por código solo filtra lo que ya trajo el servidor; no decide nada.
+  const lotes = (inventario.data ?? []).filter((l) => l.code.toLowerCase().includes(busqueda.trim().toLowerCase()))
   const totalDisponible = lotes.reduce((s, l) => s + l.available_quantity, 0)
 
   const exportar = async () => {
@@ -64,13 +68,22 @@ export function InventoryPage() {
         <div className="filterbar">
           <div className="section-title">Existencias por lote</div>
           <div className="filters">
-            <input className="input" placeholder="Origen (municipio)" aria-label="Filtrar por origen" value={origen} onChange={(e) => setOrigen(e.target.value)} />
+            <select className="input" aria-label="Filtrar por origen" value={origen} onChange={(e) => setOrigen(e.target.value)}>
+              <option value="">Todos los orígenes</option>
+              {origenes.map((o) => (
+                <option key={o} value={o}>{o}</option>
+              ))}
+            </select>
             <select className="input" aria-label="Filtrar por estado" value={estado} onChange={(e) => setEstado(e.target.value)}>
               <option value="">Todos los estados</option>
               {(Object.keys(ESTADOS) as EstadoLote[]).map((k) => (
                 <option key={k} value={k}>{ESTADOS[k].etiqueta}</option>
               ))}
             </select>
+            <div className="search-box">
+              <Icon name="search" />
+              <input aria-label="Buscar por código de lote" placeholder="Código de lote..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+            </div>
           </div>
         </div>
         {inventario.isError && (

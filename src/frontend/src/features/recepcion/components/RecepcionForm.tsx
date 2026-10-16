@@ -119,6 +119,20 @@ export function RecepcionForm({ isOnline }: Props) {
       )}
 
       <div className="form-actions">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => {
+            setFincaId("")
+            setCantidad("")
+            setCosto("")
+            setNotas("")
+            setError(null)
+            setMensaje(null)
+          }}
+        >
+          Limpiar
+        </Button>
         <Button type="submit" disabled={guardando}>
           <Icon name={isOnline ? "sync" : "box"} />
           {guardando ? "Guardando..." : isOnline ? "Guardar y enviar" : "Guardar en el dispositivo"}

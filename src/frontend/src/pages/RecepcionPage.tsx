@@ -1,5 +1,6 @@
 import { useLiveQuery } from "dexie-react-hooks"
 import { PageHead } from "@/components/shared"
+import { Icon } from "@/components/ui"
 import { db } from "@/db/dexieDb"
 import { useNetwork } from "@/context/NetworkContext"
 import { RecepcionForm } from "@/features/recepcion/components/RecepcionForm"
@@ -21,6 +22,7 @@ export function ReceptionPage() {
         <RecepcionForm isOnline={isOnline} />
 
         <aside className="field-tip">
+          <div className="tip-icon"><Icon name="sprout" size={28} /></div>
           <div className="eyebrow">Consejo de campo</div>
           <div className="section-title mt-2">Verifique el peso neto</div>
           <p>Confirme que la báscula esté calibrada y descuente el peso del empaque antes de guardar.</p>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/dexieDb';
@@ -6,12 +7,14 @@ import { useNetwork } from '@/context/NetworkContext';
 import { useAuth } from '@/context/AuthContext';
 import { PageHead } from '@/components/shared';
 import { listarLotes } from '@/api/servicios';
+import { mensajeError } from '@/api/axiosClient';
 import { ESTADOS, ROLES, type EstadoLote } from '@/shared/etiquetas';
 import { formatoKg } from '@/shared/formato';
 
 export const DashboardPage: React.FC = () => {
   const { isOnline } = useNetwork();
-  const { usuario } = useAuth();
+  const { usuario, salir } = useAuth();
+  const navigate = useNavigate();
   const lotes = useQuery({ queryKey: ['lotes'], queryFn: () => listarLotes(), enabled: isOnline });
   const pendientes = useLiveQuery(() => db.colaRecepciones.where('estado').equals('PENDING').count(), [], 0);
 
@@ -25,13 +28,27 @@ export const DashboardPage: React.FC = () => {
         eyebrow="Resumen general"
         title={`Panel principal · ${usuario ? ROLES[usuario.role] : ''}`}
         text="Estado del inventario y de los registros pendientes de envío."
+        action={
+          <button onClick={() => { salir(); navigate('/login'); }} className="btn btn-ghost">
+            Cerrar sesión
+          </button>
+        }
       />
+
+      {lotes.isError && (
+        <div className="validation warning mb-4" role="alert">
+          <div>
+            <strong>No se pudieron cargar los lotes</strong>
+            <span>{mensajeError(lotes.error)} Cuando haya conexión, la información se actualiza sola.</span>
+          </div>
+        </div>
+      )}
 
       <div className="metrics">
         <div className="metric-card">
           <div className="metric-top"><span>Lotes registrados</span></div>
           <strong>{lista.length}</strong>
-          <small>{isOnline ? 'Datos del servidor' : 'Sin conexión: no se pueden consultar'}</small>
+          <small>{'Última lectura del servidor'}</small>
         </div>
         <div className="metric-card brown">
           <div className="metric-top"><span>Existencia disponible</span></div>

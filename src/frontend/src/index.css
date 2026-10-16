@@ -367,4 +367,4 @@ td strong { color: #1e293b; }
   .public-facts { grid-template-columns: 1fr; }
   .public-facts > div { border: 0; border-bottom: 1px solid #e2e8f0; }
   .public-footer { align-items: flex-start; flex-direction: column; gap: 1rem; }
-}
+}.public-hero .eyebrow { color: #6ee7b7; }

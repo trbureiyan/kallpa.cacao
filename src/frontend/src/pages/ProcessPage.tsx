@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { PageHead } from "@/components/shared"
 import { Badge } from "@/components/ui"
 import { listarLotes } from "@/api/servicios"
+import { mensajeError } from "@/api/axiosClient"
 import type { TransformacionResultado } from "@/api/tipos"
 import { ProcessForm } from "@/features/transformacion/components/ProcessForm"
 import { ShrinkageAlertCard } from "@/features/transformacion/components/ShrinkageAlertCard"
@@ -11,7 +12,7 @@ import { formatoFecha, formatoKg } from "@/shared/formato"
 
 export function ProcessPage() {
   const [ultimo, setUltimo] = useState<TransformacionResultado | null>(null)
-  const { data: lotes = [] } = useQuery({ queryKey: ["lotes"], queryFn: () => listarLotes() })
+  const { data: lotes = [], isError, error } = useQuery({ queryKey: ["lotes"], queryFn: () => listarLotes() })
   // Los lotes de salida (productos) son los que no son materia prima recibida.
   const productos = lotes.filter((l) => l.product_type !== "raw_cocoa")
 
@@ -22,6 +23,15 @@ export function ProcessPage() {
         title="Transformación y control de merma"
         text="Registre cada etapa. El servidor calcula la merma, descuenta el inventario y genera el lote de salida."
       />
+
+      {isError && (
+        <div className="validation warning mb-4" role="alert">
+          <div>
+            <strong>No se pudieron cargar los lotes</strong>
+            <span>{mensajeError(error)} Registrar una etapa requiere conexión con el servidor.</span>
+          </div>
+        </div>
+      )}
 
       <div className="process-layout">
         <ProcessForm onResultado={setUltimo} />
