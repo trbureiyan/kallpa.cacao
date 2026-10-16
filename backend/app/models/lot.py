@@ -10,6 +10,7 @@ class Lot(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     code: Mapped[str] = mapped_column(String(40), unique=True, index=True)
     producer_id: Mapped[int] = mapped_column(ForeignKey("producers.id"))
+    product_type: Mapped[str] = mapped_column(String(40), default="raw_cocoa", index=True)
     farm_id: Mapped[int | None] = mapped_column(ForeignKey("farms.id"), nullable=True, index=True)
     origin: Mapped[str] = mapped_column(String(160), index=True)
     received_on: Mapped[date] = mapped_column(Date)
