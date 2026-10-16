@@ -6,9 +6,8 @@ import { ProcessForm } from "@/features/transformacion/components/ProcessForm"
 import { ShrinkageAlertCard } from "@/features/transformacion/components/ShrinkageAlertCard.tsx"
 
 export function ProcessPage() {
-  const [lastInputQty, setLastInputQty] = useState(250)
-  const [lastOutputQty, setLastOutputQty] = useState(200)
-
+  const [lastInputQty] = useState(250)
+  const [lastOutputQty] = useState(200)
   // Consultas reactivas
   const lotes = useLiveQuery(() => db.recepciones.toArray(), [], [])
   const procesosHistorial = useLiveQuery(() => db.procesos.reverse().toArray(), [], [])

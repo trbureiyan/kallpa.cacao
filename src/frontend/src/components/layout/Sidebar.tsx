@@ -2,7 +2,7 @@ import React from 'react'
 import { NavLink } from 'react-router-dom'
 import { 
   LayoutDashboard, 
-  PackageInput, 
+  Package, 
   Workflow, 
   GitCommit, 
   Boxes, 
@@ -15,7 +15,7 @@ import {
 export const Sidebar: React.FC = () => {
   const menuItems = [
     { to: '/dashboard', label: 'Resumen', icon: LayoutDashboard },
-    { to: '/recepcion', label: 'Recepción', icon: PackageInput },
+    { to: '/recepcion', label: 'Recepción', icon: Package },
     { to: '/transformacion', label: 'Transformación', icon: Workflow },
     { to: '/trazabilidad', label: 'Trazabilidad', icon: GitCommit },
     { to: '/inventario', label: 'Inventario', icon: Boxes },
@@ -26,7 +26,6 @@ export const Sidebar: React.FC = () => {
   return (
     <aside className="w-64 bg-white border-r border-slate-200 min-h-screen flex flex-col justify-between p-4 shrink-0">
       <div>
-        {/* Logo y Nombre */}
         <div className="flex items-center gap-3 px-2 py-3 mb-6">
           <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-md">
             <Sprout size={24} />
@@ -45,7 +44,6 @@ export const Sidebar: React.FC = () => {
           Espacio de trabajo
         </div>
 
-        {/* Enlaces de Navegación */}
         <nav className="space-y-1">
           {menuItems.map((item) => {
             const IconComponent = item.icon
@@ -69,7 +67,6 @@ export const Sidebar: React.FC = () => {
         </nav>
       </div>
 
-      {/* Tarjeta de Ayuda Inferior */}
       <div className="bg-emerald-50/80 border border-emerald-100 rounded-2xl p-3 flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
           <HelpCircle size={18} />

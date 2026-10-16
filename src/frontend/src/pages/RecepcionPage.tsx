@@ -13,7 +13,7 @@ export function ReceptionPage({
   online: boolean
   addPending: () => void
 }) {
-  const [search, setSearch] = useState("")
+  const [search] = useState("")
 
   // Consulta reactiva a Dexie
   const lotesLocales = useLiveQuery(

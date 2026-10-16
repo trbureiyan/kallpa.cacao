@@ -1,4 +1,4 @@
-import React, { useState, type FormEvent } from "react"
+import { useState, type FormEvent } from "react"
 import { db } from "@/db/dexieDb"
 import { sincronizarRecepcionesPendientes } from "../api/recepcionSync"
 import { Button, Field, Icon } from "@/components/ui"

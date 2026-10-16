@@ -1,4 +1,3 @@
-import React from 'react';
 import type { AuditEntry } from '@/db/dexieDb';
 
 export function AuditLogTable({ logs }: { logs: AuditEntry[] }) {

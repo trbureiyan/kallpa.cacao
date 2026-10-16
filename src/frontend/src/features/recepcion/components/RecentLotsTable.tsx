@@ -1,4 +1,3 @@
-import React from 'react';
 import type { RecepcionOffline } from '@/db/dexieDb';
 
 interface RecentLotsTableProps {
