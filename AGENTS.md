@@ -90,6 +90,8 @@ kallpa.cacao/
 └── AGENTS.md
 ```
 
+**Ubicación actual de la API:** la rama `backend` la mantiene en `backend/` (FastAPI, SQLAlchemy, Alembic, Docker), no en `src/backend/`, que quedó vacío allí. Se acordó no moverla; el árbol de arriba sigue siendo el destino de referencia. Contrato frontend–backend: `docs/contrato-api.md`.
+
 Crear módulos y directorios solo cuando se vayan a usar de inmediato. No dejar directorios vacíos sin propósito. El árbol de arriba es el destino; no todo existe todavía. El scaffolding actual está vacío (stubs de 0 bytes), así que antes de proponer nada inspeccionar `src/` y respetar lo que haya agregado el equipo.
 
 **Layer architecture:** `Request → router (require_role) → service → rules (funciones puras) / models → DB`. El frontend solo muestra: consume la API y nunca decide.
@@ -108,7 +110,7 @@ Crear módulos y directorios solo cuando se vayan a usar de inmediato. No dejar 
 | `make backup` | Copia el archivo SQLite a `datos/respaldo/` con checksum | Idempotente |
 | `make restore` | Restaura un respaldo | Ver Dangerous Commands |
 
-Los targets del `Makefile` existen pero aún están vacíos. Completarlos antes de documentarlos en `README.md`. Frontend (desde `src/frontend/`): `pnpm test` (vitest), `pnpm exec tsc -b` (tipos), `pnpm exec eslint .` (lint), `pnpm build`. Backend: por definir.
+Los targets del `Makefile` existen pero aún están vacíos. Completarlos antes de documentarlos en `README.md`. Frontend (desde `src/frontend/`): `pnpm test` (vitest), `pnpm exec tsc -b` (tipos), `pnpm exec eslint .` (lint), `pnpm build`. Variables del frontend (`src/frontend/.env.example`): `VITE_API_URL` y `VITE_PERMITIR_MODO_LOCAL` (`false` en la evaluación; `true` solo para trabajar sin servidor, en `.env.local`). CI en `.github/workflows/ci.yml`: tipos, lint, pruebas y build del frontend; pytest del backend cuando existe `backend/`. Backend: `python -m pytest -q` desde `backend/`.
 
 ### Dangerous Commands
 
@@ -182,9 +184,15 @@ Document known landmines here. Be specific: name the files, describe the behavio
 - **[Offline]**: alcance limitado a la RECEPCIÓN de lotes. UUID técnico generado en el cliente; el servidor asigna el código legible (`CACxxx`) al sincronizar. Sincronización idempotente. Si a la hora 14 RF01–RF12 no recorren el flujo con pruebas, el offline se reduce o se descarta.
 - **[Incidencia hora 12]**: bloquear CAC001, identificar origen y explicar cantidades afectadas, sin borrar historial. Requiere tarjeta de cambio (`documentos/cambios/CC-001`), ajuste de un criterio de aceptación y prueba de regresión en `tests/backend/regresion/`. Bloquear es un cambio de estado auditado, nunca un borrado.
 - **[CSV]**: el CSV (RF11) y los cálculos autoritativos se generan en el servidor, solo para administrador.
-- **[Frontend sin backend, fase 1]**: hasta integrar el backend, el frontend ejecuta las reglas contra Dexie (`features/*/api/*Db.ts`) como respaldo local. Esto contradice «el frontend nunca decide» y es transitorio: en la fase 2 cada servicio llama primero a la API y Dexie queda como cola de recepciones. La rama `frontend` es la fuente de verdad de los contratos; lo que difiera en la rama `backend` se adapta del lado del backend.
+- **[RESUELTO · Frontend sin backend, fase 1]** (ver «Fuente única por sesión»): hasta integrar el backend, el frontend ejecuta las reglas contra Dexie (`features/*/api/*Db.ts`) como respaldo local. Esto contradice «el frontend nunca decide» y es transitorio: en la fase 2 cada servicio llama primero a la API y Dexie queda como cola de recepciones. La rama `frontend` es la fuente de verdad de los contratos; lo que difiera en la rama `backend` se adapta del lado del backend.
 - **[Vocabulario vigente]**: los campos y estados del frontend están en inglés/mayúsculas (`lotCode`, `producer`, `status` con `PENDIENTE|LIBERADO|BLOQUEADO`) y la rama `backend` también usa nombres en inglés. Se acordó mantenerlos en lugar de migrar a español; esta entrada reemplaza lo dicho en Domain Language sobre nombres idénticos en español.
-- **[Usuarios demo locales]**: `context/usuariosDemo.ts` guarda usuarios de demostración solo para el modo sin backend. La autenticación real pasa al servidor en la fase 2 y ese archivo se elimina.
+- **[Usuarios demo locales]**: `context/usuariosDemo.ts` guarda usuarios de demostración solo para el modo sin backend. En la fase 2 la autenticación real la hace el servidor; estos usuarios solo se ofrecen con `VITE_PERMITIR_MODO_LOCAL=true` y deben desaparecer del despliegue final.
+- **[Fuente única por sesión]**: al iniciar sesión, si la API responde todo va a la API (`features/*/api/*Api.ts`); solo si no hay red y `VITE_PERMITIR_MODO_LOCAL=true` todo va a Dexie (`*Db.ts`). Nunca se mezclan por llamada: dejaría lotes locales que el servidor no conoce y existencias duplicadas. Dexie conserva la cola de recepciones pendientes y la copia del catálogo de fincas. Un 401 con sesión la cierra sin tocar la cola.
+- **[Modo local en la evaluación]**: `VITE_PERMITIR_MODO_LOCAL` debe ir en `false` en la entrega. Encendido, un fallo de red muestra datos de demostración en lugar del servidor.
+- **[Contrato con el backend]**: `docs/contrato-api.md` lista endpoints, equivalencias de vocabulario y deltas pendientes. Si cambia un endpoint, se actualiza ese archivo y las pruebas de `*Api.test.ts` en el mismo commit. La forma de `/lots/{id}/traceability`, `/economics` y `/audit` se armó leyendo el código del backend y debe verificarse contra la API en marcha.
+- **[CSV del servidor]**: `GET /exports/lots.csv` no neutraliza texto que Excel lee como fórmula; el CSV local sí. En modo API el archivo es el del servidor, así que el riesgo vive allí hasta que lo corrijan.
+- **[Costo sin dato]**: el frontend omite `costs_cop` cuando el operador no lo escribe, pero el backend lo toma como 0 y el costo unitario deja de ser «no calculable». Hasta que el servidor acepte «sin dato», un costo de 0 puede ser un costo no registrado.
+- **[Versiones del backend]**: `backend/requirements.txt` usa rangos y no hay lockfile; contradice «Supply Chain and Dependencies» y hace que CI pueda instalar versiones distintas.
 - **[Datos sintéticos]**: solo datos sintéticos. Sin contraseñas, claves ni información privada en el repo ni en herramientas de IA.
 - **[Dependencias no confirmadas]**: FastAPI y SQLite están recomendados pero pendientes de confirmación del equipo. No instalar dependencias hasta que se confirmen.
 

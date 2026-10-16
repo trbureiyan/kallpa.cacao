@@ -3,6 +3,8 @@ name: ci
 on:
   push:
   pull_request:
+  # permite repetir la ejecución a mano con `gh workflow run ci.yml --ref <rama>`
+  workflow_dispatch:
 
 # Solo lectura: el flujo no publica ni etiqueta nada
 permissions:
