@@ -1,0 +1,26 @@
+# Blueprint de Render: un servicio web con Docker que sirve API y PWA. La base de datos es Neon (externa).
+services:
+  - type: web
+    name: kallpa-cacao
+    runtime: docker
+    plan: free
+    region: oregon
+    branch: master
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: SEED_DEMO_DATA
+        value: "false"
+      - key: LOSS_ALERT_THRESHOLD_PERCENT
+        value: "15"
+      - key: DELAY_ALERT_DAYS
+        value: "7"
+      # secretos: se cargan en Render, nunca en el repositorio
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        sync: false
