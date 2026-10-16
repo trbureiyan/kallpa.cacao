@@ -27,32 +27,20 @@ kallpa.cacao/
 ├── .github/workflows/ci.yml         # pytest + tipos + build
 ├── .docs/                           # reto oficial y contexto; NO modificar sin preguntar
 │
+├── backend/                         # API (FastAPI, SQLAlchemy, Alembic); la mantiene la rama backend
+│   ├── app/
+│   │   ├── main.py                  # monta los routers; la API aún no sirve el build del frontend
+│   │   ├── config.py · database.py  # configuración por variables de entorno (.env en backend/) y sesión
+│   │   ├── api/                     # un router por área: auth, receptions, lots, transformations, inventory,
+│   │   │                            #   alerts, economics, audit, public, exports, users, analytics
+│   │   ├── security/                # authentication.py, permissions.py: require_roles(), ÚNICO punto de control de acceso
+│   │   ├── services/                # reglas y transacciones: inventario, transformación, trazabilidad, alertas, economía
+│   │   └── models/ · schemas/       # tablas y contratos de entrada y salida
+│   ├── migrations/                  # Alembic
+│   ├── tests/                       # pytest del backend
+│   └── Dockerfile · docker-compose.yml · requirements.txt · requirements-dev.txt
+│
 ├── src/
-│   ├── backend/
-│   │   ├── pyproject.toml
-│   │   └── app/
-│   │       ├── main.py              # monta routers y sirve el build del frontend
-│   │       ├── core/
-│   │       │   ├── config.py
-│   │       │   ├── database.py      # sesión, transacciones, PRAGMAs de SQLite
-│   │       │   ├── security.py      # hash de contraseñas, sesión o token — cambios solo con aprobación
-│   │       │   ├── permissions.py   # require_role(): ÚNICO punto de control de acceso
-│   │       │   ├── idempotency.py   # clave única por operación
-│   │       │   ├── errors.py        # errores de dominio → mensajes claros
-│   │       │   └── clock.py         # hora del servidor, sustituible en pruebas
-│   │       └── modules/             # cada módulo: router, service, schemas, models, rules
-│   │           ├── identidad/       # usuarios, login, roles
-│   │           ├── lotes/           # RF01
-│   │           ├── inventario/      # RF08: libro de movimientos, disponible derivado
-│   │           ├── transformacion/  # RF02
-│   │           ├── trazabilidad/    # RF03
-│   │           ├── economia/        # RF05, RF12, merma
-│   │           ├── alertas/         # RF04
-│   │           ├── estados/         # RF09
-│   │           ├── auditoria/       # RF10: solo inserción
-│   │           ├── reportes/        # RF11: filtros y CSV
-│   │           ├── publico/         # RF06: ficha con serializador propio
-│   │           └── sincronizacion/  # diferenciador: ingestión offline idempotente
 │   └── frontend/
 │       ├── package.json · vite.config.ts · tsconfig.json
 │       └── src/
@@ -90,7 +78,7 @@ kallpa.cacao/
 └── AGENTS.md
 ```
 
-**Ubicación actual de la API:** la rama `backend` la mantiene en `backend/` (FastAPI, SQLAlchemy, Alembic, Docker), no en `src/backend/`, que quedó vacío allí. Se acordó no moverla; el árbol de arriba sigue siendo el destino de referencia. Contrato frontend–backend: `docs/contrato-api.md`.
+**Ubicación de la API:** `backend/`. Se eliminó `src/backend/`, que solo tenía 83 archivos vacíos sin referencias. El backend agrupa por capa (`api/`, `services/`, `models/`), no por módulo como describen «Layer architecture» y «Estructura de módulos (backend)» más abajo; esas secciones siguen siendo la intención de diseño y las reglas que valen son las de permisos, inventario, idempotencia y auditoría. Contrato frontend–backend: `docs/contrato-api.md`.
 
 Crear módulos y directorios solo cuando se vayan a usar de inmediato. No dejar directorios vacíos sin propósito. El árbol de arriba es el destino; no todo existe todavía. El scaffolding actual está vacío (stubs de 0 bytes), así que antes de proponer nada inspeccionar `src/` y respetar lo que haya agregado el equipo.
 
