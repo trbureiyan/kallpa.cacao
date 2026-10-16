@@ -96,7 +96,7 @@ export function InventoryPage() {
         <div className="validation danger mt-6" role="alert">
           <Icon name="alert" />
           <div>
-            <strong>No se pudo cargar el inventario</strong>
+            <strong>{error ? "No se pudo cargar el inventario" : "No se pudo exportar el CSV"}</strong>
             <span>{error ?? errorExport}</span>
           </div>
         </div>

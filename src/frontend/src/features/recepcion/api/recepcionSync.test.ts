@@ -94,6 +94,40 @@ describe('sincronizarRecepcionesPendientes (modo api)', () => {
   })
 })
 
+describe('sincronizarRecepcionesPendientes (corridas simultáneas)', () => {
+  it('dos corridas a la vez no envían dos veces la misma recepción', async () => {
+    await encolarRecepcionApi(datos)
+    const post = vi.spyOn(axiosClient, 'post').mockImplementation(async () => {
+      await new Promise((r) => setTimeout(r, 20))
+      return ok('CAC008')
+    })
+    const [a, b] = await Promise.all([sincronizarRecepcionesPendientes('api'), sincronizarRecepcionesPendientes('api')])
+    expect(post).toHaveBeenCalledTimes(1)
+    expect(a + b).toBe(1)
+  })
+
+  it('una recepción guardada mientras corre otra sincronización también se envía', async () => {
+    await encolarRecepcionApi(datos)
+    const post = vi.spyOn(axiosClient, 'post').mockImplementation(async () => {
+      await new Promise((r) => setTimeout(r, 20))
+      return ok('CAC00X')
+    })
+    const primera = sincronizarRecepcionesPendientes('api')
+    await encolarRecepcionApi(datos) // llega después de que la primera leyó sus pendientes
+    const segunda = sincronizarRecepcionesPendientes('api')
+    await Promise.all([primera, segunda])
+    expect(post).toHaveBeenCalledTimes(2)
+    expect((await db.recepciones.toArray()).every((l) => l.syncStatus === 'SYNCED')).toBe(true)
+  })
+
+  it('si una corrida falla, la siguiente igual se ejecuta', async () => {
+    await encolarRecepcionApi(datos)
+    vi.spyOn(axiosClient, 'post').mockRejectedValueOnce(new AxiosError('Network Error', 'ERR_NETWORK')).mockResolvedValueOnce(ok('CAC009'))
+    await sincronizarRecepcionesPendientes('api')
+    expect(await sincronizarRecepcionesPendientes('api')).toBe(1)
+  })
+})
+
 describe('sincronizarRecepcionesPendientes (modo local)', () => {
   it('no llama a la API', async () => {
     await encolarRecepcionApi(datos)

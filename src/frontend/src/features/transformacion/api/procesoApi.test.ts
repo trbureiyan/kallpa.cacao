@@ -62,16 +62,18 @@ describe('registrarProcesoApi', () => {
     expect((post.mock.calls[0][1] as { incident: string }).incident).toBe('adición de insumos · lluvia')
   })
 
-  it('un reintento con la misma clave manda la misma clave y el mismo código de salida', async () => {
+  it('un reintento con la misma clave manda la misma clave, el mismo código y la misma hora aunque pase el tiempo', async () => {
     conInventario()
     const post = vi.spyOn(axiosClient, 'post').mockResolvedValue({ data: { output_code: 'x' } })
-    await registrarProcesoApi('ADMINISTRADOR', datos)
-    await registrarProcesoApi('ADMINISTRADOR', datos)
+    const intento = { ...datos, ocurridoEn: '2026-01-10T11:00:00.000Z' }
+    await registrarProcesoApi('ADMINISTRADOR', intento)
+    fijarReloj(() => '2026-01-10T11:05:00.000Z')
+    await registrarProcesoApi('ADMINISTRADOR', intento)
+    expect((post.mock.calls[0][1] as { occurred_at: string }).occurred_at).toBe('2026-01-10T11:00:00.000Z')
     expect(post.mock.calls[0][1]).toEqual(post.mock.calls[1][1])
   })
 
   it.each([
-    ['más que la existencia', { inputQty: 120 }, 'EXISTENCIA_INSUFICIENTE'],
     ['entrada 0', { inputQty: 0 }, 'DATO_INVALIDO'],
     ['salida mayor sin justificar', { outputQty: 120 }, 'DATO_INVALIDO'],
     ['lote desconocido', { lotCode: 'CAC999' }, 'LOTE_NO_ENCONTRADO'],
@@ -80,6 +82,13 @@ describe('registrarProcesoApi', () => {
     const post = vi.spyOn(axiosClient, 'post')
     await expect(registrarProcesoApi('ADMINISTRADOR', { ...datos, ...cambio })).rejects.toMatchObject({ codigo })
     expect(post).not.toHaveBeenCalled()
+  })
+
+  it('la existencia la decide el servidor: un reintento con el lote ya en 0 kg igual se envía', async () => {
+    vi.spyOn(axiosClient, 'get').mockResolvedValue({ data: [{ ...inventario[0], available_quantity: 0 }] })
+    const post = vi.spyOn(axiosClient, 'post').mockResolvedValue({ data: { output_code: 'CAC001-AAAAAA' } })
+    await expect(registrarProcesoApi('ADMINISTRADOR', datos)).resolves.toEqual({ outputCode: 'CAC001-AAAAAA' })
+    expect(post).toHaveBeenCalledTimes(1)
   })
 
   it('un rechazo del servidor se muestra con su detalle', async () => {

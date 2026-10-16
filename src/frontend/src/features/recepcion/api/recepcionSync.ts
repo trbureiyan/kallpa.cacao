@@ -6,11 +6,22 @@ import { db } from '@/db/dexieDb'
 // Errores que no dependen del registro: seguir enviando solo alargaría la espera y no cambiaría el resultado.
 const CORTAN_LA_CORRIDA = new Set(['SESION', 'SIN_RED', 'SERVIDOR'])
 
+// [DECISION] las corridas se encolan en lugar de reutilizar la que está en curso: la página y el formulario pueden
+// pedir sincronizar a la vez, y una recepción guardada justo después de que la primera leyó sus pendientes
+// quedaría sin enviar si se devolviera esa misma promesa. Cada corrida lee las pendientes cuando le toca.
+let cola: Promise<unknown> = Promise.resolve()
+
 /**
  * Envía las recepciones pendientes a /receptions, una por una y en orden de captura.
  * Devuelve cuántas quedaron sincronizadas. Una recepción nunca se borra: o queda SYNCED, o PENDING, o ERROR con mensaje.
  */
-export async function sincronizarRecepcionesPendientes(modo: ModoFuente): Promise<number> {
+export function sincronizarRecepcionesPendientes(modo: ModoFuente): Promise<number> {
+  const corrida = cola.catch(() => undefined).then(() => correr(modo))
+  cola = corrida
+  return corrida
+}
+
+async function correr(modo: ModoFuente): Promise<number> {
   if (modo !== 'api') return 0
 
   const pendientes = await db.recepciones.where('syncStatus').equals('PENDING').sortBy('idLocal')

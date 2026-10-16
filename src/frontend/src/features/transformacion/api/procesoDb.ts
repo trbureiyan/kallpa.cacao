@@ -18,6 +18,8 @@ export interface DatosProceso {
   incidencias?: string
   notes?: string
   claveIdempotencia: string
+  /** Hora de captura fijada con la clave: un reintento debe enviar la misma, o el servidor lo ve como otra operación. */
+  ocurridoEn?: string
 }
 
 /**

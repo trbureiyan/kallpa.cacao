@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { useAuth } from '@/context/AuthContext'
+import { ahoraISO } from '@/utils/clock'
 import { ErrorDominio } from '@/utils/errores'
 import { formatearKg, parsearNumero } from '@/utils/formato'
 import { registrarProcesoApi } from '../api/procesoApi'
@@ -44,8 +45,10 @@ function aBorrador(v: typeof VACIO): Borrador {
 export function ProcessForm({ lotes, onBorrador, onSuccess }: ProcessFormProps) {
   const { nombreUsuario, modo, rol } = useAuth()
   const [v, setV] = useState({ ...VACIO, lotCode: lotes[0]?.code ?? '' })
-  // Una clave por intento: reenviar el mismo formulario nunca consume dos veces
-  const [clave, setClave] = useState(() => crypto.randomUUID())
+  // Una clave y una hora por intento: reenviar tras perder la respuesta debe enviar lo MISMO, o el servidor lo toma
+  // como otra operación. Se crean en el primer envío (no al abrir el formulario) y se descartan cuando el resultado
+  // es definitivo: éxito o rechazo. Tras sin red o error del servidor el resultado es incierto y se conservan.
+  const intento = useRef<{ clave: string; ocurridoEn: string } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [ok, setOk] = useState(false)
@@ -66,6 +69,7 @@ export function ProcessForm({ lotes, onBorrador, onSuccess }: ProcessFormProps) 
     setLoading(true)
     try {
       const b = aBorrador(v)
+      const actual = (intento.current ??= { clave: crypto.randomUUID(), ocurridoEn: ahoraISO() })
       const datos = {
         lotCode,
         stage: v.stage,
@@ -77,15 +81,18 @@ export function ProcessForm({ lotes, onBorrador, onSuccess }: ProcessFormProps) 
         justificacion: v.justificacion,
         incidencias: v.incidencias,
         notes: v.notes,
-        claveIdempotencia: clave,
+        claveIdempotencia: actual.clave,
+        ocurridoEn: actual.ocurridoEn,
       }
       if (modo === 'api' && rol) await registrarProcesoApi(rol, datos)
       else await registrarProcesoLocal(datos)
       setOk(true)
-      setClave(crypto.randomUUID())
+      intento.current = null
       setV({ ...VACIO, lotCode })
       onSuccess?.()
     } catch (err) {
+      const incierto = err instanceof ErrorDominio && (err.codigo === 'SIN_RED' || err.codigo === 'SERVIDOR')
+      if (!incierto) intento.current = null
       setError(
         err instanceof ErrorDominio
           ? err.message

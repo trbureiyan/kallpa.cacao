@@ -36,11 +36,10 @@ export async function registrarProcesoApi(rol: RolUsuario, d: DatosProceso): Pro
     throw new ErrorDominio('LOTE_NO_ENCONTRADO', `No se registró la transformación. El lote ${d.lotCode} no existe. Seleccione un lote registrado en Recepción.`)
   }
 
-  const errores = validarTransformacion({ entradaKg: d.inputQty, salidaKg: d.outputQty, disponibleKg: lote.disponibleKg, justificacion: d.justificacion })
-  if (errores.length > 0) {
-    const sinExistencia = Number.isFinite(d.inputQty) && d.inputQty > lote.disponibleKg
-    throw new ErrorDominio(sinExistencia ? 'EXISTENCIA_INSUFICIENTE' : 'DATO_INVALIDO', errores.join(' '))
-  }
+  // [DECISION] la existencia no se valida aquí: si la respuesta de un envío exitoso se perdió, el reintento con la
+  // misma clave vería 0 kg y se rechazaría, cuando el servidor lo habría respondido sin volver a consumir.
+  const errores = validarTransformacion({ entradaKg: d.inputQty, salidaKg: d.outputQty, disponibleKg: Number.POSITIVE_INFINITY, justificacion: d.justificacion })
+  if (errores.length > 0) throw new ErrorDominio('DATO_INVALIDO', errores.join(' '))
 
   // la API guarda justificación e incidencias en un solo campo
   const incident = [d.justificacion?.trim(), d.incidencias?.trim()].filter(Boolean).join(' · ')
@@ -50,7 +49,7 @@ export async function registrarProcesoApi(rol: RolUsuario, d: DatosProceso): Pro
       idempotency_key: d.claveIdempotencia,
       lot_id: lote.id,
       stage: d.stage,
-      occurred_at: ahoraISO(),
+      occurred_at: d.ocurridoEn ?? ahoraISO(),
       input_quantity: d.inputQty,
       output_quantity: d.outputQty,
       unit: 'kg',
