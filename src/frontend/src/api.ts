@@ -86,7 +86,14 @@ export type ApiTransformation = {
   outputs: Array<{ lot_id: number; lot_code: string; product_type: string; quantity: number; unit: string; status: string }>
 }
 
-export type ApiAlert = { type: string; severity: string; entity: string; value_percent?: number; rule: string; cause: string }
+export type ApiAlert = {
+  type: 'merma' | 'registro_incompleto' | 'retraso' | 'costo'
+  severity: string
+  entity: string
+  value_percent?: number
+  rule: string
+  cause: string
+}
 
 export type ApiUser = {
   id: number

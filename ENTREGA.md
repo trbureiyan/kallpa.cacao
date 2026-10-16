@@ -13,7 +13,7 @@
 
 ## 2. Qué hace la solución
 
-El backend permite registrar productores y fincas, recibir cacao en un lote, registrar transformaciones y lotes de salida, consultar existencias y trazabilidad, cambiar estados con autorización, calcular alertas de merma y datos económicos, publicar una ficha de producto y exportar lotes a CSV.
+El backend permite registrar productores y fincas, recibir cacao en un lote, registrar transformaciones y lotes de salida, consultar existencias y trazabilidad, cambiar estados con autorización, calcular alertas de merma, registro incompleto y retraso, consultar datos económicos, publicar una ficha de producto y exportar lotes a CSV.
 
 El flujo vertical que se debe demostrar es:
 
@@ -37,6 +37,8 @@ Los costos se guardan en un solo libro: `CostEntry`. El costo de compra se asoci
 - Recepción: cantidad positiva, unidad explícita e identificador de lote único. La clave idempotente permite reintentar una operación sin crear otra recepción.
 - Transformación: comprueba lote, estado, stock y unidad; el consumo y la creación de salidas/movimientos se hacen en una transacción. Misma clave y mismo contenido devuelve el resultado previo; misma clave con contenido diferente produce conflicto.
 - Merma: `(entrada - salida) / entrada × 100`. La alerta de merma del caso se activa si supera estrictamente 15 %.
+- Registro incompleto: alerta si una etapa no tiene responsable o no tiene ningún registro de costo de procesamiento; un registro de COP 0 cuenta como presente.
+- Retraso: alerta si hay existencia mayor que 0, el lote no está bloqueado y supera los días desde su última etapa o, si no tiene etapas, desde la recepción. `DELAY_ALERT_DAYS` configura el límite (7 días por defecto).
 - Economía: costo unitario = suma de costos de etapa / cantidad de salida vendible; margen sobre venta = `(precio - costo unitario) / precio × 100`. La compra de materia prima queda aparte y no se suma al indicador. Salida o precio cero produce indicador no calculable con explicación.
 - Estados: `pending`, `released`, `blocked`. El cambio requiere rol administrador y motivo. La ficha pública solo informa disponible un producto liberado.
 - Público: el endpoint usa un esquema permitido y excluye contacto del productor y costos internos.
@@ -82,13 +84,13 @@ Verificación ejecutada el 16-10-2026 en el commit de referencia `bac1ab59af580a
 | RF01 Recepción | `api/receptions.py`, modelo `Reception`/`Lot` | `test_recepcion_lote.py`; informe de recepción válida, rechazo de 0 y negativo. | Incorporar resultado, datos y captura/consulta SQL a E05. |
 | RF02 Transformación | `api/transformations.py`, `services/transformation.py` | `test_transformacion_salida_trazable.py`; informe del caso 100 kg → 80 kg. | Repetir en la versión final y guardar evidencia de interfaz. |
 | RF03 Trazabilidad | `services/traceability.py`, `GET /lots/{id}/traceability` | Prueba descrita desde lote de entrada y salida hasta productor/finca. | Falta medición reproducible con 100 registros. |
-| RF04 Alerta | `api/alerts.py` | `test_merma_y_perdidas.py`; prueba documentada de 20 % frente a 15 %. | Guardar evidencia de la regla y causa que ve el usuario. |
+| RF04 Alerta | `api/alerts.py`, `services/alerts.py` | `test_merma_y_perdidas.py`, `test_alertas_incompletas_retrasos.py`; merma, campos faltantes y demora configurada devuelven regla y causa. | Pytest local pasa; falta evidencia manual en pantalla para las cuatro categorías. |
 | RF05 Indicador económico | `services/economics.py`, `api/economics.py` | Fórmula y límites documentados en backend README. | Falta evidencia del ejemplo con valores modificados y salida cero. |
-| RF06 Ficha pública | `api/public.py` | Esquema público con lista de campos permitidos; prueba de privacidad descrita. | Falta registrar prueba anónima/captura de la versión final. |
+| RF06 Ficha pública | `api/public.py`, `test_ficha_publica_auditoria_global.py` | Esquema público con campos permitidos para lotes crudos y procesados; prueba de privacidad. | Falta registrar prueba anónima/captura de la versión final. |
 | RF07 Persistencia | SQLAlchemy, Alembic, PostgreSQL | Informe de reinicio en base PostgreSQL aislada con conteos comparados. | Falta adjuntar pasos de restauración y comprobación de integridad. |
 | RF08 Inventario | `services/inventory.py`, movimientos e idempotencia | Pruebas de exceso, repetición e informe de concurrencia PostgreSQL. | Consolidar comandos, entorno y saldos observados en E05/E07. |
 | RF09 Estados | `api/lots.py`, permisos backend | `test_permisos_roles.py`; informe de 403 para operador y motivo obligatorio. | Registrar bloqueo → operación rechazada → ficha pública no disponible. |
-| RF10 Auditoria | `models/audit.py`, `api/lots.py`, migracion `e4219b1a7c30` | Actor, fecha, accion, valores anterior/nuevo; guardas ORM y triggers impiden update/delete. La instancia Compose observada esta en Alembic head. | Pruebas SQLite y ensayo temporal PostgreSQL 16 pasan; falta guardar evidencia manual de consulta de auditoria en el flujo completo. |
+| RF10 Auditoria | `models/audit.py`, `api/lots.py`, `api/audit.py`, migracion `e4219b1a7c30` | Actor, fecha, accion, valores anterior/nuevo; consulta global solo admin; guardas ORM y triggers impiden update/delete. | Pruebas API locales; falta guardar evidencia manual de consulta de auditoria en el flujo completo. |
 | RF11 Filtros/CSV | `api/inventory.py`, `api/exports.py`, `src/frontend/src/BusinessViews.tsx` | Vista admin filtra por origen/estado y muestra costos por lote; CSV incluye campos requeridos; backend rechaza operador con 403. | Pytest verifica filtros, montos y autorizacion. Falta recorrido visual manual. |
 | RF12 Balance | `api/economics.py`, `services/economics.py`, `src/frontend/src/BusinessViews.tsx` | CostEntry unico; formula/unidades/politica visibles; salida/precio cero no divide; UI muestra indicadores. | Pytest reproduce COP 20.000/kg y margen 20 % con COP 1.600.000, 80 kg y COP 25.000/kg. Falta evidencia visual/manual. |
 

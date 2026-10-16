@@ -96,3 +96,19 @@ Ajuste de alcance de esta implementación: `src/frontend/src/db.ts` ahora guarda
 - Archivos afectados: README.md, AGENTS.md, documentos/E02_requisitos.md, documentos/E03_diseno.md, documentos/E05_pruebas.md, documentos/E07_operacion.md, ENTREGA.md, este archivo.
 - Revision humana requerida: validar que las rutas fuente (backend/ y src/frontend/) sigan siendo las acordadas; repetir la prueba offline en navegador y la restauracion en una base aislada; completar casos manuales y verificar informacion de equipo/piloto.
 - Verificacion observada: pytest 18 passed / 1 skipped / 1 warning; concurrencia PostgreSQL temporal 1 passed; build Vite/TypeScript/PWA exitoso; HTTP 200 en web, /health y /docs; Alembic b6d1ef3a9204 (head). No se modifico la base persistente durante estas pruebas.
+
+## Guion del pitch y preparacion de exposicion (2026-10-16)
+
+- Herramienta: ChatGPT (OpenAI), agente de codigo.
+- Proposito: preparar un guion oral de cinco diapositivas y menos de cinco minutos, con demostracion, propuesta de piloto, metricas y respuestas a preguntas previsibles.
+- Archivos afectados: `pitch/guion.md`.
+- Fuentes: criterios E09 del reto oficial y estado/limitaciones documentados en el repositorio.
+- Revision humana requerida: acordar marca, cliente/pagador, precio COP, alcance y costos del piloto; validar que las cifras y la demostracion coincidan con la version que se presentara. El guion usa el caso sintetico CAC001 y no afirma resultados de campo ni ventas reales.
+
+## Ficha publica de lote crudo y auditoria global (2026-10-16)
+
+- Herramienta: ChatGPT (OpenAI), agente de codigo.
+- Proposito: permitir consultar publicamente lotes de materia prima mediante una lista permitida de campos, y ofrecer auditoria global protegida para administradores.
+- Archivos afectados: `backend/app/api/public.py`, `backend/app/api/audit.py`, `backend/app/main.py`, `backend/tests/test_ficha_publica_auditoria_global.py`, `backend/README.md`, `documentos/E05_pruebas.md`, `ENTREGA.md`.
+- Revision humana requerida: revisar que la etiqueta `recepcion` y la cantidad de lote crudo coincidan con la interfaz; probar `GET /api/v1/public/products/{code}` para CAC001-CAC003 y `GET /api/v1/audit` con ambos roles contra la version desplegada.
+- Verificacion observada: `python -m pytest tests/test_ficha_publica_auditoria_global.py -q`: 2 aprobadas; suite completa `python -m pytest -q`: 20 aprobadas, 1 omitida y 1 advertencia deprecada de Starlette/TestClient. La prueba omitida requiere `TEST_POSTGRES_URL`; no se escribio en la base persistente.

@@ -1,7 +1,9 @@
+from datetime import datetime, time, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import Lot, Transformation, TransformationOutput
+from app.models import Lot, Reception, Transformation, TransformationOutput
 from app.schemas.api import PublicProduct
 from app.services.traceability import trace_lot
 
@@ -15,10 +17,22 @@ def product_card(code: str, db: Session = Depends(get_db)):
         raise HTTPException(404, "Producto no encontrado")
     link = db.query(TransformationOutput).filter_by(lot_id=lot.id).first()
     product = db.get(Transformation, link.transformation_id) if link else None
-    if not product:
-        raise HTTPException(404, "Producto sin lote de salida")
+    if link and not product:
+        raise HTTPException(404, "Transformación del producto no encontrada")
+    if product:
+        stage = product.stage
+        occurred_at = product.occurred_at
+    else:
+        # Raw lots, including the seeded CAC001-CAC003, have no transformation.
+        # Use reception time when available and the lot date for legacy/demo rows.
+        reception = db.query(Reception).filter_by(lot_id=lot.id).first()
+        stage = "recepcion"
+        occurred_at = (reception.received_at if reception else
+                       datetime.combine(lot.received_on, time.min, tzinfo=timezone.utc))
+        if occurred_at.tzinfo is None:
+            occurred_at = occurred_at.replace(tzinfo=timezone.utc)
     # Explicit allowlist: never serialize user, producer contact, cost, or private lot data.
-    return {"code": lot.code, "product_type": lot.product_type, "stage": product.stage, "occurred_at": product.occurred_at,
+    return {"code": lot.code, "product_type": lot.product_type, "stage": stage, "occurred_at": occurred_at,
             "output_quantity": float(lot.received_quantity), "unit": lot.unit, "status": lot.status,
             "availability": "available" if lot.status == "released" else "not_available",
             "status_reason": lot.status_reason if lot.status == "blocked" else None,

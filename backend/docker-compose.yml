@@ -20,6 +20,8 @@ services:
       DATABASE_URL: postgresql+psycopg://cacao:cacao_local_only@db:5432/cacao
       SECRET_KEY: local-compose-change-before-deploy
       SEED_DEMO_DATA: "true"
+      LOSS_ALERT_THRESHOLD_PERCENT: ${LOSS_ALERT_THRESHOLD_PERCENT:-15}
+      DELAY_ALERT_DAYS: ${DELAY_ALERT_DAYS:-7}
       CORS_ORIGINS: http://localhost:3000,http://localhost:5173,http://localhost:8080
     ports:
       - "8000:8000"

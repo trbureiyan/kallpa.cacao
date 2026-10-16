@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import SessionLocal
 from app import models
-from app.api import auth, receptions, transformations, lots, inventory, economics, public, exports, alerts, users, analytics
+from app.api import auth, receptions, transformations, lots, inventory, economics, public, exports, alerts, users, analytics, audit
 from app.security.authentication import hash_password
 from contextlib import asynccontextmanager
 
@@ -47,7 +47,7 @@ app = FastAPI(title=settings.app_name, version="0.1.0",
 origins = [value.strip() for value in settings.cors_origins.split(",") if value.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 for router in (auth.router, users.router, receptions.router, transformations.router, lots.router, inventory.router,
-               economics.router, public.router, exports.router, alerts.router, analytics.router):
+               economics.router, public.router, exports.router, alerts.router, analytics.router, audit.router):
     app.include_router(router, prefix=settings.api_prefix)
 
 

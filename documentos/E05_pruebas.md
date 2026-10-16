@@ -4,7 +4,7 @@
 
 ## Automatización existente
 
-La suite está en `backend/tests/`. Sus archivos cubren recepción, transformación/trazabilidad, cálculo/alerta de merma, idempotencia/inventario, roles/permisos, migraciones Alembic y una prueba opcional de concurrencia PostgreSQL.
+La suite está en `backend/tests/`. Sus archivos cubren recepción, transformación/trazabilidad, cálculo/alerta de merma, idempotencia/inventario, roles/permisos, migraciones Alembic y una prueba opcional de concurrencia PostgreSQL. `test_ficha_publica_auditoria_global.py` cubre la ficha pública de un lote crudo sin datos privados/costos y el endpoint global de auditoría con acceso exclusivo de administrador. `test_alertas_incompletas_retrasos.py` cubre responsable/costo ausentes, umbral estricto de días, última etapa y exclusión de lotes bloqueados o sin existencia.
 
 Comando, desde `backend/`:
 
@@ -14,6 +14,8 @@ python -m pytest -q
 
 Resultado del 16-10-2026, commit de referencia `bac1ab59af580a1e6190aebaecbdae652df6fa9f`: `python -m pytest -q` terminó con 18 aprobadas, 1 omitida y 1 advertencia deprecada de Starlette/TestClient. La omitida fue concurrencia PostgreSQL porque la suite ordinaria no tenía `TEST_POSTGRES_URL`. Después se ejecutó `tests/test_concurrencia_postgres.py` contra PostgreSQL 16 temporal en un contenedor con `tmpfs`: 1 aprobada; dos consumos concurrentes de 7 kg sobre 10 kg produjeron un único consumo y saldo final de 3 kg. El contenedor fue eliminado. La suite SQLite no escribió en la base persistente.
 Ensayo de migracion PostgreSQL 16 ejecutado en un contenedor temporal con `tmpfs`, sin volumen persistente: se aplico `d843a91c5e2b`, se insertaron datos sinteticos, se hizo upgrade a `e4219b1a7c30`, se verificaron costos migrados, columnas duplicadas retiradas y triggers PostgreSQL contra UPDATE/DELETE; el downgrade restauro campos/valores y el upgrade final volvio a head. El contenedor temporal se elimino. No se uso ni modifico la base persistente del proyecto.
+
+Ejecucion adicional del 2026-10-16 tras ampliar la ficha publica, la auditoria global y las alertas: desde `backend/`, `python -m pytest -q` termino con 24 aprobadas, 1 omitida y 1 advertencia deprecada de Starlette/TestClient. Las pruebas nuevas cubren ficha publica para lote crudo sin costos/datos privados, acceso administrador exclusivo a `GET /api/v1/audit`, etapa sin costos de procesamiento y umbral de retraso estricto con ultima etapa/recepcion. La omitida sigue siendo la prueba opcional de concurrencia PostgreSQL sin `TEST_POSTGRES_URL`.
 
 El build de producción `npm run build` pasó el 16-10-2026. La raíz web, `/health` y `/docs` respondieron HTTP 200; Alembic en el servicio actual reportó `b6d1ef3a9204 (head)`. Esto es una comprobación HTTP, no un recorrido visual completo. La comprobación de navegador/IndexedDB offline debe repetirse en la versión de entrega con capturas. Restauración y medición con 100 registros siguen sin evidencia.
 

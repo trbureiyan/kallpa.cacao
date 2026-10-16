@@ -55,13 +55,14 @@ Obtén un JWT enviando formulario `username` y `password` a `POST /api/v1/auth/l
 | `GET /api/v1/lots/{id}/traceability` | Recorrido y existencia; usuario interno |
 | `GET /api/v1/lots/{id}/movements` | Libro de movimientos del lote; usuario interno |
 | `GET /api/v1/lots/{id}/audit` | Historial de cambios; administrador |
+| `GET /api/v1/audit` | Historial global con actor, fecha, accion y valores anterior/nuevo; solo administrador |
 | `POST /api/v1/transformations` | Registrar una etapa, consumir el lote de entrada y crear el lote procesado junto con su movimiento de producción; operador o administrador |
 | `GET /api/v1/alerts` | Alertas calculadas; administrador |
 | `GET /api/v1/economics` | Lista de costos unitarios, margenes, formulas y supuestos; administrador |
 | `GET /api/v1/economics/{transformation_id}` | Costo y margen; administrador |
 | `PATCH /api/v1/lots/products/{output_code}/status` | Liberar, dejar pendiente o bloquear con motivo; administrador |
 | `PATCH /api/v1/lots/{id}/status` | Cambiar estado de materia prima u otro lote con motivo; administrador |
-| `GET /api/v1/public/products/{code}` | Ficha pública con campos permitidos, sin costos ni datos de contacto |
+| `GET /api/v1/public/products/{code}` | Ficha pública de lote crudo o procesado con campos permitidos, sin costos ni datos de contacto |
 | `GET /api/v1/exports/lots.csv` | Resumen CSV filtrable; administrador |
 | `GET /api/v1/inventory/movements` | Movimientos internos; usuario interno |
 | `GET /api/v1/inventory` | Saldo disponible por lote; usuario interno |
