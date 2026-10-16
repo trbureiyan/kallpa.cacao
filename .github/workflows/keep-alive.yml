@@ -1,0 +1,53 @@
+name: keep-alive
+
+# Render (plan gratuito) duerme el servicio tras ~15 min sin tráfico y tarda decenas de segundos en despertar; Neon
+# también suspende su cómputo tras ~5 min sin consultas. Este ping cada 10 min evita el arranque en frío durante las
+# pruebas y la evaluación. Es un archivo propio: no comparte nada con ci.yml.
+# Las ejecuciones programadas solo corren desde la rama por defecto (master). GitHub las desactiva tras 60 días sin
+# actividad en el repositorio: si deja de correr, revise Actions > keep-alive.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# nunca dos pings a la vez ni cola de pings atrasados
+concurrency:
+  group: keep-alive
+  cancel-in-progress: true
+
+env:
+  BASE_URL: https://kallpa-cacao.onrender.com
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      # despierta Render. El shell de Actions corre con -e: sin `|| true`, un timeout de curl (código 28) abortaría el
+      # paso en el primer intento y el bucle de reintentos nunca correría.
+      - name: Ping /health (despierta Render)
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -m 70 "$BASE_URL/health" || true)
+            echo "Intento $i: HTTP $code"
+            if [ "$code" = "200" ]; then exit 0; fi
+            sleep 5
+          done
+          echo "El servicio no respondió 200 tras 3 intentos"
+          exit 1
+
+      # /health no consulta la base. Esta ruta pública sí (un 404 también cuenta: la consulta se ejecutó), así que
+      # despierta Neon. Un 5xx significa que la API no pudo hablar con la base.
+      - name: Ping con consulta a la base (despierta Neon)
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -m 70 "$BASE_URL/api/v1/public/products/CAC001" || true)
+            echo "Intento $i: HTTP $code"
+            case "$code" in 200|404) exit 0 ;; esac
+            sleep 5
+          done
+          echo "La API no pudo consultar la base tras 3 intentos"
+          exit 1
