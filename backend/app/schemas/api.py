@@ -1,6 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from uuid import UUID
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class ORMModel(BaseModel):
@@ -29,8 +30,7 @@ class FarmCreate(BaseModel):
 
 
 class ReceptionCreate(BaseModel):
-    idempotency_key: str = Field(min_length=8, max_length=100)
-    lot_code: str = Field(min_length=2, max_length=40)
+    idempotency_key: UUID
     farm_id: int
     received_at: datetime
     quantity_kg: Decimal = Field(gt=0, max_digits=14, decimal_places=3)
@@ -63,6 +63,7 @@ class LotOut(ORMModel):
     id: int
     code: str
     producer_id: int
+    product_type: str
     origin: str
     received_on: date
     received_quantity: float
@@ -73,18 +74,41 @@ class LotOut(ORMModel):
     status_reason: str | None
 
 
+class TransformationOutputCreate(BaseModel):
+    lot_code: str = Field(min_length=2, max_length=40)
+    product_type: str = Field(min_length=2, max_length=40)
+    quantity: float = Field(gt=0)
+    unit: str = Field(default="kg", min_length=1, max_length=20)
+
+
 class TransformationCreate(BaseModel):
     idempotency_key: str = Field(min_length=8, max_length=100)
     lot_id: int
     stage: str = Field(min_length=2, max_length=120)
     occurred_at: datetime
     input_quantity: float = Field(gt=0)
-    output_quantity: float = Field(ge=0)
+    output_quantity: float | None = Field(default=None, ge=0)
     unit: str = "kg"
     incident: str | None = None
-    output_code: str = Field(min_length=2, max_length=50)
+    output_code: str | None = Field(default=None, min_length=2, max_length=40)
+    product_type: str = Field(default="processed_cocoa", min_length=2, max_length=40)
+    outputs: list[TransformationOutputCreate] | None = Field(default=None, min_length=1, max_length=20)
     costs_cop: float = Field(default=0, ge=0)
     sale_price_cop_per_unit: float | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def normalize_outputs(self):
+        if self.outputs:
+            codes = [output.lot_code for output in self.outputs]
+            if len(codes) != len(set(codes)):
+                raise ValueError("Cada lote de salida debe tener un código único")
+            if self.output_code and self.output_code != codes[0]:
+                raise ValueError("output_code debe coincidir con el código de la primera salida")
+            self.output_quantity = sum(output.quantity for output in self.outputs)
+            self.output_code = codes[0]
+        elif self.output_quantity is None or self.output_code is None:
+            raise ValueError("Indique output_code y output_quantity, o la lista outputs")
+        return self
 
 
 class StatusChange(BaseModel):
@@ -101,6 +125,7 @@ class StatusChange(BaseModel):
 
 class PublicProduct(BaseModel):
     code: str
+    product_type: str
     stage: str
     occurred_at: datetime
     output_quantity: float
