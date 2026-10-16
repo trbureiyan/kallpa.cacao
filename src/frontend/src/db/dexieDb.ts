@@ -13,6 +13,18 @@ export interface RecepcionOffline {
   syncStatus: 'PENDING' | 'SYNCED' | 'ERROR';
   errorMessage?: string;
   status?: 'PENDIENTE' | 'LIBERADO' | 'BLOQUEADO';
+  /** Solo modo API: finca del catálogo del servidor, costo de compra y notas de calidad. */
+  farmId?: number;
+  purchaseTotalCop?: number;
+  qualityNotes?: string;
+}
+
+// Catálogo de fincas del servidor, copiado para poder capturar recepciones sin conexión
+export interface Finca {
+  id: number;
+  producerId: number;
+  name: string;
+  region: string;
 }
 
 // 2. Registro de Transformación / Proceso (RF02, RF04)
@@ -62,6 +74,7 @@ export class CacaoOfflineDB extends Dexie {
   procesos!: Table<ProcesoOffline, number>;
   auditLogs!: Table<AuditEntry, number>;
   movimientos!: Table<Movimiento, number>;
+  fincas!: Table<Finca, number>;
 
   constructor() {
     super('CacaoOfflineDB');
@@ -91,6 +104,9 @@ export class CacaoOfflineDB extends Dexie {
     this.version(4).stores({
       procesos: '++idLocal, lotCode, stage, date, &claveIdempotencia',
     });
+
+    // v5: catálogo de fincas para la recepción en modo API
+    this.version(5).stores({ fincas: 'id' });
 
     // [DECISION] auditoría de solo inserción — los hooks bloquean update/delete desde cualquier código. El servidor repetirá la regla en la fase 2.
     const soloInsercion = () => {

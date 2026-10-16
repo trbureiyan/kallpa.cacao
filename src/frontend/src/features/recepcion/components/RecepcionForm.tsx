@@ -1,7 +1,9 @@
-import { useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { useAuth } from "@/context/AuthContext"
 import { sincronizarRecepcionesPendientes } from "../api/recepcionSync"
-import { guardarRecepcionLocal } from "../api/recepcionDb"
+import { encolarRecepcionApi, guardarRecepcionLocal } from "../api/recepcionDb"
+import { cargarFincas } from "../api/fincasApi"
+import type { Finca } from "@/db/dexieDb"
 import { Button, Field, Icon } from "@/components/ui"
 import { ErrorDominio } from "@/utils/errores"
 import { parsearNumero } from "@/utils/formato"
@@ -12,7 +14,11 @@ interface RecepcionFormProps {
 }
 
 export function RecepcionForm({ isOnline = false, onSuccess }: RecepcionFormProps) {
-  const { nombreUsuario } = useAuth()
+  const { nombreUsuario, modo } = useAuth()
+  const esApi = modo === "api"
+  const [fincas, setFincas] = useState<Finca[]>([])
+  const [fincaId, setFincaId] = useState("")
+  const [costo, setCosto] = useState("")
   const [producer, setProducer] = useState("Productor A · Ana Torres")
   const [origin, setOrigin] = useState("Rivera")
   const [date, setDate] = useState(() => new Date().toLocaleDateString("sv-SE"))
@@ -23,23 +29,47 @@ export function RecepcionForm({ isOnline = false, onSuccess }: RecepcionFormProp
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // En modo API la finca sale del catálogo del servidor (o de su copia local si no hay red)
+  useEffect(() => {
+    if (!esApi) return
+    cargarFincas()
+      .then((lista) => {
+        setFincas(lista)
+        setFincaId((actual) => actual || String(lista[0]?.id ?? ""))
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : "No se pudo cargar el catálogo de fincas."))
+  }, [esApi])
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError(null)
     setLoading(true)
 
     try {
-      const lote = await guardarRecepcionLocal({
-        producer,
-        origin,
-        date,
-        quantity: parsearNumero(qty),
-        unit,
-        usuario: nombreUsuario,
-      })
+      let lote
+      if (esApi) {
+        const finca = fincas.find((f) => String(f.id) === fincaId)
+        lote = await encolarRecepcionApi({
+          farmId: finca?.id ?? 0,
+          farmName: finca?.name ?? "",
+          region: finca?.region,
+          date,
+          quantity: parsearNumero(qty),
+          purchaseTotalCop: parsearNumero(costo || "0"),
+        })
+      } else {
+        lote = await guardarRecepcionLocal({
+          producer,
+          origin,
+          date,
+          quantity: parsearNumero(qty),
+          unit,
+          usuario: nombreUsuario,
+        })
+      }
 
       // Si hay conexión se intenta sincronizar; si falla, el lote queda pendiente sin perderse
-      if (isOnline) await sincronizarRecepcionesPendientes().catch(() => undefined)
+      if (isOnline) await sincronizarRecepcionesPendientes(modo).catch(() => undefined)
 
       onSuccess?.()
       setSavedCode(lote.lotCode)
@@ -86,6 +116,18 @@ export function RecepcionForm({ isOnline = false, onSuccess }: RecepcionFormProp
       )}
 
       <div className="form-grid">
+        {esApi ? (
+          <Field label="Finca">
+            <select className="input" value={fincaId} onChange={(e) => setFincaId(e.target.value)} required>
+              {fincas.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name} · {f.region}
+                </option>
+              ))}
+            </select>
+          </Field>
+        ) : (
+          <>
         <Field label="Productor">
           <select
             className="input"
@@ -116,6 +158,8 @@ export function RecepcionForm({ isOnline = false, onSuccess }: RecepcionFormProp
             <option value="Gigante">Gigante</option>
           </select>
         </Field>
+          </>
+        )}
 
         <Field label="Fecha de recepción">
           <input
@@ -141,6 +185,22 @@ export function RecepcionForm({ isOnline = false, onSuccess }: RecepcionFormProp
             <span>kg</span>
           </div>
         </Field>
+
+        {esApi && (
+          <Field label="Costo total de compra">
+            <div className="input-unit">
+              <input
+                className="input"
+                type="text"
+                inputMode="decimal"
+                placeholder="Ej. 1200000"
+                value={costo}
+                onChange={(e) => setCosto(e.target.value)}
+              />
+              <span>COP</span>
+            </div>
+          </Field>
+        )}
 
         <Field label="Unidad">
           <select

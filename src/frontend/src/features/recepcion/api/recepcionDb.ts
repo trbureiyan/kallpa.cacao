@@ -67,3 +67,46 @@ export async function guardarRecepcionLocal(datos: {
     return lote
   })
 }
+
+
+/**
+ * Modo API: solo se encola la captura. El servidor crea lote, movimiento, costo y auditoría al sincronizar,
+ * así que aquí no se escribe movimiento ni auditoría local (duplicarían lo del servidor).
+ */
+export async function encolarRecepcionApi(datos: {
+  farmId: number
+  farmName: string
+  region?: string
+  date: string
+  quantity: number
+  purchaseTotalCop: number
+  qualityNotes?: string
+}): Promise<RecepcionOffline> {
+  if (!datos.farmId) throw invalido('Falta la finca.', 'seleccione una finca.')
+  if (!datos.date) throw invalido('Falta la fecha de recepción.', 'indique la fecha.')
+  if (!Number.isFinite(datos.quantity) || datos.quantity <= 0) {
+    throw invalido('La cantidad recibida debe ser un número mayor a 0 kg.', 'escriba el peso neto, por ejemplo 100 o 12,5.')
+  }
+  if (!Number.isFinite(datos.purchaseTotalCop) || datos.purchaseTotalCop < 0) {
+    throw invalido('El costo de compra no puede ser negativo.', 'escriba 0 o un valor en COP.')
+  }
+
+  const idempotencyKey = crypto.randomUUID()
+  const lote: RecepcionOffline = {
+    idempotencyKey,
+    // provisional: el servidor asigna el código CACxxx al sincronizar
+    lotCode: `PEND-${idempotencyKey.slice(0, 8).toUpperCase()}`,
+    producer: datos.farmName,
+    origin: datos.region ?? '',
+    date: datos.date,
+    quantity: datos.quantity,
+    unit: 'kg',
+    syncStatus: 'PENDING',
+    status: 'PENDIENTE',
+    farmId: datos.farmId,
+    purchaseTotalCop: datos.purchaseTotalCop,
+    qualityNotes: datos.qualityNotes?.trim() || undefined,
+  }
+  lote.idLocal = await db.recepciones.add(lote)
+  return lote
+}

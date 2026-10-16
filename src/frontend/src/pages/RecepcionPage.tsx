@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
 import { PageHead } from "@/components/shared"
 import { Icon } from "@/components/ui"
+import { useAuth } from "@/context/AuthContext"
 import { db } from "@/db/dexieDb"
 import { sincronizarRecepcionesPendientes } from "@/features/recepcion/api/recepcionSync"
 import { RecepcionForm } from "@/features/recepcion/components/RecepcionForm.tsx"
@@ -15,6 +16,7 @@ export function ReceptionPage({
   addPending: () => void
 }) {
   const [search] = useState("")
+  const { modo } = useAuth()
 
   // Consulta reactiva a Dexie
   const lotesLocales = useLiveQuery(
@@ -27,10 +29,10 @@ export function ReceptionPage({
   useEffect(() => {
     if (!online) return
 
-    void sincronizarRecepcionesPendientes().catch((error) => {
+    void sincronizarRecepcionesPendientes(modo).catch((error) => {
       console.error("Error al sincronizar las recepciones:", error)
     })
-  }, [online])
+  }, [online, modo])
 
   // Filtrar los lotes locales
   const lotesFiltrados = (lotesLocales || []).filter(
