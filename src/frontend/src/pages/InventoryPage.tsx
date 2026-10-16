@@ -22,7 +22,7 @@ export function InventoryPage() {
   const [busqueda, setBusqueda] = useState("")
   const [cambio, setCambio] = useState<{ lotCode: string; nuevo: "LIBERADO" | "BLOQUEADO" } | null>(null)
 
-  const { filas: todas, cargando, error, recargar } = useFilasInventario(modo, rol)
+  const { filas: todas, cargando, error, recargar, economia } = useFilasInventario(modo, rol)
   const [errorExport, setErrorExport] = useState<string | null>(null)
 
   const origenes = [...new Set(todas.map((f) => f.origen))].sort()
@@ -75,8 +75,9 @@ export function InventoryPage() {
           <span>Costo unitario promedio</span>
           <strong>{costoPromedio === null ? "—" : `${formatearCOP(costoPromedio)}/kg`}</strong>
           <small>
-            Promedio simple de la etapa más reciente con costo de cada lote. Fórmula por lote: costo total de la etapa /
-            kg de salida vendible.
+            Promedio simple de la etapa más reciente con costo de cada lote. Fórmula por lote:{" "}
+            {economia?.formula ?? "costo total de la etapa / kg de salida vendible"}.
+            {economia?.politica && ` ${economia.politica}`}
           </small>
         </div>
         <div className="economy-card">

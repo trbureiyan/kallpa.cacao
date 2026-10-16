@@ -3,7 +3,7 @@ import { cambiarEstadoLote } from '@/features/estados/api/estadosDb'
 import { guardarRecepcionLocal } from '@/features/recepcion/api/recepcionDb'
 import { registrarProcesoLocal } from '@/features/transformacion/api/procesoDb'
 import { limpiarDb } from '@/test/limpiarDb'
-import { obtenerFichaPublica } from './fichaApi'
+import { obtenerFichaLocal as obtenerFichaPublica } from './fichaApi'
 
 const admin = { rol: 'ADMINISTRADOR', usuario: 'Admin' } as const
 

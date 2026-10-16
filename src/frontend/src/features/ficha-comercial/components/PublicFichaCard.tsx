@@ -13,16 +13,30 @@ const ETIQUETA_ESTADO = {
 export function PublicFichaCard({ lotCode }: { lotCode: string }) {
   // undefined = cargando; null = no encontrado
   const [ficha, setFicha] = useState<FichaPublica | null | undefined>(undefined)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let vigente = true
-    void obtenerFichaPublica(lotCode).then((f) => {
-      if (vigente) setFicha(f)
-    })
+    obtenerFichaPublica(lotCode)
+      .then((f) => {
+        if (vigente) setFicha(f)
+      })
+      .catch((e) => {
+        if (vigente) setError(e instanceof Error ? e.message : 'No se pudo consultar la ficha. Intente de nuevo.')
+      })
     return () => {
       vigente = false
     }
   }, [lotCode])
+
+  if (error) {
+    return (
+      <div className="card p-8 text-center max-w-4xl mx-auto my-8" role="alert">
+        <strong>No se pudo consultar la ficha.</strong>
+        <p className="mt-2 text-texto-suave">{error}</p>
+      </div>
+    )
+  }
 
   if (ficha === undefined) {
     return <div className="card p-8 text-center text-texto-suave max-w-4xl mx-auto my-8">Cargando ficha del lote...</div>
