@@ -18,7 +18,7 @@ Contexto del evento:
 
 ## Marco del proyecto
 
-Documento: `.docs/00_marco_del_proyecto.md`. **Versión sincronizada con este resumen: v0.1 (2026-10-15).** Lo que no esté en el marco no está decidido.
+Documento: `.docs/00_marco_del_proyecto.md`. **Versión sincronizada con este resumen: v0.2 (2026-10-16).** Lo que no esté en el marco no está decidido.
 
 ### Qué manda cada documento
 
@@ -33,8 +33,9 @@ Documento: `.docs/00_marco_del_proyecto.md`. **Versión sincronizada con este re
 
 - **Dentro:** RF01–RF12 con CAC001–003, tres perfiles (operador, administrador, comprador anónimo), recepción con conectividad limitada `[EN VALIDACIÓN]` y un panel de analítica en el servidor con tres preguntas: origen o productor con más merma, lotes con menor margen, lotes bloqueados o con alerta abierta.
 - **Fuera:** IA, sensores, pagos, notificaciones, varias asociaciones, transformación sin conexión, resolución manual de conflictos de sincronización, mapas, roles adicionales. Lo que no esté en "dentro" se pospone aunque tiente.
-- **Límites declarados:** una transformación consume un solo lote de entrada (si se mezclan, se conservan todos los orígenes); unidad única kg; datos sintéticos.
-- **Offline `[DECIDIDO]` en alcance:** solo recepción de lotes y lectura de lo ya cargado. Transformar y cambiar estados exigen conexión. La cola local guarda solo operaciones y una copia de lectura; el esquema real vive en el servidor. Sin Background Sync. La forma "fuerte" (sin red total) sigue `[EN VALIDACIÓN]` con el criterio del marco, Anexo A; si falla, forma débil (reintentos, tiempos límite, indicador de pendientes) sobre la misma cola idempotente. Si falla la idempotencia, se corrige primero en el servidor: también protege el inventario.
+- **Límites declarados:** una transformación consume un solo lote de entrada (si se mezclan, se conservan todos los orígenes); unidad única kg; datos sintéticos. Trazabilidad por lote sin parcela: no afirmar cumplimiento de EUDR ni de GS1.
+- **Offline `[DECIDIDO]` en alcance:** solo recepción de lotes y lectura de lo ya cargado. Transformar y cambiar estados exigen conexión. La cola local guarda solo operaciones y una copia de lectura; el esquema real vive en el servidor. Sin Background Sync. Forma débil con lectura desde caché `[DECIDIDO]` (reintentos, indicador de pendientes, regla de uso: no recargar sin conexión; texto de interfaz "con conectividad limitada"). La forma "fuerte" sigue `[EN VALIDACIÓN]`: el resultado de Graffe (marco, Anexo A) falló el punto 1 y dejó pendiente el 5. La cola es un módulo único `offline/`; solo recepción escribe en ella. Si falla la idempotencia, se corrige primero en el servidor: también protege el inventario.
+- **Propuestos, solo si el usuario lo pide:** ficha pública como plantilla servida por el backend (la SPA no la renderiza; `/api` y `/publico` fuera del fallback del service worker) y contrato de idempotencia con hash (misma clave y otro contenido, 422; claves sin caducidad). Hoy el árbol de arriba aún lista `features/ficha-publica/`.
 - **Esquema de datos `[ABIERTO]`:** no crear modelos ni migraciones definitivas sin acuerdo; proponer. Puntos pendientes en marco §8 (fuente única de costos, motivo en auditoría, propagación del bloqueo a derivados, compra del cacao fuera del costo de etapa).
 - **Reglas de corte `[PROPUESTO]`:** hora 14 sin núcleo demostrable, offline pasa a forma débil y la analítica a tres consultas fijas; hora 21 congelar funcionalidades; hora 23 solo el integrador toca la rama principal.
 - **Responsables:** matriz en marco §10 (`[PROPUESTO]`). El agente no asigna ni reasigna trabajo.
