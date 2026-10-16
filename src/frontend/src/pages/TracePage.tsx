@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext"
 import { obtenerTrazabilidadApi } from "@/features/trazabilidad/api/trazabilidadApi"
 import { obtenerTrazabilidadLote, type TraceInfo } from "@/features/trazabilidad/api/trazabilidadDb"
 import { formatearKg } from "@/utils/formato"
+import { LIMITES, normalizarCodigoLote, validarCodigoLote } from "@/utils/validacion"
 
 export function TracePage() {
   const [codigo, setCodigo] = useState("")
@@ -16,8 +17,15 @@ export function TracePage() {
 
   const buscar = async () => {
     setError(null)
+    const c = normalizarCodigoLote(codigo)
+    const invalido = validarCodigoLote(c)
+    if (invalido) {
+      setTraza(null)
+      setError(invalido)
+      setConsultado(true)
+      return
+    }
     try {
-      const c = codigo.trim()
       setTraza(modo === "api" && rol ? await obtenerTrazabilidadApi(rol, c) : await obtenerTrazabilidadLote(c))
     } catch (e) {
       setTraza(null)
@@ -46,7 +54,11 @@ export function TracePage() {
               <input
                 className="input"
                 value={codigo}
-                onChange={(e) => setCodigo(e.target.value)}
+                onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+                maxLength={LIMITES.codigoLote}
+                autoCapitalize="characters"
+                autoComplete="off"
+                spellCheck={false}
                 placeholder="Código, ej. CAC001"
               />
             </label>

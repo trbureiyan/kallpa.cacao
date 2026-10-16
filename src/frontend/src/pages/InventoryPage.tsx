@@ -127,7 +127,7 @@ export function InventoryPage() {
             <label className="search-box">
               <span className="sr-only">Código de lote</span>
               <Icon name="search" />
-              <input placeholder="Código de lote..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+              <input placeholder="Código de lote..." value={busqueda} maxLength={40} autoCapitalize="characters" onChange={(e) => setBusqueda(e.target.value.toUpperCase())} />
             </label>
           </div>
         </div>

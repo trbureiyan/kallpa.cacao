@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Logo } from '@/components/ui';
 import { prefetchRuta } from '@/utils/prefetch';
+import { LIMITES, normalizarCodigoLote, validarCodigoLote } from '@/utils/validacion';
 import { PublicFichaCard } from '@/features/ficha-comercial/components/PublicFichaCard.tsx';
 
 export const PublicFichaPage: React.FC = () => {
@@ -9,6 +10,7 @@ export const PublicFichaPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const lotCodeParam = searchParams.get('lote') ?? '';
   const [codigo, setCodigo] = useState(lotCodeParam);
+  const [aviso, setAviso] = useState<string | null>(null);
 
   return (
     <div className="public-shell">
@@ -29,12 +31,27 @@ export const PublicFichaPage: React.FC = () => {
         className="public-search"
         onSubmit={(e) => {
           e.preventDefault();
-          setSearchParams(codigo.trim() ? { lote: codigo.trim() } : {});
+          const c = normalizarCodigoLote(codigo);
+          const invalido = c ? validarCodigoLote(c) : null;
+          setAviso(invalido);
+          if (!invalido) setSearchParams(c ? { lote: c } : {});
         }}
       >
         <label className="field flex-1">
           <span>Código del lote</span>
-          <input className="input" value={codigo} onChange={(e) => setCodigo(e.target.value)} placeholder="Por ejemplo CAC001" />
+          <input
+            className="input"
+            value={codigo}
+            onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+            maxLength={LIMITES.codigoLote}
+            autoCapitalize="characters"
+            autoComplete="off"
+            spellCheck={false}
+            aria-invalid={!!aviso}
+            aria-describedby="aviso-codigo"
+            placeholder="Por ejemplo CAC001"
+          />
+          {aviso && <small id="aviso-codigo" className="nota-error" role="alert">{aviso}</small>}
         </label>
         <button type="submit" className="btn btn-primary">Consultar</button>
       </form>

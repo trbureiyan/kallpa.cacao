@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { validarTransformacion } from './reglas'
+import { validarCifrasProceso, validarTransformacion } from './reglas'
 
 describe('validarTransformacion', () => {
   it('acepta 100 kg a 80 kg con 100 kg disponibles', () => {
@@ -28,5 +28,19 @@ describe('validarTransformacion', () => {
   })
   it('una justificación en blanco no cuenta', () => {
     expect(validarTransformacion({ entradaKg: 100, salidaKg: 110, disponibleKg: 100, justificacion: '   ' }).length).toBe(1)
+  })
+})
+
+describe('validarCifrasProceso', () => {
+  const ok = { entrada: '100', salida: '80', costo: '1.600.000', precio: '25000' }
+  it('cifras válidas no dan errores', () => expect(validarCifrasProceso(ok).errores).toEqual({}))
+  // reporte del equipo: esto se registraba como "sin costo" sin avisar
+  it('basura en el costo opcional bloquea con mensaje del campo', () => {
+    const { errores } = validarCifrasProceso({ ...ok, costo: '20000´¨P[RTGGTYBGTR45YHT' })
+    expect(Object.keys(errores)).toEqual(['costo'])
+  })
+  it('marca cada campo inválido por separado', () => {
+    const { errores } = validarCifrasProceso({ entrada: '1e3', salida: 'abc', costo: '', precio: 'Infinity' })
+    expect(Object.keys(errores).sort()).toEqual(['entrada', 'precio', 'salida'])
   })
 })

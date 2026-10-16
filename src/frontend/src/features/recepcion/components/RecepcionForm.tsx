@@ -6,7 +6,7 @@ import { cargarFincas } from "../api/fincasApi"
 import type { Finca } from "@/db/dexieDb"
 import { Button, Field, Icon } from "@/components/ui"
 import { ErrorDominio } from "@/utils/errores"
-import { parsearNumero } from "@/utils/formato"
+import { LIMITES, PATRON_CIFRA, validarCOP, validarKg } from "@/utils/validacion"
 
 interface RecepcionFormProps {
   isOnline?: boolean
@@ -43,6 +43,17 @@ export function RecepcionForm({ isOnline = false, onSuccess }: RecepcionFormProp
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError(null)
+    const cantidad = validarKg(qty, "La cantidad recibida")
+    const compra = validarCOP(costo, { opcional: true, campo: "El costo de compra" })
+    if ("error" in cantidad || "error" in compra) {
+      setError("error" in cantidad ? cantidad.error : "error" in compra ? compra.error : "")
+      return
+    }
+    const hoy = new Date().toLocaleDateString("sv-SE")
+    if (!date || date > hoy) {
+      setError("La fecha de recepción no puede ser futura. Se registraría un lote que aún no llegó. Elija la fecha de hoy o una anterior.")
+      return
+    }
     setLoading(true)
 
     try {
@@ -54,15 +65,16 @@ export function RecepcionForm({ isOnline = false, onSuccess }: RecepcionFormProp
           farmName: finca?.name ?? "",
           region: finca?.region,
           date,
-          quantity: parsearNumero(qty),
-          purchaseTotalCop: parsearNumero(costo || "0"),
+          quantity: cantidad.valor,
+          // vacío = 0: la recepción del servidor exige un costo de compra (comportamiento previo)
+          purchaseTotalCop: compra.valor ?? 0,
         })
       } else {
         lote = await guardarRecepcionLocal({
           producer,
           origin,
           date,
-          quantity: parsearNumero(qty),
+          quantity: cantidad.valor,
           unit,
           usuario: nombreUsuario,
         })
@@ -167,6 +179,7 @@ export function RecepcionForm({ isOnline = false, onSuccess }: RecepcionFormProp
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
+            max={new Date().toLocaleDateString("sv-SE")}
             required
           />
         </Field>
@@ -178,6 +191,9 @@ export function RecepcionForm({ isOnline = false, onSuccess }: RecepcionFormProp
               type="text"
               inputMode="decimal"
               placeholder="Ej. 100 o 12,5"
+              pattern={PATRON_CIFRA}
+              maxLength={LIMITES.cifra}
+              aria-label="Cantidad recibida en kg"
               value={qty}
               onChange={(e) => setQty(e.target.value)}
               required
@@ -193,7 +209,10 @@ export function RecepcionForm({ isOnline = false, onSuccess }: RecepcionFormProp
                 className="input"
                 type="text"
                 inputMode="decimal"
-                placeholder="Ej. 1200000"
+                placeholder="Ej. 1.200.000"
+                pattern={PATRON_CIFRA}
+                maxLength={LIMITES.cifra}
+                aria-label="Costo total de compra en COP"
                 value={costo}
                 onChange={(e) => setCosto(e.target.value)}
               />
