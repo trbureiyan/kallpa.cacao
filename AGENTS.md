@@ -80,7 +80,7 @@ kallpa.cacao/
 │
 ├── backend/                         # API (FastAPI, SQLAlchemy, Alembic); la mantiene la rama backend
 │   ├── app/
-│   │   ├── main.py                  # monta los routers; la API aún no sirve el build del frontend
+│   │   ├── main.py                  # monta los routers y sirve src/frontend/dist si existe (app/frontend.py)
 │   │   ├── config.py · database.py  # configuración por variables de entorno (.env en backend/) y sesión
 │   │   ├── api/                     # un router por área: auth, receptions, lots, transformations, inventory,
 │   │   │                            #   alerts, economics, audit, public, exports, users, analytics
@@ -229,8 +229,8 @@ Document known landmines here. Be specific: name the files, describe the behavio
 - **[Fuente única por sesión]**: al iniciar sesión, si la API responde todo va a la API (`features/*/api/*Api.ts`); solo si no hay red y `VITE_PERMITIR_MODO_LOCAL=true` todo va a Dexie (`*Db.ts`). Nunca se mezclan por llamada: dejaría lotes locales que el servidor no conoce y existencias duplicadas. Dexie conserva la cola de recepciones pendientes y la copia del catálogo de fincas. Un 401 con sesión la cierra sin tocar la cola.
 - **[Modo local en la evaluación]**: `VITE_PERMITIR_MODO_LOCAL` debe ir en `false` en la entrega. Encendido, un fallo de red muestra datos de demostración en lugar del servidor.
 - **[Contrato con el backend]**: `docs/contrato-api.md` lista endpoints, equivalencias de vocabulario y deltas pendientes. Si cambia un endpoint, se actualiza ese archivo y las pruebas de `*Api.test.ts` en el mismo commit. La forma de `/lots/{id}/traceability`, `/economics` y `/audit` se armó leyendo el código del backend y debe verificarse contra la API en marcha.
-- **[CSV del servidor]**: `GET /exports/lots.csv` no neutraliza texto que Excel lee como fórmula; el CSV local sí. En modo API el archivo es el del servidor, así que el riesgo vive allí hasta que lo corrijan.
-- **[Costo sin dato]**: el frontend omite `costs_cop` cuando el operador no lo escribe, pero el backend lo toma como 0 y el costo unitario deja de ser «no calculable». Hasta que el servidor acepte «sin dato», un costo de 0 puede ser un costo no registrado.
+- **[RESUELTO · CSV del servidor]**: `GET /exports/lots.csv` ahora antepone un apóstrofo al texto que empieza con `=`, `+`, `-`, `@`, tabulador o retorno (`app/api/exports.py`), igual que el CSV local. Prueba: `backend/tests/test_exportacion_csv_seguro.py`.
+- **[RESUELTO · Costo sin dato]**: `costs_cop` omitido es «sin dato»: no crea entrada de costo, `/economics` devuelve costo unitario y margen nulos y `/alerts` emite `registro_incompleto`. Un `costs_cop: 0` explícito sí se registra y cuenta como dato. Prueba: `backend/tests/test_costo_sin_dato.py`.
 - **[Versiones del backend]**: `backend/requirements.txt` usa rangos y no hay lockfile; contradice «Supply Chain and Dependencies» y hace que CI pueda instalar versiones distintas.
 - **[Datos sintéticos]**: solo datos sintéticos. Sin contraseñas, claves ni información privada en el repo ni en herramientas de IA.
 - **[Dependencias]**: `[RESUELTO]` FastAPI y PostgreSQL ya están `[DECIDIDO]` en el marco (SQLite descartado). Sigue vigente: no instalar dependencias sin aprobación, versión exacta y declaración en E08 (ver Manual Actions).
