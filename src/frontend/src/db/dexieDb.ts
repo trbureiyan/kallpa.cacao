@@ -10,8 +10,10 @@ export interface RecepcionOffline {
   date: string;
   quantity: number;
   unit: string;
-  syncStatus: 'PENDING' | 'SYNCED' | 'ERROR';
+  /** DISCARDED: el operador decidió no enviarla; el registro se conserva en el dispositivo. */
+  syncStatus: 'PENDING' | 'SYNCED' | 'ERROR' | 'DISCARDED';
   errorMessage?: string;
+  discardedAt?: string;
   status?: 'PENDIENTE' | 'LIBERADO' | 'BLOQUEADO';
   /** Solo modo API: finca del catálogo del servidor, costo de compra y notas de calidad. */
   farmId?: number;

@@ -24,7 +24,7 @@ export async function cargarFincas(): Promise<Finca[]> {
     return fincas
   } catch (e) {
     const err = traducirErrorApi(e)
-    if (err.codigo !== 'SIN_RED') throw err
+    if (err.codigo !== 'SIN_RED' && err.codigo !== 'SIN_RESPUESTA') throw err
     const copia = (await db.fincas.toArray()).sort((a, b) => a.name.localeCompare(b.name))
     if (copia.length === 0) {
       throw new ErrorDominio('SIN_CATALOGO', 'No hay fincas disponibles. Sin conexión y sin una copia previa no se puede elegir la finca. Conéctese una vez para descargar el catálogo.')

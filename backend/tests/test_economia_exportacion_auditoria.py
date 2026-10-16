@@ -83,7 +83,7 @@ def test_exportacion_csv_filtra_y_muestra_costos_por_lote(api):
     )
 
     assert response.status_code == 200, response.text
-    rows = list(csv.DictReader(StringIO(response.text)))
+    rows = list(csv.DictReader(StringIO(response.content.decode("utf-8-sig"))))
     assert {"identificador", "origen", "recibido", "consumido", "disponible", "estado", "costos_COP"}.issubset(rows[0])
     by_code = {row["identificador"]: row for row in rows}
     raw_code = reception["lot_code"]

@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext"
 import { obtenerTrazabilidadApi } from "@/features/trazabilidad/api/trazabilidadApi"
 import { obtenerTrazabilidadLote, type TraceInfo } from "@/features/trazabilidad/api/trazabilidadDb"
 import { formatearKg } from "@/utils/formato"
+import { LIMITES, normalizarCodigoLote, validarCodigoLote } from "@/utils/validacion"
 
 export function TracePage() {
   const [codigo, setCodigo] = useState("")
@@ -16,8 +17,15 @@ export function TracePage() {
 
   const buscar = async () => {
     setError(null)
+    const c = normalizarCodigoLote(codigo)
+    const invalido = validarCodigoLote(c)
+    if (invalido) {
+      setTraza(null)
+      setError(invalido)
+      setConsultado(true)
+      return
+    }
     try {
-      const c = codigo.trim()
       setTraza(modo === "api" && rol ? await obtenerTrazabilidadApi(rol, c) : await obtenerTrazabilidadLote(c))
     } catch (e) {
       setTraza(null)
@@ -40,14 +48,18 @@ export function TracePage() {
               void buscar()
             }}
           >
-            <label className="relative flex-1">
+            <label className="input-icon flex-1 min-w-0">
               <span className="sr-only">Código del lote</span>
-              <Icon name="search" className="absolute left-3 top-3 text-texto-suave" />
+              <Icon name="search" />
               <input
-                className="input pl-9"
+                className="input"
                 value={codigo}
-                onChange={(e) => setCodigo(e.target.value)}
-                placeholder="Código de lote, por ejemplo CAC001"
+                onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+                maxLength={LIMITES.codigoLote}
+                autoCapitalize="characters"
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="Código, ej. CAC001"
               />
             </label>
             <Button type="submit">Consultar</Button>

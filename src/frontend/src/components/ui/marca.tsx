@@ -29,9 +29,12 @@ export function SelloLote({ codigo }: { codigo: string }) {
 export function IndicadorConexion({ estado, pendientes }: { estado: EstadoConexion; pendientes: number }) {
   const texto: Record<EstadoConexion, string> = {
     sin_red: "Sin conexión",
+    conectando: "Conectando con el servidor...",
+    no_responde: "El servidor no responde",
     pendiente: `${pendientes} por enviar`,
     sincronizado: "Sincronizado",
     error: "Error al sincronizar",
+    descartado: "Descartado",
   }
   return (
     <span role="status" className={`conexion conexion-${estado.replace("_", "-")}`}>

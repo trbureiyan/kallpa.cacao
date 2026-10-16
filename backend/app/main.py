@@ -1,7 +1,9 @@
 from datetime import date
 from pathlib import Path
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from app.config import settings, validar_configuracion
 from app.frontend import montar_frontend
 from app.database import SessionLocal
@@ -49,6 +51,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=settings.app_name, version="0.1.0",
               description="API para recepción, transformación y trazabilidad del cacao.", lifespan=lifespan)
+
+
+# El 422 por defecto devuelve el valor recibido; un NaN o Infinity no se puede escribir en JSON y terminaba en 500.
+# Solo se devuelven campo y mensaje, que es lo que muestra el frontend.
+@app.exception_handler(RequestValidationError)
+async def validation_error(_request, exc: RequestValidationError):
+    return JSONResponse(status_code=422, content={"detail": [{"loc": list(e.get("loc", ())), "msg": e.get("msg", ""), "type": e.get("type", "")} for e in exc.errors()]})
+
+
 origins = [value.strip() for value in settings.cors_origins.split(",") if value.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 for router in (auth.router, users.router, receptions.router, transformations.router, lots.router, inventory.router,

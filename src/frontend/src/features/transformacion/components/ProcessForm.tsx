@@ -2,7 +2,9 @@ import { useRef, useState, type FormEvent } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { ahoraISO } from '@/utils/clock'
 import { ErrorDominio } from '@/utils/errores'
-import { formatearKg, parsearNumero } from '@/utils/formato'
+import { formatearKg } from '@/utils/formato'
+import { LIMITES, PATRON_CIFRA, parsearDecimal } from '@/utils/validacion'
+import { validarCifrasProceso, type CampoCifra } from '../reglas'
 import { registrarProcesoApi } from '../api/procesoApi'
 import { registrarProcesoLocal } from '../api/procesoDb'
 
@@ -31,15 +33,16 @@ const VACIO = {
   notes: '',
 }
 
-const opcional = (t: string) => (t.trim() === '' ? undefined : parsearNumero(t))
+// vista previa mientras se escribe: lo que no es cifra válida queda como NaN y la tarjeta no calcula
+const kg = (t: string) => parsearDecimal(t, { decimales: 3 }) ?? NaN
+const cop = (t: string) => (t.trim() === '' ? undefined : (parsearDecimal(t, { decimales: 2, miles: true }) ?? NaN))
 
 function aBorrador(v: typeof VACIO): Borrador {
-  return {
-    inputQty: parsearNumero(v.entrada),
-    outputQty: parsearNumero(v.salida),
-    costoTotalCOP: opcional(v.costo),
-    precioVentaCOP: opcional(v.precio),
-  }
+  return { inputQty: kg(v.entrada), outputQty: kg(v.salida), costoTotalCOP: cop(v.costo), precioVentaCOP: cop(v.precio) }
+}
+
+function ErrorCampo({ id, texto }: { id: string; texto?: string }) {
+  return texto ? <small id={id} className="nota-error">{texto}</small> : null
 }
 
 export function ProcessForm({ lotes, onBorrador, onSuccess }: ProcessFormProps) {
@@ -52,6 +55,7 @@ export function ProcessForm({ lotes, onBorrador, onSuccess }: ProcessFormProps) 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [ok, setOk] = useState(false)
+  const [errCampo, setErrCampo] = useState<Partial<Record<CampoCifra, string>>>({})
 
   const lotCode = v.lotCode || lotes[0]?.code || ''
   const disponible = lotes.find((l) => l.code === lotCode)?.disponibleKg
@@ -66,6 +70,12 @@ export function ProcessForm({ lotes, onBorrador, onSuccess }: ProcessFormProps) 
     e.preventDefault()
     setError(null)
     setOk(false)
+    const { errores } = validarCifrasProceso(v)
+    setErrCampo(errores)
+    if (Object.keys(errores).length > 0) {
+      setError('Hay cifras que no son válidas. No se envió nada para no registrar datos distintos de los reales. Corrija los campos marcados.')
+      return
+    }
     setLoading(true)
     try {
       const b = aBorrador(v)
@@ -91,7 +101,7 @@ export function ProcessForm({ lotes, onBorrador, onSuccess }: ProcessFormProps) 
       setV({ ...VACIO, lotCode })
       onSuccess?.()
     } catch (err) {
-      const incierto = err instanceof ErrorDominio && (err.codigo === 'SIN_RED' || err.codigo === 'SERVIDOR')
+      const incierto = err instanceof ErrorDominio && (err.codigo === 'SIN_RED' || err.codigo === 'SIN_RESPUESTA' || err.codigo === 'SERVIDOR')
       if (!incierto) intento.current = null
       setError(
         err instanceof ErrorDominio
@@ -163,23 +173,31 @@ export function ProcessForm({ lotes, onBorrador, onSuccess }: ProcessFormProps) 
             value={v.entrada}
             onChange={(e) => cambiar('entrada', e.target.value)}
             placeholder={disponible === undefined ? '' : `Máximo ${disponible}`}
+            pattern={PATRON_CIFRA}
+            maxLength={LIMITES.cifra}
+            aria-invalid={!!errCampo.entrada}
+            aria-describedby="err-entrada"
             required
           />
+          <ErrorCampo id="err-entrada" texto={errCampo.entrada} />
         </label>
 
         <label className="field">
           <span className="field-label">Salida vendible (kg)</span>
-          <input className="input" inputMode="decimal" value={v.salida} onChange={(e) => cambiar('salida', e.target.value)} required />
+          <input className="input" inputMode="decimal" value={v.salida} onChange={(e) => cambiar('salida', e.target.value)} pattern={PATRON_CIFRA} maxLength={LIMITES.cifra} aria-invalid={!!errCampo.salida} aria-describedby="err-salida" required />
+          <ErrorCampo id="err-salida" texto={errCampo.salida} />
         </label>
 
         <label className="field">
           <span className="field-label">Costo total de la etapa (COP)</span>
-          <input className="input" inputMode="decimal" value={v.costo} onChange={(e) => cambiar('costo', e.target.value)} />
+          <input className="input" inputMode="decimal" value={v.costo} onChange={(e) => cambiar('costo', e.target.value)} pattern={PATRON_CIFRA} maxLength={LIMITES.cifra} aria-invalid={!!errCampo.costo} aria-describedby="err-costo" />
+          <ErrorCampo id="err-costo" texto={errCampo.costo} />
         </label>
 
         <label className="field">
           <span className="field-label">Precio de venta hipotético (COP/kg)</span>
-          <input className="input" inputMode="decimal" value={v.precio} onChange={(e) => cambiar('precio', e.target.value)} />
+          <input className="input" inputMode="decimal" value={v.precio} onChange={(e) => cambiar('precio', e.target.value)} pattern={PATRON_CIFRA} maxLength={LIMITES.cifra} aria-invalid={!!errCampo.precio} aria-describedby="err-precio" />
+          <ErrorCampo id="err-precio" texto={errCampo.precio} />
         </label>
 
         <label className="field col-span-full">
@@ -188,6 +206,7 @@ export function ProcessForm({ lotes, onBorrador, onSuccess }: ProcessFormProps) 
             className="input"
             value={v.justificacion}
             onChange={(e) => cambiar('justificacion', e.target.value)}
+            maxLength={LIMITES.justificacion}
             placeholder="Por ejemplo: adición de insumos"
           />
         </label>
@@ -199,13 +218,14 @@ export function ProcessForm({ lotes, onBorrador, onSuccess }: ProcessFormProps) 
             rows={2}
             value={v.incidencias}
             onChange={(e) => cambiar('incidencias', e.target.value)}
+            maxLength={LIMITES.incidencias}
             placeholder="Hechos ocurridos durante la etapa"
           />
         </label>
 
         <label className="field col-span-full">
           <span className="field-label">Notas de observación</span>
-          <textarea className="input" rows={2} value={v.notes} onChange={(e) => cambiar('notes', e.target.value)} />
+          <textarea className="input" rows={2} value={v.notes} onChange={(e) => cambiar('notes', e.target.value)} maxLength={LIMITES.notas} />
         </label>
       </div>
 

@@ -4,10 +4,12 @@ import { axiosClient } from '@/api/axiosClient'
 import { db } from '@/db/dexieDb'
 import { limpiarDb } from '@/test/limpiarDb'
 import { encolarRecepcionApi } from './recepcionDb'
-import { sincronizarRecepcionesPendientes } from './recepcionSync'
+import { descartarRecepcion, reintentarRecepcion, resumirCola, sincronizarRecepcionesPendientes } from './recepcionSync'
 
 const datos = { farmId: 3, farmName: 'Finca C', date: '2026-01-05', quantity: 12.5, purchaseTotalCop: 500_000, qualityNotes: 'seco' }
 const rechazo = (status: number, detail = 'x') => new AxiosError('x', 'ERR', undefined, undefined, { status, data: { detail } } as AxiosResponse)
+const heredada = (syncStatus: 'PENDING' | 'ERROR' = 'PENDING') =>
+  ({ idempotencyKey: crypto.randomUUID(), lotCode: 'CAC001', producer: 'A', origin: 'Rivera', date: '2026-01-01', quantity: 100, unit: 'kg', syncStatus })
 const ok = (lot_code: string) => ({ status: 201, data: { lot_code } })
 
 beforeEach(limpiarDb)
@@ -85,12 +87,13 @@ describe('sincronizarRecepcionesPendientes (modo api)', () => {
     expect((await db.recepciones.toArray()).map((l) => l.syncStatus).sort()).toEqual(['ERROR', 'SYNCED'])
   })
 
-  it('un registro de la fase sin backend (sin finca) pasa a ERROR sin llamar a la API', async () => {
-    await db.recepciones.add({ idempotencyKey: 'k', lotCode: 'CAC001', producer: 'A', origin: 'Rivera', date: '2026-01-01', quantity: 100, unit: 'kg', syncStatus: 'PENDING' })
+  it('un registro de la fase sin backend (sin finca) no es de la cola: no se envía, no se marca ERROR y no se borra', async () => {
+    await db.recepciones.add(heredada())
     const post = vi.spyOn(axiosClient, 'post')
     await sincronizarRecepcionesPendientes('api')
     expect(post).not.toHaveBeenCalled()
-    expect((await db.recepciones.toArray())[0].syncStatus).toBe('ERROR')
+    const [l] = await db.recepciones.toArray()
+    expect(l).toMatchObject({ lotCode: 'CAC001', syncStatus: 'PENDING', quantity: 100 })
   })
 })
 
@@ -134,5 +137,82 @@ describe('sincronizarRecepcionesPendientes (modo local)', () => {
     const post = vi.spyOn(axiosClient, 'post')
     expect(await sincronizarRecepcionesPendientes('local')).toBe(0)
     expect(post).not.toHaveBeenCalled()
+  })
+})
+
+describe('resumirCola', () => {
+  it('cuenta solo las recepciones de la cola del servidor; las heredadas sin finca no cuentan', async () => {
+    await db.recepciones.add(heredada('PENDING'))
+    await db.recepciones.add(heredada('ERROR')) // marcada por la versión anterior
+    await encolarRecepcionApi(datos)
+    const conError = await encolarRecepcionApi(datos)
+    await db.recepciones.update(conError.idLocal!, { syncStatus: 'ERROR', errorMessage: 'x' })
+    expect(resumirCola(await db.recepciones.toArray())).toEqual({ pendientes: 1, errores: 1 })
+  })
+
+  it('una descartada no cuenta como pendiente ni como error', async () => {
+    const l = await encolarRecepcionApi(datos)
+    await db.recepciones.update(l.idLocal!, { syncStatus: 'DISCARDED' })
+    expect(resumirCola(await db.recepciones.toArray())).toEqual({ pendientes: 0, errores: 0 })
+  })
+})
+
+describe('reintentarRecepcion', () => {
+  it('vuelve a enviar una recepción con error y queda SYNCED si el servidor la acepta', async () => {
+    const l = await encolarRecepcionApi(datos)
+    await db.recepciones.update(l.idLocal!, { syncStatus: 'ERROR', errorMessage: 'Finca no encontrada' })
+    const post = vi.spyOn(axiosClient, 'post').mockResolvedValue(ok('CAC010'))
+    await reintentarRecepcion(l.idLocal!, 'api')
+    expect(post).toHaveBeenCalledTimes(1)
+    // misma clave: si el servidor ya la tenía, devuelve el lote original y no duplica
+    expect(post.mock.calls[0][1]).toMatchObject({ idempotency_key: l.idempotencyKey })
+    const r = await db.recepciones.get(l.idLocal!)
+    expect(r).toMatchObject({ syncStatus: 'SYNCED', lotCode: 'CAC010' })
+    expect(r?.errorMessage).toBeUndefined()
+  })
+
+  it('si el servidor la rechaza otra vez, vuelve a ERROR con el motivo nuevo', async () => {
+    const l = await encolarRecepcionApi(datos)
+    await db.recepciones.update(l.idLocal!, { syncStatus: 'ERROR', errorMessage: 'viejo' })
+    vi.spyOn(axiosClient, 'post').mockRejectedValue(rechazo(422, 'quantity_kg no válido'))
+    await reintentarRecepcion(l.idLocal!, 'api')
+    const r = await db.recepciones.get(l.idLocal!)
+    expect(r?.syncStatus).toBe('ERROR')
+    expect(r?.errorMessage).toContain('quantity_kg')
+  })
+
+  it('sin red queda PENDING para el próximo intento automático', async () => {
+    const l = await encolarRecepcionApi(datos)
+    await db.recepciones.update(l.idLocal!, { syncStatus: 'ERROR', errorMessage: 'x' })
+    vi.spyOn(axiosClient, 'post').mockRejectedValue(new AxiosError('Network Error', 'ERR_NETWORK'))
+    await reintentarRecepcion(l.idLocal!, 'api')
+    expect((await db.recepciones.get(l.idLocal!))?.syncStatus).toBe('PENDING')
+  })
+})
+
+describe('descartarRecepcion', () => {
+  it('marca la recepción como descartada y la conserva en el dispositivo con sus datos y el motivo previo', async () => {
+    const l = await encolarRecepcionApi(datos)
+    await db.recepciones.update(l.idLocal!, { syncStatus: 'ERROR', errorMessage: 'Finca no encontrada' })
+    await descartarRecepcion(l.idLocal!)
+    expect(await db.recepciones.count()).toBe(1)
+    const r = await db.recepciones.get(l.idLocal!)
+    expect(r).toMatchObject({ syncStatus: 'DISCARDED', quantity: 12.5, errorMessage: 'Finca no encontrada' })
+    expect(r?.discardedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+  })
+
+  it('una descartada ya no se envía', async () => {
+    const l = await encolarRecepcionApi(datos)
+    await db.recepciones.update(l.idLocal!, { syncStatus: 'ERROR' })
+    await descartarRecepcion(l.idLocal!)
+    const post = vi.spyOn(axiosClient, 'post')
+    await sincronizarRecepcionesPendientes('api')
+    expect(post).not.toHaveBeenCalled()
+  })
+
+  it('solo se descarta lo que tiene error: una pendiente o sincronizada no se toca', async () => {
+    const l = await encolarRecepcionApi(datos)
+    await expect(descartarRecepcion(l.idLocal!)).rejects.toMatchObject({ codigo: 'NO_DESCARTABLE' })
+    expect((await db.recepciones.get(l.idLocal!))?.syncStatus).toBe('PENDING')
   })
 })

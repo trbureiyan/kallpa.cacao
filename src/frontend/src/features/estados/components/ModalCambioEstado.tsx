@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button, Field, Icon } from '@/components/ui'
 import { useAuth } from '@/context/AuthContext'
+import { LIMITES, validarMotivo } from '@/utils/validacion'
 import { ErrorDominio } from '@/utils/errores'
 import { cambiarEstadoApi } from '../api/estadosApi'
 import { cambiarEstadoLote } from '../api/estadosDb'
@@ -31,6 +32,8 @@ export function ModalCambioEstado({ lotes, loteInicial, nuevoInicial, onClose, o
     d?.showModal()
     return () => d?.close()
   }, [])
+
+  const motivoInvalido = validarMotivo(motivo)
 
   const confirmar = async () => {
     setError(null)
@@ -95,13 +98,18 @@ export function ModalCambioEstado({ lotes, loteInicial, nuevoInicial, onClose, o
               placeholder="Describa la razón del cambio..."
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
+              maxLength={LIMITES.motivoMax}
+              aria-describedby="ayuda-motivo"
             />
+            <small id="ayuda-motivo" className="text-sm text-texto-suave">
+              {motivoInvalido && motivo.trim() ? motivoInvalido : `De ${LIMITES.motivoMin} a ${LIMITES.motivoMax} caracteres. Queda en la auditoría.`}
+            </small>
           </Field>
         </div>
 
         <div className="modal-actions">
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button disabled={!motivo.trim()} variant={nuevo === 'BLOQUEADO' ? 'danger' : 'primary'} onClick={confirmar}>
+          <Button disabled={!!motivoInvalido} variant={nuevo === 'BLOQUEADO' ? 'danger' : 'primary'} onClick={confirmar}>
             Confirmar {nuevo === 'BLOQUEADO' ? 'bloqueo' : 'liberación'}
           </Button>
         </div>

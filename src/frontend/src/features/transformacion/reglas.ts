@@ -1,3 +1,5 @@
+import { validarCOP, validarKg } from '@/utils/validacion'
+
 interface EntradaTransformacion {
   entradaKg: number
   salidaKg: number
@@ -34,3 +36,20 @@ export function validarTransformacion(i: EntradaTransformacion): string[] {
 
   return errores
 }
+
+export type CampoCifra = 'entrada' | 'salida' | 'costo' | 'precio'
+
+/** Valida cada cifra por separado: un opcional con basura bloquea el envío en lugar de viajar como "sin dato". */
+export function validarCifrasProceso(v: Record<CampoCifra, string>) {
+  const entrada = validarKg(v.entrada, 'La cantidad de entrada')
+  const salida = validarKg(v.salida, 'La salida vendible')
+  const costo = validarCOP(v.costo, { opcional: true, campo: 'El costo total de la etapa' })
+  const precio = validarCOP(v.precio, { opcional: true, campo: 'El precio de venta' })
+  const errores: Partial<Record<CampoCifra, string>> = {}
+  if ('error' in entrada) errores.entrada = entrada.error
+  if ('error' in salida) errores.salida = salida.error
+  if ('error' in costo) errores.costo = costo.error
+  if ('error' in precio) errores.precio = precio.error
+  return { errores, valores: { entrada, salida, costo, precio } }
+}
+

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { NetworkProvider, useNetwork } from '@/context/NetworkContext';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { rutasPermitidas } from '@/context/rutas';
+import { MODO_LOCAL_PERMITIDO } from '@/context/fuente';
 import { EsqueletoPagina } from '@/components/shared/EsqueletoPagina';
 // Importación diferida del layout con Dexie y componentes del shell
 const AppShell = lazy(() => import('@/components/layout/AppShell').then(m => ({ default: m.AppShell })));
@@ -56,9 +57,10 @@ function ProtectedLayout() {
 }
 
 export default function App() {
-  // Inicializar datos semilla en IndexedDB si la base está vacía (sin bloquear el chunk principal)
+  // La semilla de Dexie solo sirve al modo local. Cargada siempre, en modo API sus lotes aparecían como
+  // recepciones sin finca por enviar y la cabecera quedaba en "Error al sincronizar" en todas las páginas.
   useEffect(() => {
-    void import('@/db/seed').then(m => m.seedDatabase());
+    if (MODO_LOCAL_PERMITIDO) void import('@/db/seed').then(m => m.seedDatabase());
   }, []);
 
   return (

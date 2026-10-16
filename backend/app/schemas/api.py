@@ -1,8 +1,26 @@
 from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
-from typing import Literal
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from typing import Annotated, Literal
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator, model_validator
+
+
+def _max_decimales(n: int):
+    def validar(valor: float) -> float:
+        if Decimal(str(valor)).as_tuple().exponent < -n:
+            raise ValueError(f"Admite como máximo {n} decimales")
+        return valor
+    return AfterValidator(validar)
+
+
+# [DECISION] float con cotas y sin NaN/Infinity en lugar de Decimal: el servicio de transformación opera en float y
+# cambiar el tipo tocaría su aritmética a horas de la entrega. Las cotas siguen las columnas Numeric de recepción.
+Kg = Annotated[float, Field(gt=0, le=99_999_999_999.999, allow_inf_nan=False), _max_decimales(3)]
+KgOCero = Annotated[float, Field(ge=0, le=99_999_999_999.999, allow_inf_nan=False), _max_decimales(3)]
+Cop = Annotated[float, Field(ge=0, le=99_999_999_999_999.99, allow_inf_nan=False), _max_decimales(2)]
+CopPorKg = Annotated[float, Field(ge=0, le=999_999_999.99, allow_inf_nan=False), _max_decimales(2)]
+# códigos de lote: segmentos en mayúsculas y dígitos separados por guion (CAC001, CAC001-1A2B3C)
+CodigoLote = Annotated[str, Field(min_length=2, max_length=40, pattern=r"^[A-Z0-9]+(-[A-Z0-9]+)*$")]
 
 
 class ORMModel(BaseModel):
@@ -106,7 +124,7 @@ class ReceptionCreate(BaseModel):
     received_at: datetime
     quantity_kg: Decimal = Field(gt=0, max_digits=14, decimal_places=3)
     purchase_total_cop: Decimal = Field(ge=0, max_digits=16, decimal_places=2)
-    quality_notes: str | None = None
+    quality_notes: str | None = Field(default=None, max_length=500)
 
 
 class ReceptionOut(BaseModel):
@@ -146,9 +164,9 @@ class LotOut(ORMModel):
 
 
 class TransformationOutputCreate(BaseModel):
-    lot_code: str = Field(min_length=2, max_length=40)
+    lot_code: CodigoLote
     product_type: str = Field(min_length=2, max_length=40)
-    quantity: float = Field(gt=0)
+    quantity: Kg
     unit: str = Field(default="kg", min_length=1, max_length=20)
 
 
@@ -157,15 +175,15 @@ class TransformationCreate(BaseModel):
     lot_id: int
     stage: str = Field(min_length=2, max_length=120)
     occurred_at: datetime
-    input_quantity: float = Field(gt=0)
-    output_quantity: float | None = Field(default=None, ge=0)
+    input_quantity: Kg
+    output_quantity: KgOCero | None = None
     unit: str = "kg"
-    incident: str | None = None
-    output_code: str | None = Field(default=None, min_length=2, max_length=40)
+    incident: str | None = Field(default=None, max_length=1000)
+    output_code: CodigoLote | None = None
     product_type: str = Field(default="processed_cocoa", min_length=2, max_length=40)
     outputs: list[TransformationOutputCreate] | None = Field(default=None, min_length=1, max_length=20)
-    costs_cop: float | None = Field(default=None, ge=0)  # None = la etapa no registró costo
-    sale_price_cop_per_unit: float | None = Field(default=None, ge=0)
+    costs_cop: Cop | None = None  # None = la etapa no registró costo
+    sale_price_cop_per_unit: CopPorKg | None = None
 
     @model_validator(mode="after")
     def normalize_outputs(self):

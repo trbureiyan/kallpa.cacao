@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
+import { useLocation } from "react-router-dom"
 import { useLiveQuery } from "dexie-react-hooks"
 import { PageHead } from "@/components/shared"
 import { Icon } from "@/components/ui"
 import { useAuth } from "@/context/AuthContext"
 import { db } from "@/db/dexieDb"
-import { sincronizarRecepcionesPendientes } from "@/features/recepcion/api/recepcionSync"
+import { esDeLaCola, sincronizarRecepcionesPendientes } from "@/features/recepcion/api/recepcionSync"
+import { ErroresSincronizacion } from "@/features/recepcion/components/ErroresSincronizacion"
 import { RecepcionForm } from "@/features/recepcion/components/RecepcionForm.tsx"
 import { RecentLotsTable } from "@/features/recepcion/components/RecentLotsTable"
 
@@ -15,15 +17,24 @@ export function ReceptionPage({
   online: boolean
   addPending: () => void
 }) {
-  const [search] = useState("")
   const { modo } = useAuth()
+  const { hash } = useLocation()
 
-  // Consulta reactiva a Dexie
+  // En modo API la tabla muestra la cola del servidor; en modo local, los lotes del dispositivo. Nunca ambas.
   const lotesLocales = useLiveQuery(
-    () => db.recepciones.reverse().toArray(),
-    [],
+    async () => (await db.recepciones.reverse().toArray()).filter((r) => esDeLaCola(r) === (modo === "api")),
+    [modo],
     [],
   )
+  const hayErrores = lotesLocales.some((r) => r.syncStatus === "ERROR")
+
+  // El aviso de la cabecera lleva aquí: se enfoca la lista para que el lector de pantalla la anuncie
+  useEffect(() => {
+    if (hash !== "#errores-sincronizacion" || !hayErrores) return
+    const lista = document.getElementById("errores-sincronizacion")
+    lista?.focus()
+    lista?.scrollIntoView?.({ block: "start" })
+  }, [hash, hayErrores])
 
   // Sincronización automática cuando cambia el estado de conexión
   useEffect(() => {
@@ -33,14 +44,6 @@ export function ReceptionPage({
       console.error("Error al sincronizar las recepciones:", error)
     })
   }, [online, modo])
-
-  // Filtrar los lotes locales
-  const lotesFiltrados = (lotesLocales || []).filter(
-    (lote) =>
-      lote.lotCode.toLowerCase().includes(search.toLowerCase()) ||
-      lote.producer.toLowerCase().includes(search.toLowerCase()) ||
-      lote.origin.toLowerCase().includes(search.toLowerCase()),
-  )
 
   return (
     <>
@@ -73,7 +76,9 @@ export function ReceptionPage({
         </aside>
       </div>
 
-      <RecentLotsTable lots={lotesFiltrados} />
+      <ErroresSincronizacion modo={modo} />
+
+      <RecentLotsTable lots={lotesLocales} />
     </>
   )
 }
