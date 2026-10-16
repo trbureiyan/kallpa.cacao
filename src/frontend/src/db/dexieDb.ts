@@ -44,6 +44,8 @@ export class CacaoOfflineDB extends Dexie {
       colaRecepciones: 'idempotencyKey, estado, creadoEn',
       fincas: 'id',
     })
+    // v4: RecepcionForm ordena por region; Dexie exige que el campo esté indexado (sin esto lanza SchemaError).
+    this.version(4).stores({ fincas: 'id, region' })
   }
 }
 

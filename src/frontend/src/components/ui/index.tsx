@@ -231,7 +231,7 @@ export function Logo({ light = false }: { light?: boolean }) {
             light ? "text-white" : "text-slate-900"
           }`}
         >
-          AgroCacao <span className="text-emerald-600">Huila</span>
+          kallpa<span className="text-emerald-600">.cacao</span>
         </div>
         <div
           className={`text-[10px] font-bold uppercase tracking-[.18em] mt-1 ${

@@ -17,7 +17,7 @@ export const PublicFichaPage: React.FC = () => {
     <div className="public-shell">
       <header className="public-header">
         <div className="flex items-center gap-2 font-black text-lg text-emerald-800">
-          <span>AGROCACAO HUILA</span>
+          <span>KALLPA.CACAO</span>
         </div>
         <button onClick={() => navigate('/login')} className="btn btn-secondary">
           Acceso de operadores y administradores
@@ -43,7 +43,7 @@ export const PublicFichaPage: React.FC = () => {
 
       <footer className="public-footer">
         <div>
-          <strong>AgroCacao Huila</strong>
+          <strong>kallpa.cacao</strong>
           <p>Ficha comercial con datos autorizados. Caso simulado del reto de la hackathon.</p>
         </div>
       </footer>

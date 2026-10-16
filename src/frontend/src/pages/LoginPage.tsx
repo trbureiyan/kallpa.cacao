@@ -41,7 +41,7 @@ export const LoginPage: React.FC = () => {
         <div className="relative z-10 max-w-xl">
           <div className="flex items-center gap-2 font-black text-2xl tracking-wider text-emerald-300">
             <Sprout className="w-8 h-8" />
-            <span>AGROCACAO HUILA</span>
+            <span>KALLPA.CACAO</span>
           </div>
 
           <div className="mt-16 mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold text-emerald-100 backdrop-blur">

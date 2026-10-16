@@ -268,7 +268,8 @@ td strong { color: #1e293b; }
 .user-modal-intro small { color: #94a3b8; font-size: .65rem; }
 
 /* --- FICHA PÚBLICA PARA COMPRADORES --- */
-.public-shell { min-height: 100vh; background: #f8fafc; }
+.public-shell { min-height: 100vh; display: flex; flex-direction: column; background: #f8fafc; }
+.public-shell > .public-footer { margin-top: auto; }
 .public-header { height: 5rem; padding: 0 max(1.5rem, calc((100% - 76rem) / 2)); display: flex; align-items: center; justify-content: space-between; background: white; }
 .public-hero { min-height: 24rem; position: relative; overflow: hidden; display: flex; align-items: center; background: radial-gradient(circle at 75% 35%, #0b7a58, #064e3b 62%); }
 .public-hero::after { content: ""; position: absolute; right: 8%; width: 19rem; height: 19rem; border: 1px solid #ffffff26; border-radius: 48% 52% 42% 58%; transform: rotate(28deg); }
