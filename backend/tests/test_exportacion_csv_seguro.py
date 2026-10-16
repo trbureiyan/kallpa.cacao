@@ -27,7 +27,7 @@ def _lote_con_origen(api, region: str) -> str:
 def _filas(api) -> dict[str, dict]:
     r = api["client"].get("/api/v1/exports/lots.csv", headers=auth(api["admin_token"]))
     assert r.status_code == 200, r.text
-    return {f["identificador"]: f for f in csv.DictReader(StringIO(r.text))}
+    return {f["identificador"]: f for f in csv.DictReader(StringIO(r.content.decode("utf-8-sig")))}
 
 
 @pytest.mark.parametrize("region", ['=HYPERLINK("http://malo.example","clic")', "+1+1", "-2+3", "@SUM(A1)", "\tcmd", "\n=cmd"])
@@ -71,3 +71,13 @@ def test_el_codigo_del_lote_tambien_se_neutraliza(api):
     assert "'=CMD()|' /C calc'!A0" in codigos
     assert not any(c.startswith("=") for c in codigos)
     assert codigo in codigos
+
+
+def test_csv_lleva_bom_utf8_y_nombre_con_fecha(api):
+    # sin BOM, Excel en Windows abre el archivo como ANSI y rompe tildes y eñes
+    r = api["client"].get("/api/v1/exports/lots.csv", headers=auth(api["admin_token"]))
+    assert r.status_code == 200
+    assert r.content.startswith(b"\xef\xbb\xbf")
+    assert not r.content.startswith(b"\xef\xbb\xbf\xef\xbb\xbf")
+    import re
+    assert re.search(r'filename="lotes_\d{4}-\d{2}-\d{2}\.csv"', r.headers["content-disposition"])

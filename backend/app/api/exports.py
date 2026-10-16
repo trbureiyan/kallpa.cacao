@@ -1,5 +1,6 @@
 import csv
 import io
+from datetime import date
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
@@ -43,6 +44,7 @@ def export_lots(origin: str | None = None, status: str | None = None,
             _texto_seguro(lot.code), _texto_seguro(lot.origin), float(lot.received_quantity), float(lot.consumed_quantity),
             float(lot.available_quantity), lot.status, costs_by_lot.get(lot.id, 0),
         ])
-    stream.seek(0)
-    return StreamingResponse(iter([stream.getvalue()]), media_type="text/csv; charset=utf-8",
-                             headers={"Content-Disposition": "attachment; filename=lotes.csv"})
+    # BOM UTF-8: sin él Excel en Windows lee el archivo como ANSI y rompe tildes y eñes
+    nombre = f"lotes_{date.today().isoformat()}.csv"
+    return StreamingResponse(iter(["\ufeff" + stream.getvalue()]), media_type="text/csv; charset=utf-8",
+                             headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
