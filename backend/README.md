@@ -31,9 +31,9 @@ Por defecto usa SQLite en `backend/cacao.db`; el esquema se crea mediante Alembi
 
 ## Docker
 
-Desde `backend/` ejecuta `docker compose up --build`. El contenedor aplica las migraciones Alembic antes de iniciar la API, disponible en el puerto 8000. PostgreSQL guarda datos en el volumen `postgres_data`.
+Desde `backend/`, ejecuta `docker compose up --build db api` para levantar PostgreSQL y la API. El contenedor aplica las migraciones Alembic antes de iniciar la API, disponible en el puerto 8000. PostgreSQL guarda datos en el volumen `postgres_data`.
 
-Compose también construye la PWA React en `http://localhost:8080`. Para desarrollo del frontend por separado, consulta [src/frontend/README.md](../src/frontend/README.md); Vite corre en `http://localhost:5173`, origen incluido en CORS.
+El archivo Compose también define un servicio frontend en `http://localhost:8080`, pero la fuente de `src/frontend/` está incompleta en esta rama (el punto de entrada y `package.json` están vacíos). Por eso, el comando de pila completa `docker compose up --build` no se considera una instalación verificada desde esta copia. Para demostrar la PWA, use la rama/copia que contenga su fuente completa y documente el commit correspondiente.
 
 ## Usuarios sintéticos
 
@@ -66,7 +66,7 @@ Obtén un JWT enviando formulario `username` y `password` a `POST /api/v1/auth/l
 | `GET /api/v1/inventory/movements` | Movimientos internos; usuario interno |
 | `GET /api/v1/inventory` | Saldo disponible por lote; usuario interno |
 
-La interfaz web implementa captura offline de recepciones y vistas online para inventario, alertas, economía, cambios de estado de administrador y consulta pública de productos. La app debe abrirse con conexión una primera vez para iniciar sesión y almacenar el catálogo de fincas. Los formularios luego se guardan en IndexedDB y se reenvían con clave idempotente cuando hay conexión; las transformaciones offline todavía no están habilitadas.
+La aplicación contempla una PWA React para captura offline de recepciones y vistas online. Sin embargo, la fuente frontend no está completa en esta rama y esas funciones no pueden verificarse aquí. El informe de revisión conserva resultados anteriores de build y del ensayo offline; no los trate como una verificación de este commit. Las transformaciones offline no forman parte del alcance comprobado.
 
 ## Primera demostración en `/docs`
 

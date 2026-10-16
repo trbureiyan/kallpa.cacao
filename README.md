@@ -1,19 +1,29 @@
 # kallpa.cacao
 
-MVP para registrar recepciones de cacao, conservarlas sin conexion y sincronizarlas con una API de trazabilidad.
+Backend para un MVP de trazabilidad de cacao: recepción, lotes, transformación, inventario, alertas, economía y consulta pública. El repositorio está en la rama `backend`.
 
-## Ejecutar con Docker
+## Iniciar la API y PostgreSQL con Docker
 
-Desde `backend/`: `docker compose up --build`. La PWA queda en `http://localhost:8080`, la API en `http://localhost:8000` y su documentacion en `http://localhost:8000/docs`. Los datos de demostracion son sinteticos: `operador` / `Operador123!`.
+Desde PowerShell, en `backend/`:
 
-## Estructura activa
+```powershell
+docker compose up --build db api
+```
 
-- `backend/`: API FastAPI, PostgreSQL/SQLite y migraciones.
-- `src/frontend/`: PWA React, captura offline en IndexedDB y sincronizacion de recepciones.
-- `frontend/`: copia anterior conservada; no la usa Docker Compose.
+- API: <http://localhost:8000>
+- Swagger: <http://localhost:8000/docs>
+- Salud: <http://localhost:8000/health>
 
-Para desarrollo local del frontend y ensayo offline, consulte [`src/frontend/README.md`](src/frontend/README.md).
+Las credenciales sintéticas de demostración son `operador` / `Operador123!` y `admin` / `Admin123!`. No exponga esas credenciales ni la configuración local a Internet.
 
-## Verificacion automatizada
+El Compose también define un servicio frontend, pero la fuente frontend de esta rama está incompleta; por eso no se documenta aquí como un inicio de pila completa verificado. Consulte [backend/README.md](backend/README.md) para ejecución local y pruebas, y [ENTREGA.md](ENTREGA.md) para el estado de los requisitos, la evidencia y las limitaciones.
 
-En PowerShell, desde la raiz del repositorio, ejecute: `.\.venv\Scripts\python.exe -m unittest discover -s tests/backend/integration -p test_offline_receptions.py`.
+## Ejecutar las pruebas del backend
+
+Desde `backend/`, con las dependencias de desarrollo instaladas:
+
+```powershell
+python -m pytest -q
+```
+
+La prueba de concurrencia PostgreSQL se ejecuta aparte y requiere una base de ensayo aislada. No use la base persistente de demostración para ensayos destructivos.
