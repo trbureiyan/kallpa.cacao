@@ -25,21 +25,23 @@ export function AuditPage({ onAction }: { onAction?: () => void }) {
   const handleEjecutarAccion = async () => {
     if (!motivo.trim()) return
 
+    const lote = await db.recepciones.where("lotCode").equals(targetLot).first()
+
+    // Registrar en auditoría inmutable
     await db.auditLogs.add({
-      timestamp: new Date().toLocaleString(),
-      user: nombreUsuario,
+      timestamp: new Date().toISOString(),
+      user: nombreUsuario || "Administrador",
       action: actionType,
-      fieldChanged: `Estado · ${targetLot}`,
-      previousValue: actionType === "BLOQUEO" ? "LIBERADO" : "BLOQUEADO",
+      fieldChanged: "status",
+      previousValue: lote?.status || "PENDIENTE",
       newValue: actionType === "BLOQUEO" ? "BLOQUEADO" : "LIBERADO",
       lotCode: targetLot,
-      reason: motivo
+      reason: motivo,
     })
 
-    const lote = await db.recepciones.where("lotCode").equals(targetLot).first()
     if (lote && lote.idLocal !== undefined) {
       await db.recepciones.update(lote.idLocal, {
-        status: actionType === "BLOQUEO" ? "BLOQUEADO" : "LIBERADO"
+        status: actionType === "BLOQUEO" ? "BLOQUEADO" : "LIBERADO",
       })
     }
 
@@ -52,12 +54,12 @@ export function AuditPage({ onAction }: { onAction?: () => void }) {
   return (
     <>
       <PageHead
-        eyebrow="RF09 · RF10"
+        eyebrow="RF09 · RF10 · Auditoría"
         title="Auditoría e incidencias"
-        text="Historial inmutable de cambios y decisiones sobre los lotes."
+        text="Historial inmutable de cambios y decisiones operativas sobre los lotes."
         action={
           <Button onClick={() => setShowModal(true)}>
-            <Icon name="lock" /> Gestionar lote
+            <Icon name="lock" /> Bloquear / Liberar Lote
           </Button>
         }
       />
@@ -67,7 +69,7 @@ export function AuditPage({ onAction }: { onAction?: () => void }) {
         <div>
           <strong>Registro protegido e inmutable</strong>
           <p>
-            Los eventos de auditoría no pueden editarse ni eliminarse. Cada cambio conserva usuario, fecha y valores.
+            Los eventos de auditoría no se pueden modificar. Cada cambio conserva responsable, marca temporal y valores previo/nuevo.
           </p>
         </div>
       </div>
@@ -75,11 +77,11 @@ export function AuditPage({ onAction }: { onAction?: () => void }) {
       <section className="card mt-6">
         <div className="card-head">
           <div>
-            <div className="section-title">Historial de auditoría</div>
-            <p>Actividad registrada en el sistema</p>
+            <div className="section-title">Historial de cambios e incidencias</div>
+            <p>Actividad registrada en IndexedDB / Servidor</p>
           </div>
           <Badge tone="slate">
-            <Icon name="clock" size={14} /> Actualizado ahora
+            <Icon name="clock" size={14} /> Actualizado
           </Badge>
         </div>
 
@@ -88,21 +90,23 @@ export function AuditPage({ onAction }: { onAction?: () => void }) {
             "Fecha y hora",
             "Usuario",
             "Acción",
-            "Campo modificado",
+            "Lote",
+            "Campo",
             "Valor anterior",
             "Valor nuevo",
+            "Motivo / Razón",
           ]}
         >
           {logs.length === 0 ? (
             <tr>
-              <td colSpan={6} className="text-center py-4 text-slate-500">
+              <td colSpan={8} className="text-center py-4 text-slate-500">
                 No hay eventos registrados en la auditoría.
               </td>
             </tr>
           ) : (
             logs.map((log) => (
               <tr key={log.idLocal || log.timestamp}>
-                <td>{log.timestamp}</td>
+                <td>{new Date(log.timestamp).toLocaleString('es-CO')}</td>
                 <td><strong>{log.user}</strong></td>
                 <td>
                   {log.action === "BLOQUEO" && <Badge tone="red">BLOQUEO</Badge>}
@@ -110,9 +114,11 @@ export function AuditPage({ onAction }: { onAction?: () => void }) {
                   {log.action === "PROCESO" && <Badge tone="brown">PROCESO</Badge>}
                   {log.action === "EDICIÓN" && <Badge tone="slate">EDICIÓN</Badge>}
                 </td>
+                <td><strong>{log.lotCode}</strong></td>
                 <td>{log.fieldChanged}</td>
-                <td>{log.previousValue}</td>
-                <td>{log.newValue}</td>
+                <td><small>{log.previousValue}</small></td>
+                <td><small>{log.newValue}</small></td>
+                <td>{log.reason || 'N/A'}</td>
               </tr>
             ))
           )}
@@ -120,52 +126,54 @@ export function AuditPage({ onAction }: { onAction?: () => void }) {
       </section>
 
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex justify-between items-center border-b pb-3">
-              <h3 className="font-extrabold text-slate-900 text-lg">Bloquear / Liberar Lote</h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
-                <Icon name="x" size={20} />
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-head">
+              <h3 className="section-title">Gestionar estado del lote</h3>
+              <button onClick={() => setShowModal(false)} className="icon-button">
+                ✕
               </button>
             </div>
 
-            <Field label="Lote de Cacao">
-              <input
-                className="input"
-                value={targetLot}
-                onChange={(e) => setTargetLot(e.target.value)}
-              />
-            </Field>
+            <div className="modal-body space-y-4">
+              <Field label="Código del lote">
+                <input
+                  className="input"
+                  value={targetLot}
+                  onChange={(e) => setTargetLot(e.target.value)}
+                />
+              </Field>
 
-            <Field label="Acción a realizar">
-              <select
-                className="input"
-                value={actionType}
-                onChange={(e) => setActionType(e.target.value as any)}
-              >
-                <option value="BLOQUEO">Bloquear Lote (Incidencia)</option>
-                <option value="LIBERACIÓN">Liberar Lote (Aprobación)</option>
-              </select>
-            </Field>
+              <Field label="Acción a realizar">
+                <select
+                  className="input"
+                  value={actionType}
+                  onChange={(e) => setActionType(e.target.value as any)}
+                >
+                  <option value="BLOQUEO">Bloquear Lote (Incidencia de Calidad)</option>
+                  <option value="LIBERACIÓN">Liberar Lote (Conforme para venta)</option>
+                </select>
+              </Field>
 
-            <Field label="Motivo o Justificación (Obligatorio)">
-              <textarea
-                className="input min-h-20"
-                placeholder="Describe la razón técnica o de calidad..."
-                value={motivo}
-                onChange={(e) => setMotivo(e.target.value)}
-                required
-              />
-            </Field>
+              <Field label="Motivo o Justificación (Obligatorio)">
+                <textarea
+                  className="input min-h-20"
+                  placeholder="Describe la razón técnica o la observación..."
+                  value={motivo}
+                  onChange={(e) => setMotivo(e.target.value)}
+                  required
+                />
+              </Field>
+            </div>
 
-            <div className="flex gap-2 pt-2">
-              <Button variant="ghost" className="w-full" onClick={() => setShowModal(false)}>
+            <div className="modal-actions">
+              <Button variant="ghost" onClick={() => setShowModal(false)}>
                 Cancelar
               </Button>
 
               <Button
                 disabled={!motivo.trim()}
-                className={`w-full ${actionType === 'BLOQUEO' ? '!bg-red-600 hover:!bg-red-700' : ''}`}
+                className={actionType === 'BLOQUEO' ? 'btn-danger' : 'btn-primary'}
                 onClick={handleEjecutarAccion}
               >
                 Confirmar {actionType}

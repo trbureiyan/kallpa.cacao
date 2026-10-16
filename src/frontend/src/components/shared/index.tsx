@@ -2,6 +2,9 @@ import type { ReactNode } from "react"
 import { Icon } from "@/components/ui"
 import type { IconName } from "@/types/app"
 
+// Exportamos Badge desde UI para compatibilidad de importación
+export { Badge } from "@/components/ui"
+
 export function PageHead({
   eyebrow,
   title,
@@ -53,6 +56,7 @@ export function Timeline() {
       "certificate",
     ],
   ]
+
   return (
     <div className="timeline">
       {steps.map(([title, text, date, icon], i) => (

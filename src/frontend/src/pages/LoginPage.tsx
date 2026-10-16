@@ -65,10 +65,6 @@ export const LoginPage: React.FC = () => {
             ))}
           </div>
         </div>
-
-        <div className="absolute -bottom-10 -right-10 opacity-10 pointer-events-none">
-          <Sprout size={320} />
-        </div>
       </section>
 
       <section className="login-panel">
@@ -91,19 +87,14 @@ export const LoginPage: React.FC = () => {
             </div>
           </div>
 
-          <p className="text-sm text-slate-500 mb-6">
-            Plataforma de Trazabilidad y Control Agroindustrial
-          </p>
-
           <form onSubmit={submit} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                Correo electrónico o usuario
+                Usuario
               </label>
               <input
-                className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-slate-800"
+                className="input"
                 type="text"
-                placeholder="operador@agrocacao.co"
                 defaultValue="operador.rivera"
                 required
               />
@@ -114,9 +105,8 @@ export const LoginPage: React.FC = () => {
                 Contraseña
               </label>
               <input
-                className="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-slate-800"
+                className="input"
                 type="password"
-                placeholder="••••••••"
                 defaultValue="12345678"
                 required
               />
@@ -124,7 +114,7 @@ export const LoginPage: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-lg shadow-emerald-600/20"
+              className="btn btn-primary w-full justify-center"
             >
               Iniciar Sesión <ArrowRight size={18} />
             </button>
@@ -176,7 +166,7 @@ export const LoginPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <Eye size={18} className="text-slate-500" />
               <span>
-                <strong>¿Eres comprador?</strong> Escanea un QR o ingresa a la Ficha Pública
+                <strong>¿Eres comprador?</strong> Consulta la Ficha Pública
               </span>
             </div>
             <ChevronRight size={16} className="text-slate-400" />

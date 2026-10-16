@@ -23,15 +23,17 @@ export function InventoryPage({ onBlock }: { onBlock?: (lotCode: string) => void
   const toggleEstadoLote = async (lote: RecepcionOffline, nuevoEstado: 'LIBERADO' | 'BLOQUEADO') => {
     if (lote.idLocal !== undefined) {
       await db.recepciones.update(lote.idLocal, { status: nuevoEstado })
+      
+      // Registrar en auditLogs con la interfaz exact de AuditEntry
       await db.auditLogs.add({
-        timestamp: new Date().toLocaleString(),
-        user: nombreUsuario,
+        timestamp: new Date().toISOString(),
+        user: nombreUsuario || 'Operador',
         action: nuevoEstado === 'BLOQUEADO' ? 'BLOQUEO' : 'LIBERACIÓN',
-        fieldChanged: `Estado · ${lote.lotCode}`,
+        fieldChanged: 'status',
         previousValue: lote.status || 'PENDIENTE',
         newValue: nuevoEstado,
         lotCode: lote.lotCode,
-        reason: `Cambio manual desde panel de inventario`
+        reason: `Cambio manual desde panel de inventario`,
       })
       await cargarInventario()
     }
@@ -49,21 +51,22 @@ export function InventoryPage({ onBlock }: { onBlock?: (lotCode: string) => void
   const valorTotalStock = totalStockKg * COSTO_KG
 
   const exportarCSV = () => {
-    const headers = ["Codigo", "Origen", "Ingreso_kg", "Disponible_kg", "Estado", "Valor_COP"]
+    const headers = ["Codigo", "Productor", "Origen", "Ingreso_kg", "Disponible_kg", "Estado", "Valor_COP"]
     const rows = lotesFiltrados.map((l) => [
       l.lotCode,
+      l.producer,
       l.origin,
       l.quantity,
       l.availableQty ?? l.quantity,
       l.status || "PENDIENTE",
-      (l.availableQty ?? l.quantity) * COSTO_KG
+      (l.availableQty ?? l.quantity) * COSTO_KG,
     ])
     
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n")
     const encodedUri = encodeURI(csvContent)
     const link = document.createElement("a")
     link.setAttribute("href", encodedUri)
-    link.setAttribute("download", `Inventario_AgroCacao_${new Date().toISOString().split('T')[0]}.csv`)
+    link.setAttribute("download", `Inventario_AgroCacao_${new Date().toLocaleDateString('sv-SE')}.csv`)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -113,6 +116,7 @@ export function InventoryPage({ onBlock }: { onBlock?: (lotCode: string) => void
               <option>Rivera</option>
               <option>Campoalegre</option>
               <option>Algeciras</option>
+              <option>Gigante</option>
             </select>
             <select
               className="input"
@@ -127,7 +131,7 @@ export function InventoryPage({ onBlock }: { onBlock?: (lotCode: string) => void
             <div className="search-box">
               <Icon name="search" />
               <input
-                placeholder="Código..."
+                placeholder="Código de lote..."
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
               />
@@ -138,6 +142,7 @@ export function InventoryPage({ onBlock }: { onBlock?: (lotCode: string) => void
         <DataTable
           headers={[
             "Lote",
+            "Productor",
             "Origen",
             "Ingreso",
             "Disponible",
@@ -148,7 +153,7 @@ export function InventoryPage({ onBlock }: { onBlock?: (lotCode: string) => void
         >
           {lotesFiltrados.length === 0 ? (
             <tr>
-              <td colSpan={7} className="text-center py-4 text-slate-500">
+              <td colSpan={8} className="text-center py-4 text-slate-500">
                 No se encontraron lotes en el inventario.
               </td>
             </tr>
@@ -161,9 +166,10 @@ export function InventoryPage({ onBlock }: { onBlock?: (lotCode: string) => void
               return (
                 <tr key={lote.idLocal || lote.lotCode}>
                   <td><strong>{lote.lotCode}</strong></td>
+                  <td>{lote.producer}</td>
                   <td>{lote.origin}</td>
-                  <td>{lote.quantity} kg</td>
-                  <td>{disp} kg</td>
+                  <td>{lote.quantity} {lote.unit}</td>
+                  <td>{disp} {lote.unit}</td>
                   <td>
                     {est === "LIBERADO" && <Badge tone="green">LIBERADO</Badge>}
                     {est === "PENDIENTE" && <Badge tone="amber">PENDIENTE</Badge>}
