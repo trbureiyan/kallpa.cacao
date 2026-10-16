@@ -2,7 +2,7 @@ from datetime import date
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.config import settings
+from app.config import settings, validar_configuracion
 from app.frontend import montar_frontend
 from app.database import SessionLocal
 from app import models
@@ -40,6 +40,9 @@ def initialize_database():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    problemas = validar_configuracion(settings)
+    if problemas:
+        raise RuntimeError("Configuración insegura para producción: " + " ".join(problemas))
     initialize_database()
     yield
 
