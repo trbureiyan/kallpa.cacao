@@ -4,14 +4,68 @@
 > **Directiva de Interacción:** El agente se refiere al proyecto como `kallpa.cacao` y trata al equipo de la hackathon como la parte principal. El equipo es responsable de explicar cada línea en la defensa: preferir soluciones simples y legibles sobre soluciones ingeniosas. Si algo del reto es ambiguo, preguntar; no inventar requisitos ni resultados de pruebas. Si una prueba falla, reportarlo tal cual.
 
 `kallpa.cacao` | MVP de trazabilidad, transformación y comercialización de cacao para una asociación cacaotera ficticia del Huila (II Hackathon de Programación USCO, reto "Cacao con historia, calidad y valor"). Produce lotes trazables, inventario, merma y costos, y una ficha comercial pública.
-Stack: React + TypeScript (Vite) + Python (FastAPI, por confirmar) + PostgreSQL. Un solo proceso en local: el backend sirve el build del frontend como estáticos.
+Stack `[DECIDIDO]` por ahora (marco §7): React + TypeScript + Tailwind (Vite) · Python FastAPI · PostgreSQL · SQLAlchemy + Alembic · Pytest. Monolito modular: el backend sirve el build del frontend como estáticos.
 
 Contexto del evento:
 
 - 24 horas continuas de construcción. El código se congela con una etiqueta o commit final; después no se edita.
 - Caso y datos 100 % simulados. Sin datos reales, sin secretos.
 - Especificación completa del reto: `.docs/reto_cacao.md`. Es normativa; si este archivo y el reto chocan, gana el reto y se corrige este archivo.
+<<<<<<< HEAD
+=======
+- Marco del proyecto: `.docs/00_marco_del_proyecto.md`. Decisiones del equipo; resumen operativo y reglas de uso en la sección siguiente.
+>>>>>>> 424f6ea (docs: sincroniza AGENTS.md con las decisiones del marco)
 - `.docs/` existe y no se modifica sin preguntar.
+
+---
+
+## Marco del proyecto
+
+Documento: `.docs/00_marco_del_proyecto.md`. **Versión sincronizada con este resumen: v0.1 (2026-10-15).** Lo que no esté en el marco no está decidido.
+
+### Qué manda cada documento
+
+| Documento | Manda sobre | No contiene |
+|---|---|---|
+| `.docs/reto_cacao.md` | Requisitos RF01–RF12, criterios, entregables, valores de ejemplo | Decisiones del equipo |
+| `.docs/00_marco_del_proyecto.md` | Alcance, objetivos, decisiones y su estado, responsabilidades, fases y reglas de corte, riesgos del plan, criterio de aceptación offline | Código, convenciones de implementación, resultados de pruebas (viven en `tests/casos_manuales.md` y `ENTREGA.md`) |
+| `AGENTS.md` | Cómo trabaja el agente, capas y convenciones de código; resumen del marco | Detalle del marco: si hay duda, se abre el marco |
+| `documentos/` | Entregables E01–E09 | Decisiones nuevas: se toman en el marco |
+
+### Resumen operativo (lo que condiciona el código)
+
+- **Dentro:** RF01–RF12 con CAC001–003, tres perfiles (operador, administrador, comprador anónimo), recepción con conectividad limitada `[EN VALIDACIÓN]` y un panel de analítica en el servidor con tres preguntas: origen o productor con más merma, lotes con menor margen, lotes bloqueados o con alerta abierta.
+- **Fuera:** IA, sensores, pagos, notificaciones, varias asociaciones, transformación sin conexión, resolución manual de conflictos de sincronización, mapas, roles adicionales. Lo que no esté en "dentro" se pospone aunque tiente.
+- **Límites declarados:** una transformación consume un solo lote de entrada (si se mezclan, se conservan todos los orígenes); unidad única kg; datos sintéticos.
+- **Offline `[DECIDIDO]` en alcance:** solo recepción de lotes y lectura de lo ya cargado. Transformar y cambiar estados exigen conexión. La cola local guarda solo operaciones y una copia de lectura; el esquema real vive en el servidor. Sin Background Sync. La forma "fuerte" (sin red total) sigue `[EN VALIDACIÓN]` con el criterio del marco, Anexo A; si falla, forma débil (reintentos, tiempos límite, indicador de pendientes) sobre la misma cola idempotente. Si falla la idempotencia, se corrige primero en el servidor: también protege el inventario.
+- **Esquema de datos `[ABIERTO]`:** no crear modelos ni migraciones definitivas sin acuerdo; proponer. Puntos pendientes en marco §8 (fuente única de costos, motivo en auditoría, propagación del bloqueo a derivados, compra del cacao fuera del costo de etapa).
+- **Reglas de corte `[PROPUESTO]`:** hora 14 sin núcleo demostrable, offline pasa a forma débil y la analítica a tres consultas fijas; hora 21 congelar funcionalidades; hora 23 solo el integrador toca la rama principal.
+- **Responsables:** matriz en marco §10 (`[PROPUESTO]`). El agente no asigna ni reasigna trabajo.
+
+### Cómo usa el agente el marco
+
+1. `[DECIDIDO]`: se implementa sin preguntar de nuevo.
+2. `[EN VALIDACIÓN]` y `[PROPUESTO]`: se implementan solo si el usuario lo pide, dejando visible la dependencia.
+3. `[ABIERTO]` o no cubierto: no se implementa por suposición. Se pregunta una sola vez, con recomendación, agrupando las dudas.
+4. Fuera de alcance: detenerse y avisar; no agregarlo.
+5. El agente **no edita el marco**. Si detecta un choque o una decisión nueva, la entrega al cierre de la tarea (no a cada paso) con este bloque y sigue con lo vigente:
+
+```text
+PROPUESTA DE CAMBIO AL MARCO:
+1. Sección: {§ y etiqueta actual}
+2. Cambio: {texto propuesto}
+3. Motivo: {qué lo exige y evidencia}
+4. Efecto: {qué de AGENTS.md y de documentos/ se actualiza}
+```
+
+6. Si la versión del marco difiere de la sincronizada arriba, avisar y revisar este resumen antes de seguir.
+7. Choques: marco contra reto, gana el reto; marco contra este archivo, gana el marco y se corrige este archivo.
+
+### Control de cambios del marco (manual)
+
+- Lo editan personas, a mano. Cambios de alcance, stack, offline, estado de una decisión o responsabilidades se acuerdan en el grupo antes de escribirse.
+- Cada cambio agrega una fila al historial (Anexo C: versión, fecha, qué cambió, autor) y, en el mismo commit `docs:`, actualiza este resumen y la versión sincronizada. Las correcciones de redacción no suben versión.
+- No se cambia por tareas rutinarias ni para reflejar avance diario; eso va en el tablero y en `ENTREGA.md`.
 
 ---
 
@@ -34,7 +88,7 @@ kallpa.cacao/
 │   │       ├── main.py              # monta routers y sirve el build del frontend
 │   │       ├── core/
 │   │       │   ├── config.py
-│   │       │   ├── database.py      # sesión, transacciones, PRAGMAs de SQLite
+│   │       │   ├── database.py      # sesión y transacciones (SQLAlchemy)
 │   │       │   ├── security.py      # hash de contraseñas, sesión o token — cambios solo con aprobación
 │   │       │   ├── permissions.py   # require_role(): ÚNICO punto de control de acceso
 │   │       │   ├── idempotency.py   # clave única por operación
@@ -78,7 +132,7 @@ kallpa.cacao/
 │   ├── semilla/                     # CAC001-003 y usuarios demo
 │   ├── sinteticos/                  # generador de los 100 registros
 │   ├── respaldo/                    # respaldo de demostración + checksums
-│   └── runtime/                     # base SQLite activa — ignorada por git, nunca versionar
+│   └── runtime/                     # estado local de ejecución de la base — ignorado por git, nunca versionar (ubicación según despliegue, marco §7)
 │
 ├── scripts/                         # seed, backup, restore, verificar_integridad
 ├── documentos/                      # E01–E09 en markdown, exportables a un PDF (máx. 15 páginas)
@@ -107,7 +161,7 @@ Crear módulos y directorios solo cuando se vayan a usar de inmediato. No dejar 
 | `make test` | Ejecuta pytest (unit, integration, regresión) | Debe pasar antes de cada commit |
 | `make perf` | Mide trazabilidad sobre 100 registros sintéticos | Declarar método y equipo; objetivo <= 3 s |
 | `make seed` | Carga CAC001–003 y usuarios demo | Ver Dangerous Commands |
-| `make backup` | Copia el archivo SQLite a `datos/respaldo/` con checksum | Idempotente |
+| `make backup` | Respalda la base a `datos/respaldo/` con checksum (método por definir) | Idempotente |
 | `make restore` | Restaura un respaldo | Ver Dangerous Commands |
 
 Los targets del `Makefile` existen pero aún están vacíos. Completarlos antes de documentarlos en `README.md`. Comandos de typecheck, lint y build del frontend: por definir.
@@ -129,7 +183,11 @@ Los targets del `Makefile` existen pero aún están vacíos. Completarlos antes 
 
 When assigned a task:
 
+<<<<<<< HEAD
 1. Leer `AGENTS.md` primero y, si la tarea toca requisitos o criterios, la sección correspondiente de `.docs/reto_cacao.md`.
+=======
+1. Leer `AGENTS.md` primero (incluye el resumen del marco). Abrir `.docs/00_marco_del_proyecto.md` completo si la tarea toca alcance, modelo de datos, offline, fases o responsabilidades, y la sección correspondiente de `.docs/reto_cacao.md` si toca requisitos o criterios.
+>>>>>>> 424f6ea (docs: sincroniza AGENTS.md con las decisiones del marco)
 2. Leer el prompt con atención. Identificar objetivo, restricciones y alcance (qué RF toca) antes de tocar archivos.
 3. Inspeccionar los archivos relevantes con lecturas exactas y dirigidas. No hacer escaneos amplios de directorios cuando se conocen rutas específicas.
 4. Verificar la implementación actual antes de escribir código. Nunca asumir la estructura: inspeccionarla.
@@ -176,7 +234,7 @@ Document known landmines here. Be specific: name the files, describe the behavio
 - **[Idempotencia]**: la clave de idempotencia es única por operación y vive en la base (índice único). Reenviar la misma operación devuelve el resultado original sin volver a consumir. Aplica a transformaciones y a la sincronización offline.
 - **[Auditoría]**: tabla de solo inserción (sin `UPDATE`/`DELETE` desde el código). Se escribe en la misma transacción que la operación auditada: quién, cuándo (hora del servidor, `core/clock.py`), qué cambió, valor anterior y nuevo. La hora de captura offline del cliente es un campo aparte y nunca reemplaza la hora del servidor.
 - **[Transacciones y errores]**: un error no deja registros parciales ni pierde datos válidos. Toda operación multi-escritura va en una sola transacción con rollback completo.
-- **[Persistencia y respaldo]**: SQLite en `datos/runtime/` (ignorado por git). Respaldo = copiar el archivo; verificar restauración por cantidades e identificadores, sin pérdida ni duplicación. No copiar el archivo con la base en escritura activa sin usar la API de respaldo de SQLite o checkpoint de WAL.
+- **[Persistencia y respaldo]**: PostgreSQL (marco §7); estado local ignorado por git. Verificar restauración por cantidades e identificadores, sin pérdida ni duplicación. Método y ubicación del respaldo por definir; no respaldar con copia de archivos de una base en escritura activa. `[RESUELTO]` la versión anterior de esta entrada asumía SQLite y copia de archivo.
 - **[Valores del jurado]**: el jurado cambiará los valores de prueba. Merma, costo unitario y margen se calculan siempre; nunca hardcodear 20 %, 15 %, 20.000 ni 25.000. El umbral de alerta (15 %) es configuración, no literal en la lógica.
 - **[División entre cero]**: costo unitario con salida vendible 0 y margen con precio 0 deben devolver un resultado explícito (error de dominio o valor nulo explicado), nunca una excepción sin manejar ni `inf`.
 - **[Salida mayor que entrada]**: solo se acepta con justificación registrada (p. ej. adición de insumos). Sin justificación se rechaza. No comparar masas de etapas con bases distintas sin explicar el balance.
@@ -185,7 +243,7 @@ Document known landmines here. Be specific: name the files, describe the behavio
 - **[Incidencia hora 12]**: bloquear CAC001, identificar origen y explicar cantidades afectadas, sin borrar historial. Requiere tarjeta de cambio (`documentos/cambios/CC-001`), ajuste de un criterio de aceptación y prueba de regresión en `tests/backend/regresion/`. Bloquear es un cambio de estado auditado, nunca un borrado.
 - **[CSV]**: el CSV (RF11) y los cálculos autoritativos se generan en el servidor, solo para administrador.
 - **[Datos sintéticos]**: solo datos sintéticos. Sin contraseñas, claves ni información privada en el repo ni en herramientas de IA.
-- **[Dependencias no confirmadas]**: FastAPI y SQLite están recomendados pero pendientes de confirmación del equipo. No instalar dependencias hasta que se confirmen.
+- **[Dependencias]**: `[RESUELTO]` FastAPI y PostgreSQL ya están `[DECIDIDO]` en el marco (SQLite descartado). Sigue vigente: no instalar dependencias sin aprobación, versión exacta y declaración en E08 (ver Manual Actions).
 
 Esta sección es un documento vivo. Agregar una entrada cada vez que se descubre un gotcha. Nunca borrar: marcar como `[RESUELTO]` si ya no aplica.
 
@@ -360,7 +418,7 @@ Las funciones puras de `rules.py` se escriben primero con su prueba.
 
 ### Test conventions
 
-- Framework: pytest para el backend (`TestClient` de FastAPI para integración, base SQLite temporal por prueba). Frontend: por definir.
+- Framework: pytest para el backend (`TestClient` de FastAPI para integración, base de datos aislada por prueba). Frontend: por definir.
 - Ubicación: `tests/backend/{unit,integration,regresion,rendimiento}/`; casos manuales en `tests/casos_manuales.md`.
 - Hora: usar `core/clock.py` sustituible; las pruebas nunca dependen del reloj real.
 - Mocking: sin servicios externos reales. Entradas externas simuladas se identifican expresamente.
