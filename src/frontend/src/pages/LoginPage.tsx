@@ -5,6 +5,8 @@ import { useAuth } from '@/context/AuthContext';
 import { mensajeError } from '@/api/axiosClient';
 import { Wifi, WifiOff, Sprout, ArrowRight, Eye, EyeOff, ChevronRight } from 'lucide-react';
 
+const PATRON_USUARIO = String.raw`(?:[A-Za-z0-9_%+-]+(?:\.[A-Za-z0-9_%+-]+)*@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*\.[A-Za-z]{2,}|admin|operador)`;
+
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { isOnline } = useNetwork();
@@ -99,13 +101,16 @@ export const LoginPage: React.FC = () => {
           <form onSubmit={submit} className="space-y-4">
             <div>
               <label htmlFor="usuario" className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                Usuario
+                Correo electrónico
               </label>
               <input
                 id="usuario"
                 className="input"
                 type="text"
+                inputMode="email"
                 autoComplete="username"
+                pattern={PATRON_USUARIO}
+                title="Ingrese un correo válido o use admin u operador para la cuenta demo."
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -122,6 +127,9 @@ export const LoginPage: React.FC = () => {
                   className="input pr-11"
                   type={mostrarClave ? 'text' : 'password'}
                   autoComplete="current-password"
+                  minLength={6}
+                  pattern=".{6,}"
+                  title="La contraseña debe tener al menos 6 caracteres."
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
