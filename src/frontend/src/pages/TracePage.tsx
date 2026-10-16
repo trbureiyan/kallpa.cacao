@@ -40,14 +40,14 @@ export function TracePage() {
               void buscar()
             }}
           >
-            <label className="relative flex-1">
+            <label className="input-icon flex-1 min-w-0">
               <span className="sr-only">Código del lote</span>
-              <Icon name="search" className="absolute left-3 top-3 text-texto-suave" />
+              <Icon name="search" />
               <input
-                className="input pl-9"
+                className="input"
                 value={codigo}
                 onChange={(e) => setCodigo(e.target.value)}
-                placeholder="Código de lote, por ejemplo CAC001"
+                placeholder="Código, ej. CAC001"
               />
             </label>
             <Button type="submit">Consultar</Button>

@@ -12,6 +12,8 @@ import type { IconName } from "@/types/app"
 
 interface NavItem {
   name: string
+  /** Etiqueta de la barra inferior: cinco botones caben en 360 px solo con nombres cortos. */
+  corto: string
   path: string
   icon: IconName
 }
@@ -26,26 +28,31 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigation: NavItem[] = [
     {
       name: "Recepción",
+      corto: "Recepción",
       path: "/recepcion",
       icon: "box",
     },
     {
       name: "Transformación",
+      corto: "Proceso",
       path: "/transformacion",
       icon: "process",
     },
     {
       name: "Trazabilidad",
+      corto: "Trazar",
       path: "/trazabilidad",
       icon: "route",
     },
     {
       name: "Inventario",
+      corto: "Inventario",
       path: "/inventario",
       icon: "warehouse",
     },
     {
       name: "Auditoría",
+      corto: "Auditoría",
       path: "/auditoria",
       icon: "shield",
     },
@@ -120,12 +127,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* 2. Área Principal de Trabajo (Header Superior + Contenido) */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header Superior Corto */}
-        <header className="bg-superficie border-b border-borde px-6 py-3 flex items-center justify-between sticky top-0 z-40">
-          <div className="flex items-center gap-3">
+        <header className="bg-superficie border-b border-borde px-3 sm:px-6 py-2 sm:py-3 flex items-center justify-between gap-2 sticky top-0 z-40">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-wrap">
             {/* Logo visible solo en pantallas móviles */}
             <button
               type="button"
-              className="md:hidden text-left"
+              className="md:hidden text-left logo-compacto min-h-11"
               onClick={() => navigate("/recepcion")}
               onMouseEnter={() => prefetchRuta("/recepcion")}
               onFocus={() => prefetchRuta("/recepcion")}
@@ -154,8 +161,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             )}
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="flex flex-col text-right text-xs">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+            <div className="hidden sm:flex flex-col text-right text-xs">
               <span className="font-bold text-texto">{nombreUsuario}</span>
               <span className="text-xs text-texto-suave uppercase tracking-wider">{rol}</span>
             </div>
@@ -163,8 +170,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Button
               variant="ghost"
               onClick={handleLogout}
-              className="!p-2 text-texto-suave hover:text-texto hover:bg-hundido"
+              className="!p-2 min-w-11 min-h-11 text-texto-suave hover:text-texto hover:bg-hundido"
               title="Cerrar sesión"
+              aria-label={`Cerrar sesión de ${nombreUsuario}`}
             >
               <Icon name="logout" size={18} />
             </Button>
@@ -183,7 +191,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       {/* 3. Navegación Móvil Inferior */}
-      <nav aria-label="Principal móvil" className="md:hidden fixed bottom-0 left-0 right-0 bg-superficie border-t border-borde-fuerte z-50 flex justify-around p-2">
+      <nav aria-label="Principal móvil" className="md:hidden fixed bottom-0 left-0 right-0 bg-superficie border-t border-borde-fuerte z-50 flex gap-1 px-1 py-2">
         {visibleNav.map((item) => {
           const active = location.pathname === item.path
           return (
@@ -194,12 +202,13 @@ export function AppShell({ children }: { children: ReactNode }) {
               onMouseEnter={() => prefetchRuta(item.path)}
               onFocus={() => prefetchRuta(item.path)}
               aria-current={active ? "page" : undefined}
-              className={`min-h-11 min-w-11 flex flex-col items-center gap-1 p-2 text-xs font-semibold ${
+              aria-label={item.name}
+              className={`flex-1 min-w-0 min-h-11 flex flex-col items-center gap-1 px-0.5 py-1.5 font-semibold ${
                 active ? "text-acento-suave-texto bg-acento-suave rounded-md" : "text-texto-suave"
               }`}
             >
               <Icon name={item.icon} size={18} />
-              <span>{item.name}</span>
+              <span className="nav-movil-etiqueta">{item.corto}</span>
             </button>
           )
         })}
