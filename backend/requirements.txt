@@ -1,9 +1,11 @@
-fastapi>=0.115,<1.0
-uvicorn[standard]>=0.30,<1.0
-SQLAlchemy>=2.0,<3.0
-alembic>=1.13,<2.0
-pydantic-settings>=2.4,<3.0
-python-jose[cryptography]>=3.3,<4.0
-pwdlib[argon2]>=0.2,<1.0
-python-multipart>=0.0.9
-psycopg[binary]>=3.2,<4.0
+# Versiones exactas: las probadas en el desarrollo (80 pruebas del backend). Las dependencias transitivas las resuelve pip.
+# python-jose >= 3.4 y python-multipart >= 0.0.18 corrigen vulnerabilidades conocidas: no bajar de esos mínimos.
+fastapi==0.143.2
+uvicorn[standard]==0.54.0
+SQLAlchemy==2.1.4
+alembic==1.20.0
+pydantic-settings==2.16.0
+python-jose[cryptography]==3.5.0
+pwdlib[argon2]==0.3.1
+python-multipart==0.0.32
+psycopg[binary]==3.3.6
