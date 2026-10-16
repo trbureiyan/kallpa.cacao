@@ -1,10 +1,18 @@
 .env
-datos/runtime/*
-!datos/runtime/.gitkeep
+.env.*
+!.env.example
+.venv/
+venv/
+.idea/
+*.iml
+__pycache__/
+*.py[cod]
+*.db
+*.sqlite
+*.sqlite3
 node_modules/
 dist/
-__pycache__/
-*.pyc
-.venv/
-.pytest_cache/
+dev-dist/
+*.tsbuildinfo
+# contexto normativo del reto: local, no se versiona ni se modifica sin preguntar
 .docs/

@@ -1,0 +1,280 @@
+KALLPA.CACAO - EXPLICACION DE IMPLEMENTACION
+============================================
+
+Fecha: 15 de octubre de 2026
+Proyecto: backend FastAPI y frontend React para trazabilidad de recepciones de cacao
+Objetivo: explicar los cambios recientes para que el equipo pueda ejecutarlos,
+probarlos y presentarlos en el hackathon.
+
+IMPORTANTE SOBRE EL ALCANCE
+--------------------------
+Este documento explica lo que esta implementado y las verificaciones observadas.
+No afirma que el sistema cubra todos los requisitos RF del reto. La fase offline
+actual se limita al registro de recepciones. La transformacion, venta y otras
+operaciones aun no se pueden capturar offline. La especificacion normativa
+completa y RF07 deben cotejarse con el documento oficial del concurso.
+
+1. ESTRUCTURA DEL PROYECTO
+--------------------------
+
+El backend que se ejecuta con Docker esta en /backend:
+
+- app/: API FastAPI, modelos SQLAlchemy, esquemas, autenticacion, permisos y
+  servicios de negocio.
+- migrations/: historial Alembic para crear y evolucionar el esquema.
+- tests/: nuevas pruebas Pytest de API y migraciones.
+- Dockerfile y docker-compose.yml: construyen y conectan API, frontend y
+  PostgreSQL.
+- requirements.txt: dependencias necesarias para ejecutar la API.
+- requirements-dev.txt: agrega las herramientas para ejecutar pruebas.
+
+El frontend activo esta en /src/frontend. Esta es la carpeta que usa Docker
+Compose como contexto de construccion. La carpeta /frontend que existe en la
+raiz se conserva como copia antigua; no es la version canonica para nuevos
+cambios.
+
+2. CAPTURA OFFLINE EN EL FRONTEND
+---------------------------------
+
+La aplicacion esta construida con React y TypeScript como PWA. Su proposito es
+permitir a un operador registrar una recepcion cuando no hay cobertura y
+sincronizarla despues.
+
+Preparacion inicial del dispositivo:
+
+1. Abrir la PWA con conexion.
+2. Iniciar sesion como operador o administrador.
+3. Descargar y guardar el catalogo de fincas en el dispositivo.
+4. Mantener la app cargada/instalada antes de ir a una zona sin cobertura.
+
+El modulo src/frontend/src/db.ts usa IndexedDB mediante la biblioteca idb. En
+IndexedDB se guardan dos tipos de datos:
+
+- El catalogo de fincas, que se necesita para seleccionar el origen durante
+  una captura sin red.
+- Las recepciones capturadas y su estado de sincronizacion.
+
+Cada recepcion tiene un identificador local, fecha de captura, payload y estado.
+Los estados posibles son Pendiente, Enviando, Sincronizado, Revisar y Necesita
+sesion. La clave idempotency_key es un UUID creado en el cliente. El codigo
+legible CAC del lote lo genera el servidor cuando recibe la operacion. Por eso,
+antes de sincronizar la interfaz puede mostrar "Codigo pendiente".
+
+El token se mantiene en sessionStorage; la identidad minima se conserva para
+permitir reabrir la interfaz. Si expira el token, la cola local permanece y la
+interfaz pide autenticarse de nuevo. El catalogo de fincas debe haberse
+descargado antes de salir a campo.
+
+La aplicacion sincroniza al recuperar conectividad y periodicamente mientras
+esta abierta. Un error de red vuelve a dejar el registro como pendiente para
+reintentar. Un error de validacion/conflicto se marca para revision. La
+correccion edita el mismo elemento local y prepara una nueva clave UUID porque
+el payload corregido representa una nueva operacion. IndexedDB es almacenamiento
+del dispositivo, no un respaldo remoto: no se deben borrar datos del navegador
+mientras queden registros pendientes.
+
+La PWA tiene un service worker para almacenar recursos de la interfaz. Para
+ensayar el app shell sin red se recomienda compilar y servir la version de
+produccion; el modo de desarrollo de Vite no representa completamente el
+comportamiento de instalacion/cache de produccion.
+
+3. PAUSA VISIBLE DE LA SINCRONIZACION
+------------------------------------
+
+Se agrego en src/frontend/src/App.tsx un control llamado
+"Pausar sincronizacion para capturar". Al activarlo:
+
+- La app sigue guardando nuevas recepciones en IndexedDB.
+- Se bloquea la sincronizacion automatica y el boton de sincronizar.
+- La pausa se conserva en localStorage si se recarga la pagina.
+- La interfaz indica "Sincronizacion pausada" y "CAPTURA EN COLA" y muestra el
+  numero de registros pendientes.
+
+Al elegir "Reanudar sincronizacion", las recepciones pendientes se envian si hay
+conexion y una sesion valida.
+
+Este control se agrego porque los servicios locales pueden seguir
+comunicandose por localhost aunque el equipo no tenga acceso a internet. Por
+eso, apagar la red externa no siempre deja inaccesible un backend que corre en
+el mismo computador. La pausa sirve para demostrar la cola aun con servicios
+locales disponibles. No simula una desconexion fisica, y no debe confundirse con
+un ensayo real de modo avion o de DevTools configurado sin red.
+
+4. RECEPCION E IDEMPOTENCIA EN EL BACKEND
+----------------------------------------
+
+Los archivos principales son:
+
+- backend/app/schemas/api.py define ReceptionCreate: recibe idempotency_key,
+  farm_id, received_at, quantity_kg, purchase_total_cop y quality_notes. La
+  cantidad debe ser mayor que cero y la fecha debe incluir zona horaria.
+- backend/app/api/receptions.py implementa POST /api/v1/receptions.
+- backend/app/models/ guardan fincas, productores, lotes, recepciones,
+  movimientos, costos y auditoria.
+
+El proceso del endpoint es, en resumen:
+
+1. Valida que received_at incluya zona horaria.
+2. Busca una recepcion existente con la misma clave idempotente.
+3. Si ya existe y el contenido coincide, devuelve la misma recepcion/lote;
+   no crea un lote ni un movimiento duplicado.
+4. Si la misma clave se presenta con datos diferentes, responde HTTP 409.
+5. Para una nueva recepcion valida la finca y crea lote, recepcion, movimiento
+   de inventario entrante, costo de compra y evento de auditoria dentro de una
+   transaccion.
+6. Asigna el codigo CAC usando el identificador persistido del lote. El lote
+   inicia con existencia igual a la cantidad recibida.
+
+La clave idempotente permite que un registro local se reintente si no se sabe
+si el primer envio alcanzo el servidor. El servidor puede contestar con el
+mismo resultado sin duplicar la recepcion. Esto implementa el lado servidor de
+la sincronizacion; no prueba por si solo que IndexedDB guardo el registro en un
+navegador.
+
+La asignacion de codigo evita que varios dispositivos decidan el mismo codigo
+antes de conectarse: el servidor asigna el codigo una vez que crea el registro.
+La tabla Reception y las restricciones de base de datos apoyan la unicidad de
+la clave idempotente.
+
+5. NUEVA SUITE PYTEST
+--------------------
+
+Se agregaron estos archivos dentro de backend/tests:
+
+- test_recepcion_lote.py
+  Comprueba una recepcion valida, que exista su lote/recepcion/movimiento y que
+  cantidades cero o negativas sean rechazadas con HTTP 422.
+
+- test_merma_y_perdidas.py
+  Crea transformaciones con 20% y 15% de merma y consulta GET /api/v1/alerts
+  como administrador. Comprueba que la regla actual genera alerta cuando la
+  merma supera 15% y no exactamente al 15%. Usa dos lotes de entrada, pues la
+  primera transformacion consume la existencia del suyo.
+
+- test_inventario_idempotencia.py
+  Envia dos veces la misma recepcion (simulando reintento de sincronizacion) y
+  comprueba que la respuesta es la misma y que se crea un solo lote, una
+  recepcion y un movimiento. Tambien verifica HTTP 409 al reutilizar la clave
+  con una cantidad diferente.
+
+- test_permisos_roles.py
+  Comprueba que un operador obtiene HTTP 403 al cambiar el estado de un
+  producto, mientras que un administrador autorizado puede hacerlo (HTTP 200).
+
+- test_migraciones_alembic.py
+  Ejecuta Alembic contra una base SQLite temporal vacia y comprueba la presencia
+  de tablas del esquema y la revision aplicada. No usa la base de datos real de
+  desarrollo.
+
+- conftest.py
+  Crea la base SQLite temporal para las pruebas de API, inserta un usuario
+  operador, un administrador, productor y finca sinteticos, y entrega tokens de
+  prueba. Al terminar, quita la sustitucion de dependencia y elimina el esquema
+  temporal.
+
+Las pruebas cubren la implementacion actual. Son una base inicial, no la suite
+completa de todos los RF ni una prueba de carga/concurrencia de PostgreSQL. En
+particular, la comprobacion offline del backend simula repetir un POST con la
+misma clave; una futura prueba de navegador debe verificar el almacenamiento
+IndexedDB y el service worker sin conexion.
+
+6. DEPENDENCIAS Y COMO EJECUTAR LAS PRUEBAS
+------------------------------------------
+
+requirements.txt contiene las dependencias de ejecucion del backend.
+requirements-dev.txt incluye requirements.txt mas pytest y httpx para ejecutar
+las pruebas API con FastAPI TestClient.
+
+Desde PowerShell, entrar a la carpeta backend y ejecutar:
+
+    cd backend
+    python -m venv .venv
+    .venv\Scripts\Activate.ps1
+    pip install -r requirements-dev.txt
+    python -m pytest -q
+
+Resultado observado al escribir este documento:
+
+    9 passed
+
+Pytest reporto una advertencia de deprecacion de la version instalada de
+Starlette sobre su integracion TestClient/HTTPX; no produjo fallos. Las
+dependencias deben instalarse dentro del entorno virtual del proyecto para no
+mezclarlas con el Python global.
+
+7. COMO LEVANTAR Y VER EL PROYECTO
+---------------------------------
+
+Con Docker Desktop iniciado y acceso a internet para la primera descarga de
+imagenes, desde backend ejecutar:
+
+    docker compose up --build
+
+Direcciones locales:
+
+- Frontend/PWA: http://localhost:8080
+- API: http://localhost:8000
+- Documentacion Swagger: http://localhost:8000/docs
+- Health check: http://localhost:8000/health
+
+La cuenta de operador sintetica es operador / Operador123!. Inicia sesion,
+espera que se carguen las fincas, activa "Pausar sincronizacion para capturar",
+registra una recepcion y observa su estado Pendiente. Luego reanuda la
+sincronizacion y comprueba que el lote reciba su codigo CAC y figure como
+Sincronizado.
+
+El error de Docker informado durante la descarga fue:
+
+    lookup auth.docker.io: no such host
+
+Esto indica que Docker no podia resolver por DNS el dominio del registro de
+contenedores para descargar python:3.12-slim, node:22-alpine y nginx:1.27-alpine.
+El fallo ocurre antes de construir la aplicacion; no es un error de sintaxis del
+Dockerfile frontend. La primera compilacion necesita conectividad/DNS. Una vez
+que las imagenes y dependencias estan descargadas y los servicios construidos,
+se puede ejecutar sin --build cuando no se hayan cambiado Dockerfiles ni
+dependencias. Cambios en codigo fuente del frontend requieren reconstruir la
+imagen para verlos en el contenedor.
+
+La compilacion Docker completa no se pudo verificar mientras ocurria el error
+DNS. La configuracion de Compose si fue verificada anteriormente; eso valida
+sintaxis/configuracion, no la descarga efectiva de imagenes ni el arranque final
+de todos los contenedores.
+
+8. VERIFICACIONES REALIZADAS
+---------------------------
+
+- Frontend: npm run build finalizo correctamente. Genero build de Vite y
+  service worker PWA.
+- Backend: python -m pytest -q finalizo con 9 pruebas aprobadas.
+- Compose: docker compose config --quiet habia finalizado correctamente.
+- Espacios en cambios de Git: git diff --check no encontro errores de espacios;
+  Git mostro advertencias normales de conversion LF/CRLF de Windows.
+- Docker: la descarga de imagenes no se completo por fallo DNS de Docker Hub.
+  Por lo tanto, no se afirma que compose up --build haya arrancado con exito.
+
+9. LIMITES ACTUALES Y SIGUIENTE TRABAJO
+--------------------------------------
+
+- El modo offline se limita a recepciones y requiere preparar el dispositivo
+  con conexion al menos una vez para autenticacion/catalogo de fincas.
+- La sincronizacion automatica requiere que la PWA siga abierta y una sesion
+  valida. No se implemento sincronizacion en segundo plano universal.
+- Transformaciones, ventas y cambios de inventario offline no estan habilitados;
+  requieren estrategia de conflictos si varios dispositivos operan en paralelo.
+- El control de pausa permite una demostracion reproducible de la cola; el
+  ensayo sin red real debe validar tambien service worker, persistencia y
+  reconexion en navegador/dispositivo.
+- Los casos Pytest todavia no cubren concurrencia de consumo, retirada/recall,
+  trazabilidad completa de origen a producto, exportaciones ni aislamiento
+  publico/privado. Esas pruebas deben agregarse al implementar o cerrar esos
+  requisitos.
+- El umbral 15% y las reglas de permisos deben verificarse con la especificacion
+  oficial del reto antes de declarar cumplimiento RF completo.
+
+Proxima secuencia sugerida: correr Pytest localmente; levantar la aplicacion
+cuando Docker resuelva el DNS; ensayar una recepcion pausada y sincronizada;
+despues completar y probar el flujo de transformacion, inventario y trazabilidad
+antes de agregar nuevas funciones.
+
+FIN DEL DOCUMENTO

@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:16-alpine
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_DB: cacao
+      POSTGRES_USER: cacao
+      POSTGRES_PASSWORD: cacao_local_only
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cacao -d cacao"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://cacao:cacao_local_only@db:5432/cacao
+      SECRET_KEY: local-compose-change-before-deploy
+      SEED_DEMO_DATA: "true"
+      LOSS_ALERT_THRESHOLD_PERCENT: ${LOSS_ALERT_THRESHOLD_PERCENT:-15}
+      DELAY_ALERT_DAYS: ${DELAY_ALERT_DAYS:-7}
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5173,http://localhost:8080
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+  frontend:
+    build:
+      context: ../src/frontend
+      args:
+        VITE_API_BASE_URL: http://localhost:8000/api/v1
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+volumes:
+  postgres_data:

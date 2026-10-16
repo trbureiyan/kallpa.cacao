@@ -4,7 +4,7 @@
 > **Directiva de Interacción:** El agente se refiere al proyecto como `kallpa.cacao` y trata al equipo de la hackathon como la parte principal. El equipo es responsable de explicar cada línea en la defensa: preferir soluciones simples y legibles sobre soluciones ingeniosas. Si algo del reto es ambiguo, preguntar; no inventar requisitos ni resultados de pruebas. Si una prueba falla, reportarlo tal cual.
 
 `kallpa.cacao` | MVP de trazabilidad, transformación y comercialización de cacao para una asociación cacaotera ficticia del Huila (II Hackathon de Programación USCO, reto "Cacao con historia, calidad y valor"). Produce lotes trazables, inventario, merma y costos, y una ficha comercial pública.
-Stack `[DECIDIDO]` por ahora (marco §7): React + TypeScript + Tailwind (Vite) · Python FastAPI · PostgreSQL · SQLAlchemy + Alembic · Pytest. Monolito modular: el backend sirve el build del frontend como estáticos.
+Stack `[DECIDIDO]` por ahora (marco §7): React + TypeScript + Tailwind (Vite) · Python FastAPI · PostgreSQL · SQLAlchemy + Alembic · Pytest. Monolito modular: el backend sirve el build del frontend como estáticos si existe `src/frontend/dist` (`backend/app/frontend.py`); Docker Compose despliega PostgreSQL, la API y el frontend con Nginx en servicios separados.
 
 Contexto del evento:
 
@@ -79,32 +79,20 @@ kallpa.cacao/
 ├── .github/workflows/ci.yml         # pytest + tipos + build
 ├── .docs/                           # reto oficial y contexto; NO modificar sin preguntar
 │
+├── backend/                         # API (FastAPI, SQLAlchemy, Alembic); la mantiene la rama backend
+│   ├── app/
+│   │   ├── main.py                  # monta los routers y sirve src/frontend/dist si existe (app/frontend.py)
+│   │   ├── config.py · database.py  # configuración por variables de entorno (.env en backend/) y sesión
+│   │   ├── api/                     # un router por área: auth, receptions, lots, transformations, inventory,
+│   │   │                            #   alerts, economics, audit, public, exports, users, analytics
+│   │   ├── security/                # authentication.py, permissions.py: require_roles(), ÚNICO punto de control de acceso
+│   │   ├── services/                # reglas y transacciones: inventario, transformación, trazabilidad, alertas, economía
+│   │   └── models/ · schemas/       # tablas y contratos de entrada y salida
+│   ├── migrations/                  # Alembic
+│   ├── tests/                       # pytest del backend
+│   └── Dockerfile · docker-compose.yml · requirements.txt · requirements-dev.txt
+│
 ├── src/
-│   ├── backend/
-│   │   ├── pyproject.toml
-│   │   └── app/
-│   │       ├── main.py              # monta routers y sirve el build del frontend
-│   │       ├── core/
-│   │       │   ├── config.py
-│   │       │   ├── database.py      # sesión y transacciones (SQLAlchemy)
-│   │       │   ├── security.py      # hash de contraseñas, sesión o token — cambios solo con aprobación
-│   │       │   ├── permissions.py   # require_role(): ÚNICO punto de control de acceso
-│   │       │   ├── idempotency.py   # clave única por operación
-│   │       │   ├── errors.py        # errores de dominio → mensajes claros
-│   │       │   └── clock.py         # hora del servidor, sustituible en pruebas
-│   │       └── modules/             # cada módulo: router, service, schemas, models, rules
-│   │           ├── identidad/       # usuarios, login, roles
-│   │           ├── lotes/           # RF01
-│   │           ├── inventario/      # RF08: libro de movimientos, disponible derivado
-│   │           ├── transformacion/  # RF02
-│   │           ├── trazabilidad/    # RF03
-│   │           ├── economia/        # RF05, RF12, merma
-│   │           ├── alertas/         # RF04
-│   │           ├── estados/         # RF09
-│   │           ├── auditoria/       # RF10: solo inserción
-│   │           ├── reportes/        # RF11: filtros y CSV
-│   │           ├── publico/         # RF06: ficha con serializador propio
-│   │           └── sincronizacion/  # diferenciador: ingestión offline idempotente
 │   └── frontend/
 │       ├── package.json · vite.config.ts · tsconfig.json
 │       └── src/
@@ -142,6 +130,8 @@ kallpa.cacao/
 └── AGENTS.md
 ```
 
+**Ubicación de la API:** `backend/`. Se eliminó `src/backend/`, que solo tenía 83 archivos vacíos sin referencias. El backend agrupa por capa (`api/`, `services/`, `models/`), no por módulo como describen «Layer architecture» y «Estructura de módulos (backend)» más abajo; esas secciones siguen siendo la intención de diseño y las reglas que valen son las de permisos, inventario, idempotencia y auditoría. Contrato frontend–backend: `docs/contrato-api.md`.
+
 Crear módulos y directorios solo cuando se vayan a usar de inmediato. No dejar directorios vacíos sin propósito. El árbol de arriba es el destino; no todo existe todavía. El scaffolding actual está vacío (stubs de 0 bytes), así que antes de proponer nada inspeccionar `src/` y respetar lo que haya agregado el equipo.
 
 **Layer architecture:** `Request → router (require_role) → service → rules (funciones puras) / models → DB`. El frontend solo muestra: consume la API y nunca decide.
@@ -160,7 +150,7 @@ Crear módulos y directorios solo cuando se vayan a usar de inmediato. No dejar 
 | `make backup` | Respalda la base a `datos/respaldo/` con checksum (método por definir) | Idempotente |
 | `make restore` | Restaura un respaldo | Ver Dangerous Commands |
 
-Los targets del `Makefile` existen pero aún están vacíos. Completarlos antes de documentarlos en `README.md`. Comandos de typecheck, lint y build del frontend: por definir.
+Los targets del `Makefile` existen pero aún están vacíos. Completarlos antes de documentarlos en `README.md`. Frontend (desde `src/frontend/`): `pnpm test` (vitest), `pnpm exec tsc -b` (tipos), `pnpm exec eslint .` (lint), `pnpm build`. Variables del frontend (`src/frontend/.env.example`): `VITE_API_URL` y `VITE_PERMITIR_MODO_LOCAL` (`false` en la evaluación; `true` solo para trabajar sin servidor, en `.env.local`). CI en `.github/workflows/ci.yml`: tipos, lint, pruebas y build del frontend; pytest del backend cuando existe `backend/`. Backend: `python -m pytest -q` desde `backend/`.
 
 ### Dangerous Commands
 
@@ -234,6 +224,15 @@ Document known landmines here. Be specific: name the files, describe the behavio
 - **[Offline]**: alcance limitado a la RECEPCIÓN de lotes. UUID técnico generado en el cliente; el servidor asigna el código legible (`CACxxx`) al sincronizar. Sincronización idempotente. Si a la hora 14 RF01–RF12 no recorren el flujo con pruebas, el offline se reduce o se descarta.
 - **[Incidencia hora 12]**: bloquear CAC001, identificar origen y explicar cantidades afectadas, sin borrar historial. Requiere tarjeta de cambio (`documentos/cambios/CC-001`), ajuste de un criterio de aceptación y prueba de regresión en `tests/backend/regresion/`. Bloquear es un cambio de estado auditado, nunca un borrado.
 - **[CSV]**: el CSV (RF11) y los cálculos autoritativos se generan en el servidor, solo para administrador.
+- **[RESUELTO · Frontend sin backend, fase 1]** (ver «Fuente única por sesión»): hasta integrar el backend, el frontend ejecuta las reglas contra Dexie (`features/*/api/*Db.ts`) como respaldo local. Esto contradice «el frontend nunca decide» y es transitorio: en la fase 2 cada servicio llama primero a la API y Dexie queda como cola de recepciones. La rama `frontend` es la fuente de verdad de los contratos; lo que difiera en la rama `backend` se adapta del lado del backend.
+- **[Vocabulario vigente]**: los campos y estados del frontend están en inglés/mayúsculas (`lotCode`, `producer`, `status` con `PENDIENTE|LIBERADO|BLOQUEADO`) y la rama `backend` también usa nombres en inglés. Se acordó mantenerlos en lugar de migrar a español; esta entrada reemplaza lo dicho en Domain Language sobre nombres idénticos en español.
+- **[Usuarios demo locales]**: `context/usuariosDemo.ts` guarda usuarios de demostración solo para el modo sin backend. En la fase 2 la autenticación real la hace el servidor; estos usuarios solo se ofrecen con `VITE_PERMITIR_MODO_LOCAL=true` y deben desaparecer del despliegue final.
+- **[Fuente única por sesión]**: al iniciar sesión, si la API responde todo va a la API (`features/*/api/*Api.ts`); solo si no hay red y `VITE_PERMITIR_MODO_LOCAL=true` todo va a Dexie (`*Db.ts`). Nunca se mezclan por llamada: dejaría lotes locales que el servidor no conoce y existencias duplicadas. Dexie conserva la cola de recepciones pendientes y la copia del catálogo de fincas. Un 401 con sesión la cierra sin tocar la cola.
+- **[Modo local en la evaluación]**: `VITE_PERMITIR_MODO_LOCAL` debe ir en `false` en la entrega. Encendido, un fallo de red muestra datos de demostración en lugar del servidor.
+- **[Contrato con el backend]**: `docs/contrato-api.md` lista endpoints, equivalencias de vocabulario y deltas pendientes. Si cambia un endpoint, se actualiza ese archivo y las pruebas de `*Api.test.ts` en el mismo commit. La forma de `/lots/{id}/traceability`, `/economics` y `/audit` se armó leyendo el código del backend y debe verificarse contra la API en marcha.
+- **[RESUELTO · CSV del servidor]**: `GET /exports/lots.csv` ahora antepone un apóstrofo al texto que empieza con `=`, `+`, `-`, `@`, tabulador o retorno (`app/api/exports.py`), igual que el CSV local. Prueba: `backend/tests/test_exportacion_csv_seguro.py`.
+- **[RESUELTO · Costo sin dato]**: `costs_cop` omitido es «sin dato»: no crea entrada de costo, `/economics` devuelve costo unitario y margen nulos y `/alerts` emite `registro_incompleto`. Un `costs_cop: 0` explícito sí se registra y cuenta como dato. Prueba: `backend/tests/test_costo_sin_dato.py`.
+- **[Versiones del backend]**: `backend/requirements.txt` usa rangos y no hay lockfile; contradice «Supply Chain and Dependencies» y hace que CI pueda instalar versiones distintas.
 - **[Datos sintéticos]**: solo datos sintéticos. Sin contraseñas, claves ni información privada en el repo ni en herramientas de IA.
 - **[Dependencias]**: `[RESUELTO]` FastAPI y PostgreSQL ya están `[DECIDIDO]` en el marco (SQLite descartado). Sigue vigente: no instalar dependencias sin aprobación, versión exacta y declaración en E08 (ver Manual Actions).
 
@@ -410,7 +409,7 @@ Las funciones puras de `rules.py` se escriben primero con su prueba.
 
 ### Test conventions
 
-- Framework: pytest para el backend (`TestClient` de FastAPI para integración, base de datos aislada por prueba). Frontend: por definir.
+- Framework: pytest para el backend (`TestClient` de FastAPI para integración, base SQLite temporal por prueba). Frontend: vitest con `fake-indexeddb` y `jsdom`; pruebas junto al código (`*.test.ts`), una base Dexie limpia por prueba (`src/test/limpiarDb.ts`).
 - Ubicación: `tests/backend/{unit,integration,regresion,rendimiento}/`; casos manuales en `tests/casos_manuales.md`.
 - Hora: usar `core/clock.py` sustituible; las pruebas nunca dependen del reloj real.
 - Mocking: sin servicios externos reales. Entradas externas simuladas se identifican expresamente.
@@ -485,3 +484,10 @@ Docstrings solo en funciones públicas de `rules.py` y de servicios: qué hace, 
 - Nunca mostrar trazas, códigos internos ni mensajes de la base de datos.
 - Términos del dominio exactamente como en Domain Language; sin sinónimos nuevos.
 - La ficha pública jamás menciona costos internos, márgenes ni datos privados del productor.
+
+## Implementación de pantallas conectadas (2026-10-16)
+
+- La aplicación activa compone recepción offline, `WorkspaceViews.tsx`, `UsersView.tsx` y `BusinessViews.tsx` desde `App.tsx`. Las pantallas heredadas desconectadas se guardan en `src/frontend/design-reference/legacy/` y no forman parte del build.
+- La cola offline se limita a recepciones. Las transformaciones conservan clave idempotente y payload en `sessionStorage` hasta confirmar respuesta; usuarios, analítica, inventario, estados y auditoría son datos del servidor.
+- La API incorpora `/users` (admin), `GET /transformations`, `/analytics/dashboard` (admin) y el municipio nullable de usuario vía migración `b6d1ef3a9204`. Esa migración está creada, pero no se aplicó a PostgreSQL persistente.
+- Los umbrales de alerta se configuran por entorno; la alerta de costo está apagada si no se define `COST_ALERT_THRESHOLD_COP_PER_KG`.

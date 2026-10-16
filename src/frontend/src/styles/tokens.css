@@ -1,0 +1,144 @@
+/* KallpaCacao — tokens de diseño v0.2
+ * Paleta actualizada por decisión del equipo:
+ * - Theme: Emerald Green (#059669)
+ * - Cocoa Brown (#78350F)
+ * - Neutral Slate Gray (#F8FAFC)
+ * - Alert Amber (#D97706)
+ * - Alert Red (#DC2626)
+ *
+ * Los ratios de contraste de abajo fueron calculados con la fórmula WCAG 2.x.
+ * Regla: los componentes consumen SOLO tokens semánticos (--color-*), nunca primitivos.
+ */
+/* Fuentes: autoalojadas con @fontsource, importadas en main.tsx. Sin CDN. */
+
+:root {
+  /* ---------- 1. PRIMITIVOS (Nueva paleta del equipo) ---------- */
+  /* Neutral Slate Gray (#F8FAFC) */
+  --p-slate-50:  #F8FAFC;
+  --p-slate-100: #F1F5F9;
+  --p-slate-200: #E2E8F0;
+  --p-slate-400: #94A3B8;
+  --p-slate-500: #64748B;
+  --p-blanco:    #FFFFFF;
+
+  /* Cocoa Brown (#78350F) */
+  --p-cacao-950: #451A03;
+  --p-cacao-800: #78350F;
+  --p-cacao-700: #92400E;
+
+  /* Emerald Green (#059669) - Theme principal */
+  --p-emerald-600: #059669;
+  --p-emerald-700: #047857;
+  --p-emerald-800: #065F46;
+  --p-emerald-100: #D1FAE5;
+
+  /* Alert Amber (#D97706) */
+  --p-amber-600: #D97706;
+  --p-amber-700: #B45309;
+  --p-amber-100: #FEF3C7;
+
+  /* Alert Red (#DC2626) */
+  --p-red-600: #DC2626;
+  --p-red-700: #B91C1C;
+  --p-red-100: #FEE2E2;
+
+  /* Conectividad (diferenciador) */
+  --p-teal-700: #0F766E;
+
+  /* escala de espaciado (base 4 px) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+
+  /* radios: poco redondeo, el lenguaje es de etiqueta y registro */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-pill: 999px;
+}
+
+/* Semánticos, fuentes y escala de texto: Tailwind v4 genera bg-fondo, text-texto, font-mono...
+   "inline" evita duplicar: las utilidades leen los primitivos de :root. */
+@theme inline {
+  --font-display: "Fraunces Variable", Georgia, "Times New Roman", serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --text-3xl: 2.75rem;
+
+  /* superficies (Neutral Slate Gray) */
+  --color-fondo:        var(--p-slate-50);    /* #F8FAFC - Neutral Slate Gray */
+  --color-superficie:   var(--p-blanco);      /* #FFFFFF */
+  --color-hundido:      var(--p-slate-100);   /* #F1F5F9 - campos de formulario, filas alternas */
+
+  /* texto (Cocoa Brown) */
+  --color-texto:        var(--p-cacao-950);   /* #451A03 - 14.31:1 sobre fondo */
+  --color-texto-suave:  var(--p-cacao-800);   /* #78350F - Cocoa Brown (8.67:1 sobre fondo) */
+  --color-texto-tenue:  var(--p-cacao-700);   /* #92400E - 6.78:1 sobre fondo */
+  --color-texto-sobre-acento: var(--p-blanco);/* 5.48:1 sobre acento */
+
+  /* bordes */
+  --color-borde:        var(--p-slate-200);   /* #E2E8F0 - decorativo */
+  --color-borde-fuerte: var(--p-slate-500);   /* #64748B - 4.55:1 fondo: límite de campos (UI >= 3:1) */
+
+  /* acento y foco (Emerald Green) */
+  --color-acento:        var(--p-emerald-700); /* #047857 - 5.24:1 fondo, 5.48:1 con texto blanco */
+  --color-acento-hover:  var(--p-emerald-800); /* #065F46 - 7.68:1 con texto blanco */
+  --color-acento-suave:  var(--p-emerald-100); /* #D1FAE5 */
+  --color-acento-suave-texto: var(--p-emerald-800); /* #065F46 - 6.78:1 sobre acento-suave */
+  --color-foco:          var(--p-emerald-600); /* #059669 - Emerald Green (3.60:1 fondo UI >= 3:1) */
+
+  /* estados del producto (RF09) */
+  --color-pendiente:        var(--p-amber-700);     /* #B45309 - Alert Amber calibrado (4.51:1 con su fondo) */
+  --color-pendiente-fondo:  var(--p-amber-100);     /* #FEF3C7 */
+  --color-liberado:         var(--p-emerald-800);   /* #065F46 - Emerald Green (6.78:1 con su fondo) */
+  --color-liberado-fondo:   var(--p-emerald-100);   /* #D1FAE5 */
+  --color-bloqueado:        var(--p-red-700);       /* #B91C1C - Alert Red calibrado (5.30:1 con su fondo) */
+  --color-bloqueado-fondo:  var(--p-red-100);       /* #FEE2E2 */
+
+  /* conectividad (diferenciador) */
+  --color-sync-pendiente: var(--p-amber-700);
+  --color-sync-ok:        var(--p-emerald-700);
+  --color-sync-sin-red:   var(--p-teal-700);        /* #0F766E - 5.23:1 fondo */
+  --color-sync-error:     var(--p-red-700);
+}
+
+:root {
+  /* ---------- 3. COMPONENTE (solo donde duele) ---------- */
+  --sello-borde: 1.5px solid var(--color-texto);
+  --sello-radio: var(--radius-sm);
+  --sello-fuente: var(--font-mono);
+  --sello-tracking: 0.04em;
+
+  --boton-alto: 2.75rem;          /* 44 px: objetivo táctil mínimo en móvil */
+  --boton-radio: var(--radius-md);
+  --campo-alto: 2.75rem;
+  --foco-anillo: 2px solid var(--color-foco);
+  --foco-offset: 2px;
+
+  --sombra-tarjeta: 0 1px 0 rgb(69 26 3 / 0.08);
+}
+
+/* Foco visible global: requisito de E06 (navegación por teclado) */
+:focus-visible {
+  outline: var(--foco-anillo);
+  outline-offset: var(--foco-offset);
+}
+
+/* Respetar preferencia de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
