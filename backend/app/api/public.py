@@ -18,7 +18,7 @@ def product_card(code: str, db: Session = Depends(get_db)):
         raise HTTPException(404, "Producto sin lote de salida")
     # Explicit allowlist: never serialize user, producer contact, cost, or private lot data.
     return {"code": lot.code, "product_type": lot.product_type, "stage": product.stage, "occurred_at": product.occurred_at,
-            "output_quantity": float(link.quantity), "unit": lot.unit, "status": lot.status,
+            "output_quantity": float(lot.received_quantity), "unit": lot.unit, "status": lot.status,
             "availability": "available" if lot.status == "released" else "not_available",
             "status_reason": lot.status_reason if lot.status == "blocked" else None,
             "origin": lot.origin, "received_on": lot.received_on}

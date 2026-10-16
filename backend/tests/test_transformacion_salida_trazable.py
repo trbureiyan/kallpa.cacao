@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from app.models import AuditEvent, FinanceRecord, InventoryMovement, Lot, Transformation, TransformationOutput
+from app.models import AuditEvent, CostEntry, InventoryMovement, Lot, Transformation, TransformationOutput
 
 from conftest import auth
 from test_recepcion_lote import reception_payload
@@ -86,7 +86,12 @@ def test_recepcion_transformacion_salida_movimientos_merma_y_linaje(api):
     assert loss["value_percent"] == 20
 
     with api["session_factory"]() as db:
-        transform = db.query(Transformation).filter_by(output_code="DRY-TRACE-001").one()
+        transform = db.get(Transformation, payload["id"])
+        assert transform.output_code is None
+        assert "output_quantity" not in Transformation.__table__.c
+        assert "output_status" not in Transformation.__table__.c
+        assert "status_reason" not in Transformation.__table__.c
+        assert "quantity" not in TransformationOutput.__table__.c
         assert db.query(TransformationOutput).filter_by(transformation_id=transform.id, lot_id=output_lot_id).count() == 1
         assert db.query(InventoryMovement).filter_by(transformation_id=transform.id).count() == 2
         assert db.get(Lot, output_lot_id).origin == db.get(Lot, input_lot_id).origin
@@ -106,7 +111,7 @@ def test_falla_al_crear_salida_y_revierte_consumo_de_entrada(api):
         "output_quantity": 80,
         "unit": "kg",
         "output_code": "DUPLICATE-OUTPUT",
-        "costs_cop": 0,
+        "costs_cop": 200000,
     }
     first = client.post("/api/v1/transformations", headers=headers,
                         json={**base, "idempotency_key": str(uuid4())})
@@ -131,7 +136,7 @@ def test_consumo_mayor_al_disponible_no_deja_registros_parciales(api):
         before = {
             "transformations": db.query(Transformation).count(),
             "movements": db.query(InventoryMovement).count(),
-            "finance": db.query(FinanceRecord).count(),
+            "cost_entries": db.query(CostEntry).filter(CostEntry.transformation_id.is_not(None)).count(),
             "audit": db.query(AuditEvent).count(),
             "lots": db.query(Lot).count(),
         }
@@ -150,7 +155,7 @@ def test_consumo_mayor_al_disponible_no_deja_registros_parciales(api):
     with api["session_factory"]() as db:
         assert db.query(Transformation).count() == before["transformations"]
         assert db.query(InventoryMovement).count() == before["movements"]
-        assert db.query(FinanceRecord).count() == before["finance"]
+        assert db.query(CostEntry).filter(CostEntry.transformation_id.is_not(None)).count() == before["cost_entries"]
         assert db.query(AuditEvent).count() == before["audit"]
         assert db.query(Lot).count() == before["lots"]
         assert float(db.get(Lot, lot_id).available_quantity) == 100
@@ -172,12 +177,18 @@ def test_una_transformacion_puede_vincular_varios_lotes_de_salida(api):
             {"lot_code": "CLAS-A", "product_type": "cocoa_nibs", "quantity": 50, "unit": "kg"},
             {"lot_code": "CLAS-B", "product_type": "cocoa_shell", "quantity": 30, "unit": "kg"},
         ],
-        "costs_cop": 0,
+        "costs_cop": 200000,
     })
     assert response.status_code == 201, response.text
     result = response.json()
     assert result["output_quantity"] == 80
     assert {item["lot_code"] for item in result["outputs"]} == {"CLAS-A", "CLAS-B"}
+    with api["session_factory"]() as db:
+        allocations = {
+            (entry.category, float(entry.amount_cop))
+            for entry in db.query(CostEntry).filter(CostEntry.transformation_id == result["id"]).all()
+        }
+        assert allocations == {("processing", 125000.0), ("processing", 75000.0)}
     trace = client.get(f"/api/v1/lots/{input_lot_id}/traceability", headers=headers).json()
     assert {item["lot"]["code"] for item in trace["downstream_transformations"][0]["outputs"]} == {"CLAS-A", "CLAS-B"}
     for code in ("CLAS-A", "CLAS-B"):

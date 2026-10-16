@@ -1,6 +1,4 @@
-from decimal import Decimal
-
-from sqlalchemy import ForeignKey, Numeric, UniqueConstraint
+from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -15,4 +13,3 @@ class TransformationOutput(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     transformation_id: Mapped[int] = mapped_column(ForeignKey("transformations.id", ondelete="RESTRICT"), index=True)
     lot_id: Mapped[int] = mapped_column(ForeignKey("lots.id", ondelete="RESTRICT"), unique=True, index=True)
-    quantity: Mapped[Decimal] = mapped_column(Numeric(14, 3))

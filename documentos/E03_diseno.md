@@ -4,14 +4,14 @@
 
 `kallpa.cacao` es el nombre del repositorio. `AgroCacao Huila` aparece como nombre visual en la aplicación; el equipo debe confirmar la marca final. El producto busca conectar recepción, transformación, inventario y consulta del cacao de una asociación ficticia del Huila.
 
-El flujo backend disponible es: registrar productor/finca, recibir cacao, crear un lote y su movimiento de inventario, transformar el lote, consultar el linaje y presentar una ficha pública del lote procesado. El alcance de una transformación es un lote de entrada y una o varias salidas. No hay operaciones de venta implementadas. La rama actual se llama `backend`; el frontend no está completo en esta copia, por lo que los recorridos visuales no se consideran verificados aquí.
+El flujo completo disponible es registrar productor/finca, recibir cacao, crear lote y movimiento, transformar, consultar linaje y presentar ficha pública. Una transformación consume un lote de entrada y crea una o varias salidas. No hay operaciones de venta implementadas.
 
 ## Arquitectura
 
 ```mermaid
 flowchart LR
     O[Operador / Administrador / Comprador]
-    PWA[Cliente React y TypeScript previsto<br/>fuente incompleta en la rama backend]
+    PWA[Cliente React y TypeScript PWA<br/>captura offline + vistas administrativas]
     API[FastAPI<br/>API REST versionada en /api/v1]
     ORM[SQLAlchemy<br/>sesiones y modelos]
     DB[(PostgreSQL en Docker<br/>volumen persistente)]
@@ -25,7 +25,7 @@ flowchart LR
     MIG --> DB
 ```
 
-FastAPI registra routers para autenticación, recepciones, transformaciones, lotes/trazabilidad, inventario, economía, alertas, ficha pública y exportaciones. Las reglas de negocio están en servicios Python. SQLAlchemy maneja el acceso a datos; Alembic versiona el esquema. Docker Compose define PostgreSQL, API y frontend; sin el código frontend completo, no se debe presentar el arranque de los tres servicios desde esta rama como una instalación verificada.
+FastAPI registra routers para autenticación, recepciones, transformaciones, lotes/trazabilidad, inventario, economía, alertas, ficha pública y exportaciones. El frontend canónico React/PWA incluye captura offline e interfaces administrativas. El build está verificado; el recorrido visual y la integración contra servicios en ejecución siguen pendientes.
 
 ## Modelo de datos implementado
 
@@ -46,26 +46,27 @@ erDiagram
     LOTS ||--o{ COST_ENTRIES : costed
     TRANSFORMATIONS ||--o{ COST_ENTRIES : processing_cost
     RECEPTIONS ||--o{ COST_ENTRIES : purchase_cost
-    TRANSFORMATIONS ||--o| FINANCE_RECORDS : financial_summary
+
 ```
 
-Entidades principales: `User`, `Producer`, `Farm`, `Lot`, `Reception`, `Transformation`, `TransformationOutput`, `InventoryMovement`, `CostEntry`, `FinanceRecord` y `AuditEvent`. Una transformación apunta a un lote de entrada; `TransformationOutput` enlaza esa transformación con cada lote de salida. El linaje de la salida se conserva en el propio lote y en esa tabla intermedia.
+Entidades principales: `User`, `Producer`, `Farm`, `Lot`, `Reception`, `Transformation`, `TransformationOutput`, `InventoryMovement`, `CostEntry` y `AuditEvent`. Ya no existe `FinanceRecord`: el precio propuesto vive en `Transformation` y todos los costos se registran únicamente en `CostEntry`.
 
 ### Decisiones de consistencia y limitaciones del esquema
 
-- Recepción registra la operación y se enlaza uno a uno con un lote. La cantidad y finca de origen también están en el lote; hay datos repetidos entre `Reception` y `Lot` que requieren mantener consistentes. `FinanceRecord.transformation_id` también es único, por lo que el resumen financiero es de cero o uno por transformación.
+- Recepción registra la operación y se enlaza uno a uno con un lote. La cantidad y finca de origen también están en el lote; esos datos repetidos entre `Reception` y `Lot` aún requieren mantenerse consistentes.
 - El saldo rápido está en `Lot.available_quantity`; el libro `InventoryMovement` conserva recepción, consumo y producción. El informe de operación debe incluir una conciliación de ambos.
 - El consumo verifica disponibilidad y bloquea la fila del lote con `SELECT ... FOR UPDATE` en la ruta de transformación. La creación de transformación, el consumo, las salidas, los movimientos, los costos y la auditoría se ejecutan en una transacción.
 - La idempotencia de transformación guarda una clave única y una huella del payload. Repetir clave y contenido devuelve el resultado anterior; reutilizar la clave con contenido distinto responde conflicto.
-- El esquema actual conserva importes en más de un lugar (`Transformation.costs_cop`, `FinanceRecord` y `CostEntry`) y también conserva estado/código de salida en la transformación además del lote de salida. Por tanto, la fuente única de costos y estados no está demostrada en este esquema; cualquier cálculo debe documentar de qué registro lee.
-- `AuditEvent` almacena actor, tipo e identificador de entidad, acción, valores anterior/nuevo y fecha. El motivo de un cambio de estado queda en el valor posterior y en el lote; no hay una columna `reason` dedicada ni un trigger de base de datos que impida `UPDATE`/`DELETE` de auditoría. La inmutabilidad estricta sigue pendiente.
+- `CostEntry` es la fuente única de costos. `purchase` queda asociado al lote recibido; `processing` se vincula a la transformación y se distribuye entre las salidas según masa. La economía suma los costos de etapa vinculados a la transformación y excluye la compra de materia prima. La migración `e4219b1a7c30` conserva el valor que exponía la economía previa y elimina las columnas/tablas duplicadas.
+- `Lot` es la fuente autoritativa del código, cantidad y estado del producto procesado. `TransformationOutput` conserva solo la relación entre la operación y el lote; sus cantidades se leen de `Lot.received_quantity`. La migración elimina esos campos duplicados de `Transformation` y del vínculo.
+- `AuditEvent` almacena actor, tipo e identificador de entidad, accion, valores anterior/nuevo y fecha. La razon de estado queda en `after_value`; un listener ORM y triggers de base de datos impiden modificar o borrar eventos.
 
 ## Reglas de negocio
 
-- Recepción: la cantidad debe ser positiva; la unidad del MVP es kg. La clave de idempotencia evita duplicados ante reintentos.
+- Recepción registra la operación y se enlaza uno a uno con un lote. La cantidad y finca de origen también están en el lote; esos datos repetidos entre `Reception` y `Lot` aún requieren mantenerse consistentes.
 - Transformación: acepta un lote de entrada; verifica que exista, no esté bloqueado, tenga stock suficiente y use unidades compatibles. El exceso de salida requiere registrar una incidencia.
 - Merma: `(cantidad de entrada - cantidad de salida) / cantidad de entrada × 100`. La alerta de este caso se activa si el resultado es estrictamente superior a 15 %; 15 % exacto no la activa.
-- Economía descrita por el servicio actual: costo unitario = costo total informado / salida vendible; margen = `(precio - costo unitario) / precio × 100`. Con salida o precio igual a cero, el indicador correspondiente no se calcula. El costo se presenta como agregado informado; no hay desglose fiable por categoría documentado.
+- Economía: costo unitario = costos de etapa vinculados a la transformación / cantidad de salida vendible; margen = `(precio - costo unitario) / precio × 100`. Con salida o precio igual a cero, el indicador correspondiente no se calcula. La API explica que excluye la compra de materia prima.
 - Estado: `pending`, `released` o `blocked`. El administrador cambia estados con motivo. Solo `released` se informa disponible en la ficha pública.
 - Ficha pública: usa un esquema de salida permitido; no serializa contacto del productor ni costos internos.
 
@@ -77,7 +78,7 @@ Entidades principales: `User`, `Producer`, `Farm`, `Lot`, `Reception`, `Transfor
 | Administrador | Operaciones del operador, cambios de estado, economía, alertas, auditoría y CSV. | Las rutas aplican autorización en backend. |
 | Comprador público | Consultar ficha por código sin autenticación. | Recibe únicamente datos aprobados; un producto bloqueado no aparece disponible. |
 
-La administración de usuarios, ventas y analítica agregada no se presenta como capacidad disponible en la API de esta rama. Las pantallas que las sugieran deben quedar marcadas como no conectadas o fuera del alcance actual.
+La administración de usuarios, ventas y analítica agregada no se presenta como capacidad disponible en la API de esta rama. El panel de esta tarea cubre inventario, filtros/CSV, economía y auditoría.
 
 ## Diferenciador offline y límites
 
@@ -89,8 +90,8 @@ El alcance que se ha ensayado es captura de recepciones sin conexión y sincroni
 |---|---|---|---|
 | FastAPI con routers y servicios en un monolito modular | Permite documentar endpoints OpenAPI y mantener reglas del lado servidor en un MVP pequeño. | Servicios independientes. | No se ha separado el despliegue por dominio. |
 | PostgreSQL para operación con Docker; SQLite para pruebas y desarrollo local | PostgreSQL conserva los datos en un volumen y soporta bloqueos de fila para consumos concurrentes. | Una base embebida únicamente. | Las pruebas SQLite no prueban concurrencia PostgreSQL; esa prueba debe ejecutarse aparte contra una instancia desechable. |
-| Lotes explícitos como salida de transformación | Permite consultar inventario y linaje en ambos sentidos. | Guardar las cantidades de salida solo como campos de la transformación. | Persisten campos de salida duplicados en `Transformation` y `Lot`. |
+| Lotes explícitos como salida de transformación | Permite consultar inventario y linaje en ambos sentidos. | Guardar las cantidades de salida solo como campos de la transformación. | Se conserva el formato histórico de entrada de la API; la relación persistida entre transformación y lotes de salida es autoritativa. |
 
 ## Diferencias entre diseño y estado entregable
 
-Esta rama contiene backend y pruebas automatizadas. La fuente frontend aparece incompleta/vacía en esta copia, aunque Docker Compose intenta construirla; por ello, las pantallas, responsive, PWA, QR decorativo y sincronización de IndexedDB no se certifican con este repositorio. El informe en `concurso/Revision_funcional_y_plan_siguiente.txt` registra pruebas anteriores y sus límites; no reemplaza una nueva ejecución sobre el commit final.
+Esta copia contiene el frontend canónico React/PWA y vistas para recepción, inventario administrativo con filtros/CSV, economía y auditoría. El build de producción pasa. Falta el recorrido visual manual en navegador y las llamadas contra API/PostgreSQL ejecutándose en el entorno final.

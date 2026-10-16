@@ -26,18 +26,18 @@ Una transformación consume un lote de entrada y puede crear una o varias salida
 
 ## 3. Arquitectura y datos
 
-El backend usa FastAPI, SQLAlchemy y Alembic. Docker Compose configura PostgreSQL con un volumen persistente y una API; el proyecto también permite SQLite para desarrollo local y pruebas. La API publica OpenAPI/Swagger en `/docs`. El código frontend de React/TypeScript no está completo en esta rama: `src/frontend/src/App.tsx`, `src/frontend/src/main.tsx` y `src/frontend/package.json` están vacíos. Compose intenta construir ese frontend, por lo que el arranque de la pila completa no es reproducible desde esta copia hasta recuperar sus fuentes.
+El backend usa FastAPI, SQLAlchemy y Alembic. Docker Compose configura PostgreSQL con un volumen persistente y una API; el proyecto también permite SQLite para desarrollo local y pruebas. La API publica OpenAPI/Swagger en `/docs`. `src/frontend/` contiene el frontend React/PWA canónico; su build de producción está verificado, pero la revisión visual manual contra la pila integrada sigue pendiente.
 
-Los modelos principales son `User`, `Producer`, `Farm`, `Lot`, `Reception`, `Transformation`, `TransformationOutput`, `InventoryMovement`, `CostEntry`, `FinanceRecord` y `AuditEvent`. El diagrama y las decisiones del esquema están en [E03](documentos/E03_diseno.md); las historias y criterios están en [E02](documentos/E02_requisitos.md).
+Los modelos principales son `User`, `Producer`, `Farm`, `Lot`, `Reception`, `Transformation`, `TransformationOutput`, `InventoryMovement`, `CostEntry` y `AuditEvent`. `CostEntry` es la fuente única de costos; la migración `e4219b1a7c30` elimina `FinanceRecord` y `Transformation.costs_cop`. El diagrama y las decisiones están en [E03](documentos/E03_diseno.md); las historias y criterios, en [E02](documentos/E02_requisitos.md).
 
-La implementación actual conserva algunas representaciones duplicadas: la cantidad inicial y la finca aparecen en `Lot` y `Reception`; importes se guardan en `Transformation.costs_cop`, `FinanceRecord` y `CostEntry`; algunos datos de salida y estado también aparecen tanto en `Transformation` como en el lote de salida. La documentación no debe presentar una fuente única de esos valores hasta que se resuelva esa duplicación. La auditoría almacena actor, fecha, acción y valores anterior/nuevo; no existe trigger PostgreSQL documentado que impida modificar o borrar eventos, así que la inmutabilidad estricta está pendiente.
+Los costos se guardan en un solo libro: `CostEntry`. El costo de compra se asocia al lote recibido y el costo de procesamiento se distribuye por masa entre los lotes de salida. El precio propuesto queda en `Transformation`. La migración conserva el costo que exponía la API anterior y elimina las copias de costo. La auditoría tiene guardas ORM y triggers `UPDATE`/`DELETE` en PostgreSQL y SQLite de pruebas.
 
 ## 4. Reglas visibles para evaluación
 
 - Recepción: cantidad positiva, unidad explícita e identificador de lote único. La clave idempotente permite reintentar una operación sin crear otra recepción.
 - Transformación: comprueba lote, estado, stock y unidad; el consumo y la creación de salidas/movimientos se hacen en una transacción. Misma clave y mismo contenido devuelve el resultado previo; misma clave con contenido diferente produce conflicto.
 - Merma: `(entrada - salida) / entrada × 100`. La alerta de merma del caso se activa si supera estrictamente 15 %.
-- Economía: el servicio usa `costo total informado / cantidad de salida vendible`; margen sobre venta = `(precio - costo unitario) / precio × 100`. Salida o precio igual a cero produce indicador no calculable. El costo aparece agregado; el esquema aún no garantiza un desglose canónico.
+- Economía: costo unitario = suma de costos de etapa / cantidad de salida vendible; margen sobre venta = `(precio - costo unitario) / precio × 100`. La compra de materia prima queda aparte y no se suma al indicador. Salida o precio cero produce indicador no calculable con explicación.
 - Estados: `pending`, `released`, `blocked`. El cambio requiere rol administrador y motivo. La ficha pública solo informa disponible un producto liberado.
 - Público: el endpoint usa un esquema permitido y excluye contacto del productor y costos internos.
 - Seguridad: la autorización se valida en endpoints del backend; ocultar una acción en la interfaz no sustituye ese control.
@@ -73,7 +73,7 @@ Pruebas automatizadas, también desde `backend/`:
 python -m pytest -q
 ```
 
-El último resultado escrito en `concurso/Revision_funcional_y_plan_siguiente.txt` es 14 pruebas aprobadas y una omitida en la ejecución normal; la prueba de concurrencia PostgreSQL se ejecutó aparte y pasó en un PostgreSQL desechable. El informe también registra una compilación frontend y una prueba manual de recepción offline. No se ejecutaron esas verificaciones al preparar este documento. Verifique todo nuevamente sobre el commit final.
+Validacion realizada en esta revision: desde `backend/`, `python -m pytest -q` termino con 18 pruebas aprobadas, 1 omitida (prueba de concurrencia PostgreSQL sin `TEST_POSTGRES_URL`) y 1 advertencia deprecada de Starlette/TestClient. Desde `src/frontend/`, `npm run build` termino correctamente con TypeScript y Vite. No se ejecutaron migraciones ni pruebas manuales contra la base persistente del proyecto.
 
 ## 6. Estado de RF y evidencia
 
@@ -88,9 +88,9 @@ El último resultado escrito en `concurso/Revision_funcional_y_plan_siguiente.tx
 | RF07 Persistencia | SQLAlchemy, Alembic, PostgreSQL | Informe de reinicio en base PostgreSQL aislada con conteos comparados. | Falta adjuntar pasos de restauración y comprobación de integridad. |
 | RF08 Inventario | `services/inventory.py`, movimientos e idempotencia | Pruebas de exceso, repetición e informe de concurrencia PostgreSQL. | Consolidar comandos, entorno y saldos observados en E05/E07. |
 | RF09 Estados | `api/lots.py`, permisos backend | `test_permisos_roles.py`; informe de 403 para operador y motivo obligatorio. | Registrar bloqueo → operación rechazada → ficha pública no disponible. |
-| RF10 Auditoría | `models/audit.py`, escritura desde recepción/transformación/estado | Eventos con actor, acción y valores anterior/nuevo en el modelo. | Demostrar cambios relevantes y resolver la protección de borrado a nivel PostgreSQL. |
-| RF11 Filtros/CSV | `api/lots.py`, `api/exports.py` | Rutas documentadas para filtrar y exportar. | Guardar CSV de prueba y verificar columnas y rol administrador. |
-| RF12 Balance | `api/economics.py`, `services/economics.py` | Fórmula, valores no calculables y costos incluidos descritos. | Guardar prueba del ejemplo oficial (20.000 COP/kg y 20 %) con supuestos visibles. |
+| RF10 Auditoría | `models/audit.py`, `api/lots.py`, migración `e4219b1a7c30` | Actor/nombre, hora, acción y valores anterior/nuevo; guardas ORM y triggers impiden update/delete; eventos en recepción, transformación y estado. | Pruebas API y migración SQLite temporal pasan. Falta ensayo/captura manual PostgreSQL de entrega. |
+| RF11 Filtros/CSV | `api/inventory.py`, `api/exports.py`, `src/frontend/src/BusinessViews.tsx` | Vista admin filtra por origen/estado y muestra costos por lote; CSV incluye campos requeridos; backend rechaza operador con 403. | Pytest verifica filtros, montos y autorizacion. Falta recorrido visual manual. |
+| RF12 Balance | `api/economics.py`, `services/economics.py`, `src/frontend/src/BusinessViews.tsx` | CostEntry unico; formula/unidades/politica visibles; salida/precio cero no divide; UI muestra indicadores. | Pytest reproduce COP 20.000/kg y margen 20 % con COP 1.600.000, 80 kg y COP 25.000/kg. Falta evidencia visual/manual. |
 
 ## 7. Entregables documentales
 
@@ -99,7 +99,7 @@ El último resultado escrito en `concurso/Revision_funcional_y_plan_siguiente.tx
 | E01 Problema y propuesta de valor | `documentos/E01_problema.md` | Vacío; pendiente de redactar con supuestos y beneficios medibles. |
 | E02 Requisitos | `documentos/E02_requisitos.md` | Borrador creado; equipo debe confirmar prioridades y asignar responsables. |
 | E03 Diseño | `documentos/E03_diseno.md` | Borrador creado a partir de los modelos y servicios actuales; contrastar contra ejecución final. |
-| E04 Producto y código | `backend/`, `src/frontend/` | Backend disponible; frontend incompleto en esta rama. No declarar flujo de UI completo. |
+| E04 Producto y código | `backend/`, `src/frontend/` | Backend y frontend canónico disponibles; build frontend verificado. Falta recorrido visual manual integrado en escritorio y móvil. |
 | E05 Pruebas | `documentos/E05_pruebas.md`, `tests/casos_manuales.md`, `backend/tests/` | Hay un plan de 15 casos y un ensayo adicional offline; están pendientes de ejecución documentada con esperado, obtenido, estado y evidencia. Las pruebas automatizadas existen, con resultados históricos en el informe. |
 | E06 Usabilidad | `documentos/E06_usabilidad.md` | Vacío. Falta prueba real de dos tareas, hallazgos y mejora antes/después. |
 | E07 Operación | `documentos/E07_operacion.md`, README | Parcial: comandos existentes; instalación limpia y restauración deben probarse y registrarse. |
@@ -109,8 +109,8 @@ El último resultado escrito en `concurso/Revision_funcional_y_plan_siguiente.tx
 
 ## 8. Límites y próximos pasos
 
-1. Recuperar/integrar el frontend completo en una rama que lo incluya y verificar la PWA; esta rama no permite construirla actualmente.
-2. Resolver duplicaciones de costos, cantidades/estados y la protección de auditoría antes de describir esos datos como fuente única o inmutable.
+1. Recorrer visualmente el frontend en escritorio y móvil contra la API y PostgreSQL, incluida la cola de recepción offline.
+2. Aplicar la migración `e4219b1a7c30` únicamente en una base de ensayo respaldada; no se ha ejecutado sobre la base persistente del proyecto.
 3. Completar E01, E06, E07 y E09; ejecutar los 15 casos de E05 y completar sus resultados. Revisar E02 y E03 con el equipo.
 4. Ejecutar 15 casos manuales, guardar evidencia, medir trazabilidad con 100 registros y probar backup/restore en base aislada.
 5. Documentar la incidencia de CAC001: hora, impacto, decisión, cambio y regresión realmente ejecutados.

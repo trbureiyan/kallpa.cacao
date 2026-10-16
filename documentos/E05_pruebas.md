@@ -12,7 +12,7 @@ Comando, desde `backend/`:
 python -m pytest -q
 ```
 
-El último resultado registrado en `concurso/Revision_funcional_y_plan_siguiente.txt` fue 14 aprobadas y 1 omitida cuando no se configuró `TEST_POSTGRES_URL`. La carrera PostgreSQL se ejecutó aparte en PostgreSQL 16 desechable: dos solicitudes de 7 kg sobre 10 kg dieron un éxito y un conflicto; saldo final 3 kg. Es evidencia histórica de ese ensayo, no una ejecución en este borrador/commit. La migración y el reinicio de la base persistente activa no se verifican aquí.
+Resultado ejecutado en esta revision: `python -m pytest -q` desde `backend/` termino con 18 aprobadas, 1 omitida y 1 advertencia deprecada de Starlette/TestClient. La omitida es la prueba opcional de concurrencia PostgreSQL, que requiere `TEST_POSTGRES_URL`. Esta ejecucion usa bases temporales; no migro ni escribio en la base persistente del proyecto. La carrera PostgreSQL previamente descrita es evidencia historica y debe repetirse en instancia desechable para validar esta version.
 
 La comprobación de navegador/IndexedDB reportada por el usuario debe repetirse en la versión que se entregará y conservar capturas antes y después de sincronizar. La prueba de interacción visual, restauración del respaldo y medición con 100 registros todavía no tienen evidencia adjunta.
 

@@ -2,6 +2,7 @@ import hashlib
 import json
 from datetime import timezone
 from decimal import Decimal
+from decimal import ROUND_HALF_UP
 
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
@@ -9,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.models import (
     AuditEvent,
-    FinanceRecord,
+    CostEntry,
     InventoryMovement,
     Lot,
     Transformation,
@@ -77,16 +78,17 @@ def _stored_payload(db: Session, transformation: Transformation) -> dict:
         "stage": transformation.stage,
         "occurred_at": _timestamp(transformation.occurred_at),
         "input_quantity": _quantity(transformation.input_quantity),
-        "output_quantity": _quantity(transformation.output_quantity),
+        "output_quantity": _quantity(sum((lot.received_quantity for lot, _ in linked_outputs), Decimal("0"))),
         "unit": transformation.unit,
         "incident": transformation.incident,
-        "output_code": transformation.output_code,
-        "costs_cop": _money(transformation.costs_cop),
+        "output_code": linked_outputs[0][0].code if linked_outputs else transformation.output_code,
+        "costs_cop": _money(sum((entry.amount_cop for entry in db.query(CostEntry).filter_by(
+            transformation_id=transformation.id, category="processing").all()), Decimal("0"))),
         "sale_price_cop_per_unit": _money(transformation.sale_price_cop_per_unit) if transformation.sale_price_cop_per_unit is not None else None,
         "outputs": [{
             "lot_code": lot.code,
             "product_type": lot.product_type,
-            "quantity": _quantity(link.quantity),
+            "quantity": _quantity(lot.received_quantity),
             "unit": lot.unit,
         } for lot, link in linked_outputs],
     }
@@ -117,17 +119,17 @@ def _result(db: Session, transformation: Transformation) -> dict:
         "responsible_id": transformation.responsible_id,
         "occurred_at": transformation.occurred_at,
         "input_quantity": float(transformation.input_quantity),
-        "output_quantity": float(transformation.output_quantity),
+        "output_quantity": sum(float(lot.received_quantity) for lot, _ in outputs),
         "unit": transformation.unit,
         "incident": transformation.incident,
-        "output_code": transformation.output_code,
+        "output_code": outputs[0][0].code if outputs else transformation.output_code,
         "product_type": outputs[0][0].product_type if outputs else "processed_cocoa",
         "outputs": [
             {
                 "lot_id": lot.id,
                 "lot_code": lot.code,
                 "product_type": lot.product_type,
-                "quantity": float(link.quantity),
+                "quantity": float(lot.received_quantity),
                 "unit": lot.unit,
                 "status": lot.status,
             }
@@ -172,13 +174,10 @@ def create_transformation(db: Session, data, actor: User):
             responsible_id=actor.id,
             occurred_at=data.occurred_at,
             input_quantity=data.input_quantity,
-            output_quantity=data.output_quantity,
             unit=data.unit,
             incident=data.incident,
-            output_code=data.output_code,
-            costs_cop=data.costs_cop,
+            output_code=data.output_code if not planned_outputs else None,
             sale_price_cop_per_unit=data.sale_price_cop_per_unit,
-            output_status="pending",
         )
         db.add(transform)
         db.flush()
@@ -200,8 +199,10 @@ def create_transformation(db: Session, data, actor: User):
         ))
 
         output_lots = []
+        normalized_outputs = []
         for output in planned_outputs:
             output_value = output if isinstance(output, dict) else output.model_dump()
+            normalized_outputs.append(output_value)
             output_lot = Lot(
                 code=output_value["lot_code"],
                 producer_id=lot.producer_id,
@@ -222,7 +223,6 @@ def create_transformation(db: Session, data, actor: User):
             db.add(TransformationOutput(
                 transformation_id=transform.id,
                 lot_id=output_lot.id,
-                quantity=output_value["quantity"],
             ))
             db.add(InventoryMovement(
                 lot_id=output_lot.id,
@@ -234,11 +234,34 @@ def create_transformation(db: Session, data, actor: User):
                 unit=output_value["unit"],
             ))
 
-        db.add(FinanceRecord(
-            transformation_id=transform.id,
-            total_cost_cop=data.costs_cop,
-            sale_price_cop_per_unit=data.sale_price_cop_per_unit,
-        ))
+        total_output_quantity = sum(
+            (Decimal(str(output["quantity"])) for output in normalized_outputs), Decimal("0")
+        )
+        total_stage_cost = Decimal(str(data.costs_cop)).quantize(Decimal("0.01"))
+        remaining_stage_cost = total_stage_cost
+        for index, (output, output_lot) in enumerate(zip(normalized_outputs, output_lots)):
+            if index == len(output_lots) - 1:
+                allocated_cost = remaining_stage_cost
+            elif total_output_quantity > 0:
+                allocated_cost = (total_stage_cost * Decimal(str(output["quantity"])) / total_output_quantity).quantize(
+                    Decimal("0.01"), rounding=ROUND_HALF_UP
+                )
+                remaining_stage_cost -= allocated_cost
+            else:
+                allocated_cost = Decimal("0.00")
+            db.add(CostEntry(
+                lot_id=output_lot.id,
+                transformation_id=transform.id,
+                category="processing",
+                amount_cop=allocated_cost,
+            ))
+        if not output_lots and total_stage_cost > 0:
+            db.add(CostEntry(
+                lot_id=lot.id,
+                transformation_id=transform.id,
+                category="processing",
+                amount_cop=total_stage_cost,
+            ))
         db.add(AuditEvent(
             actor_id=actor.id,
             entity_type="lot",
@@ -252,9 +275,26 @@ def create_transformation(db: Session, data, actor: User):
                 "stage": transform.stage,
                 "input_quantity": data.input_quantity,
                 "output_quantity": data.output_quantity,
-                "output_code": transform.output_code,
+                "output_code": output_lots[0].code if output_lots else transform.output_code,
                 "output_lot_ids": [output_lot.id for output_lot in output_lots],
                 "incident": data.incident,
+            },
+        ))
+        db.add(AuditEvent(
+            actor_id=actor.id,
+            entity_type="transformation",
+            entity_id=str(transform.id),
+            action="created",
+            before_value=None,
+            after_value={
+                "stage": transform.stage,
+                "input_lot_id": lot.id,
+                "input_quantity": _quantity(data.input_quantity),
+                "output_quantity": _quantity(data.output_quantity),
+                "output_lot_ids": [output_lot.id for output_lot in output_lots],
+                "processing_cost_cop": _money(total_stage_cost),
+                "sale_price_cop_per_unit": _money(data.sale_price_cop_per_unit)
+                if data.sale_price_cop_per_unit is not None else None,
             },
         ))
         db.flush()

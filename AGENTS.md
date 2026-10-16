@@ -11,10 +11,7 @@ Contexto del evento:
 - 24 horas continuas de construcción. El código se congela con una etiqueta o commit final; después no se edita.
 - Caso y datos 100 % simulados. Sin datos reales, sin secretos.
 - Especificación completa del reto: `.docs/reto_cacao.md`. Es normativa; si este archivo y el reto chocan, gana el reto y se corrige este archivo.
-<<<<<<< HEAD
-=======
 - Marco del proyecto: `.docs/00_marco_del_proyecto.md`. Decisiones del equipo; resumen operativo y reglas de uso en la sección siguiente.
->>>>>>> 424f6ea (docs: sincroniza AGENTS.md con las decisiones del marco)
 - `.docs/` existe y no se modifica sin preguntar.
 
 ---
@@ -183,11 +180,7 @@ Los targets del `Makefile` existen pero aún están vacíos. Completarlos antes 
 
 When assigned a task:
 
-<<<<<<< HEAD
-1. Leer `AGENTS.md` primero y, si la tarea toca requisitos o criterios, la sección correspondiente de `.docs/reto_cacao.md`.
-=======
 1. Leer `AGENTS.md` primero (incluye el resumen del marco). Abrir `.docs/00_marco_del_proyecto.md` completo si la tarea toca alcance, modelo de datos, offline, fases o responsabilidades, y la sección correspondiente de `.docs/reto_cacao.md` si toca requisitos o criterios.
->>>>>>> 424f6ea (docs: sincroniza AGENTS.md con las decisiones del marco)
 2. Leer el prompt con atención. Identificar objetivo, restricciones y alcance (qué RF toca) antes de tocar archivos.
 3. Inspeccionar los archivos relevantes con lecturas exactas y dirigidas. No hacer escaneos amplios de directorios cuando se conocen rutas específicas.
 4. Verificar la implementación actual antes de escribir código. Nunca asumir la estructura: inspeccionarla.

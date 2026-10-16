@@ -16,7 +16,7 @@ docker compose up --build db api
 
 Las credenciales sintéticas de demostración son `operador` / `Operador123!` y `admin` / `Admin123!`. No exponga esas credenciales ni la configuración local a Internet.
 
-El Compose también define un servicio frontend, pero la fuente frontend de esta rama está incompleta; por eso no se documenta aquí como un inicio de pila completa verificado. Consulte [backend/README.md](backend/README.md) para ejecución local y pruebas, y [ENTREGA.md](ENTREGA.md) para el estado de los requisitos, la evidencia y las limitaciones.
+La pila incluye el frontend canónico React/PWA en `src/frontend`; el build de producción está verificado. Falta recorrer manualmente las vistas administrativas en escritorio y móvil contra API y PostgreSQL en ejecución. Consulte [backend/README.md](backend/README.md) para rutas de economía, inventario administrativo, auditoría y CSV; [ENTREGA.md](ENTREGA.md) registra estado y evidencia.
 
 ## Ejecutar las pruebas del backend
 

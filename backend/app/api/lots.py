@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import AuditEvent, Lot, Transformation, TransformationOutput, User
@@ -12,15 +13,11 @@ router = APIRouter(prefix="/lots", tags=["Lotes y trazabilidad"])
 def _change_lot_status(lot: Lot, data: StatusChange, db: Session, actor: User):
     before = {"status": lot.status, "reason": lot.status_reason}
     link = db.query(TransformationOutput).filter_by(lot_id=lot.id).first()
-    product = db.get(Transformation, link.transformation_id) if link else None
     lot.status = data.status
     lot.status_reason = data.reason
-    if product and product.output_code == lot.code:
-        product.output_status = data.status
-        product.status_reason = data.reason
     db.add(AuditEvent(actor_id=actor.id, entity_type="lot", entity_id=str(lot.id), action="status_changed",
                       before_value=before, after_value={"status": data.status, "reason": data.reason}))
-    if product:
+    if link:
         db.add(AuditEvent(actor_id=actor.id, entity_type="product", entity_id=lot.code, action="status_changed",
                           before_value=before, after_value={"status": data.status, "reason": data.reason,
                                                             "lot_code": lot.code}))
@@ -64,9 +61,35 @@ def get_trace(lot_id: int, db: Session = Depends(get_db), actor: User = Depends(
 
 @router.get("/{lot_id}/audit")
 def get_lot_audit(lot_id: int, db: Session = Depends(get_db), actor: User = Depends(admin_only)):
-    if not db.get(Lot, lot_id):
+    lot = db.get(Lot, lot_id)
+    if not lot:
         raise HTTPException(404, "Lote no encontrado")
-    return db.query(AuditEvent).filter(AuditEvent.entity_id == str(lot_id), AuditEvent.entity_type == "lot").order_by(AuditEvent.created_at).all()
+    transformation_ids = [item.id for item in db.query(Transformation.id).filter_by(lot_id=lot_id).all()]
+    output_transformation_ids = [item.transformation_id for item in db.query(TransformationOutput).filter_by(lot_id=lot_id).all()]
+    transformation_ids = sorted(set(transformation_ids + output_transformation_ids))
+    predicates = [
+        (AuditEvent.entity_type == "lot") & (AuditEvent.entity_id == str(lot_id)),
+    ]
+    if transformation_ids:
+        predicates.append((AuditEvent.entity_type == "transformation") &
+                          AuditEvent.entity_id.in_([str(item) for item in transformation_ids]))
+    rows = (db.query(AuditEvent, User)
+            .join(User, AuditEvent.actor_id == User.id)
+            .filter(or_(*predicates))
+            .order_by(AuditEvent.created_at, AuditEvent.id)
+            .all())
+    return [{
+        "id": event.id,
+        "actor_id": event.actor_id,
+        "actor_name": user.full_name,
+        "actor_username": user.username,
+        "entity_type": event.entity_type,
+        "entity_id": event.entity_id,
+        "action": event.action,
+        "before_value": event.before_value,
+        "after_value": event.after_value,
+        "created_at": event.created_at,
+    } for event, user in rows]
 
 
 @router.patch("/products/{output_code}/status")

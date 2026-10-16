@@ -33,7 +33,7 @@ Por defecto usa SQLite en `backend/cacao.db`; el esquema se crea mediante Alembi
 
 Desde `backend/`, ejecuta `docker compose up --build db api` para levantar PostgreSQL y la API. El contenedor aplica las migraciones Alembic antes de iniciar la API, disponible en el puerto 8000. PostgreSQL guarda datos en el volumen `postgres_data`.
 
-El archivo Compose también define un servicio frontend en `http://localhost:8080`, pero la fuente de `src/frontend/` está incompleta en esta rama (el punto de entrada y `package.json` están vacíos). Por eso, el comando de pila completa `docker compose up --build` no se considera una instalación verificada desde esta copia. Para demostrar la PWA, use la rama/copia que contenga su fuente completa y documente el commit correspondiente.
+El servicio frontend usa la aplicación canónica React/PWA en `../src/frontend`. El build de producción está verificado; aún falta recorrer manualmente las vistas administrativas en escritorio y móvil conectadas a una API y PostgreSQL en ejecución.
 
 ## Usuarios sintéticos
 
@@ -65,8 +65,9 @@ Obtén un JWT enviando formulario `username` y `password` a `POST /api/v1/auth/l
 | `GET /api/v1/exports/lots.csv` | Resumen CSV filtrable; administrador |
 | `GET /api/v1/inventory/movements` | Movimientos internos; usuario interno |
 | `GET /api/v1/inventory` | Saldo disponible por lote; usuario interno |
+| `GET /api/v1/inventory/admin?origin=&status=` | Inventario con costos por lote; solo administrador |
 
-La aplicación contempla una PWA React para captura offline de recepciones y vistas online. Sin embargo, la fuente frontend no está completa en esta rama y esas funciones no pueden verificarse aquí. El informe de revisión conserva resultados anteriores de build y del ensayo offline; no los trate como una verificación de este commit. Las transformaciones offline no forman parte del alcance comprobado.
+La aplicación canónica React/PWA está en `../src/frontend`. Incluye captura offline de recepciones y vistas administrativas para inventario, CSV, economía y auditoría. El build de producción se debe volver a verificar con `npm run build` desde `src/frontend/`; las pantallas requieren además una revisión visual manual conectadas a la API. Las transformaciones offline no forman parte del alcance.
 
 ## Primera demostración en `/docs`
 
@@ -94,12 +95,13 @@ Cambia `farm_id` por el ID que devolvio el primer paso. El servidor asigna el co
 - La clave `idempotency_key` hace que repetir el mismo payload devuelva la transformación original. Si se reutiliza con un payload distinto, la API devuelve `409` y no cambia inventario. Una huella SHA-256 del payload queda guardada para comparar reintentos.
 - La operación de transformación, el descuento, los movimientos de consumo y producción, el lote de salida, el costo y la auditoría se guardan en una misma transacción.
 - Cada salida positiva crea un lote de producto con código, tipo (`product_type`), unidad, cantidad y estado pendiente. El endpoint conserva el formato histórico de una salida (`output_code`/`output_quantity`) y también acepta una lista `outputs` para dividir el resultado en varios productos; se conserva productor/finca/origen del lote de entrada y `transformation_outputs` enlaza cada lote a su transformación.
+- El lote de salida es la fuente autoritativa del código, cantidad y estado; `transformation_outputs` guarda solo la relación. Los campos de salida duplicados se calculan al responder la API y no se almacenan en `transformations`.
 - `GET /api/v1/lots/{id}/traceability` recorre el linaje hacia lotes de origen y hacia todos los lotes descendientes. Desde un lote procesado devuelve las entradas anteriores y sus fincas/productores de origen.
 - Merma = `(entrada - salida) / entrada * 100`; alerta si supera 15%, como indica el caso. Salida mayor que entrada exige justificar la adición en incidencias.
-- Costo unitario = costo total informado / salida vendible. Margen = `(precio - costo unitario) / precio * 100`; se omite si salida o precio son cero. El costo es una cifra agregada informada; aún no se desglosa por categorías.
+- `cost_entries` es la fuente única de costos. El costo de compra permanece asociado al lote recibido. El costo de procesamiento se vincula a la transformación y se distribuye entre sus lotes de salida en proporción a la masa, ajustando los centavos restantes en la última salida. El balance suma solo las entradas `processing` de esa transformación y excluye la compra. Costo unitario = costo de etapa / salida vendible; margen = `(precio - costo unitario) / precio * 100`. Salida o precio cero devuelve indicador nulo con explicación.
 - Solo administradores cambian estados de producto. La ficha pública usa una lista explícita de campos autorizados y muestra el motivo solo si está bloqueado.
 - Bloqueo de materia prima: conserva el saldo y el historial, pero impide consumir el lote en transformaciones hasta que un administrador lo libere. Bloqueo de producto procesado: impide consumirlo en etapas siguientes, y la ficha pública informa `blocked`/`not_available`; solo `released` figura como disponible. Cada cambio requiere motivo y queda auditado. El backend todavía no implementa ventas; cualquier futuro endpoint de venta debe rechazar estados `pending` y `blocked`, permitiendo despacho solo al estado autorizado (`released`).
-- La auditoría conserva actor, fecha, acción y valores antes/después; no existe ruta para borrar eventos.
+- La auditoría guarda actor, hora del servidor, acción, entidad y valores anterior/nuevo. El ORM rechaza cambios/eliminaciones; triggers de Alembic bloquean `UPDATE` y `DELETE` por SQL directo en PostgreSQL y SQLite de pruebas. La consulta por lote incluye recepción, consumo, transformaciones y cambios de estado.
 
 ## Demostración de transformación y trazabilidad
 
@@ -130,4 +132,4 @@ En local, detén la API y copia `cacao.db` para respaldo; restaura la copia en l
 
 Las variables se leen desde `.env` o entorno (`DATABASE_URL`, `SECRET_KEY`, `ACCESS_TOKEN_MINUTES`, `SEED_DEMO_DATA`, `CORS_ORIGINS`). Cambia `SECRET_KEY`, contraseñas y credenciales de PostgreSQL para despliegues; desactiva el sembrado en instalaciones reales. El alcance actual permite un lote de entrada por transformación y persiste el lote procesado de salida. El vínculo de salida admite ampliación a más de un producto; no se admiten varias entradas en una operación. Restricciones de retirada, ventas y publicación administrada del perfil público siguen siendo etapas posteriores. Los registros y productores de demostración son sintéticos.
 
-Las revisiones `c2a7f4b89d10` y `d843a91c5e2b` agregan lotes de salida, `product_type` y la huella de idempotencia; la primera materializa las salidas positivas históricas. Las pruebas de migración usan SQLite temporal. Antes de actualizar una base con datos reales, crea un respaldo y aplica las migraciones en un entorno de ensayo; no se ejecutaron migraciones sobre la base activa.
+Las revisiones `c2a7f4b89d10` y `d843a91c5e2b` materializan lotes de salida y guardan la huella de idempotencia. `e4219b1a7c30` migra costos históricos a `cost_entries`, conserva el monto que exponía la API económica anterior, elimina `finance_records` y `transformations.costs_cop`, y retira de `transformations` y `transformation_outputs` las cantidades/estados/códigos duplicados de las salidas. También añade protección inmutable a auditoría. Las pruebas Alembic verifican upgrade/downgrade/upgrade, conservación de datos, costo legado y bloqueo SQL update/delete en SQLite temporal. No se ejecutaron migraciones sobre la base activa.

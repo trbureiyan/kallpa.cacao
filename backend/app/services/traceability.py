@@ -51,7 +51,7 @@ def trace_lot(db: Session, lot_id: int):
                 .all()
             )
             downstream.append({"transformation": transform, "input_lot": db.get(Lot, input_id),
-                               "outputs": [{"lot": output, "quantity": link.quantity} for output, link in outputs]})
+                               "outputs": [{"lot": output, "quantity": output.received_quantity} for output, link in outputs]})
             pending_ids.extend(output.id for output, _ in outputs)
 
     # Each root preserves the original reception producer and farm origin.
