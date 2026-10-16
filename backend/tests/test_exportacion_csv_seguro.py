@@ -51,7 +51,8 @@ def test_las_columnas_numericas_no_se_tocan(api):
 
 
 def test_el_codigo_del_lote_tambien_se_neutraliza(api):
-    # el código lo genera el servidor (CACxxx), pero un código de salida lo escribe el operador
+    # el código lo genera el servidor (CACxxx) y la API ya rechaza códigos de salida fuera de formato; el CSV
+    # neutraliza igual por si un código llega a la base por otra vía (importación, migración, edición manual)
     from datetime import datetime, timezone
     from uuid import uuid4
 
@@ -59,9 +60,13 @@ def test_el_codigo_del_lote_tambien_se_neutraliza(api):
     lot_id = api["client"].get("/api/v1/inventory", headers=auth(api["operator_token"])).json()[0]["lot_id"]
     t = api["client"].post("/api/v1/transformations", headers=auth(api["operator_token"]), json={
         "idempotency_key": str(uuid4()), "lot_id": lot_id, "stage": "secado", "occurred_at": datetime.now(timezone.utc).isoformat(),
-        "input_quantity": 100, "output_quantity": 80, "unit": "kg", "output_code": "=CMD()|' /C calc'!A0", "costs_cop": 1,
+        "input_quantity": 100, "output_quantity": 80, "unit": "kg", "output_code": "SALIDA-1", "costs_cop": 1,
     })
     assert t.status_code == 201, t.text
+    from app.models import Lot
+    with api["session_factory"]() as db:
+        db.query(Lot).filter_by(code="SALIDA-1").update({"code": "=CMD()|' /C calc'!A0"})
+        db.commit()
     codigos = _filas(api).keys()
     assert "'=CMD()|' /C calc'!A0" in codigos
     assert not any(c.startswith("=") for c in codigos)
