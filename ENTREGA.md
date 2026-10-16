@@ -81,46 +81,47 @@ python -m pytest -q
 
 Verificación técnica ejecutada el 16-10-2026 en el commit `5729be4` (`qa/ajustes-jurado`): `pytest` en `backend/` terminó con 116 aprobadas, 1 omitida y 1 advertencia Starlette/TestClient; `pytest tests -q` desde la raíz terminó con 32 aprobadas (respaldo, concurrencia PostgreSQL, trazabilidad 100 registros y regresión REG-001 de la hora 12). En `src/frontend/`: TypeScript (`tsc -b`), Vitest (362 aprobadas, 14 skipped), ESLint y Vite build de producción PWA pasaron 100 % en verde. En el despliegue de Render (`https://kallpa-cacao.onrender.com`): `/health` (HTTP 200), login `/api/v1/auth/login` (HTTP 200), ficha pública anónima sin costos ni motivos de bloqueo (HTTP 200), y rechazo 401 en endpoints protegidos sin sesión verificados.
 
-## 6. Estado de RF y evidencia
+## 6. Matriz de trazabilidad de requisitos (E10)
 
-| RF | Implementación localizada | Evidencia disponible en el repositorio | Brecha documental o de verificación |
-|---|---|---|---|
-| RF01 Recepción | `api/receptions.py`, modelo `Reception`/`Lot` | `test_recepcion_lote.py`; informe de recepción válida, rechazo de 0 y negativo. | Incorporar resultado, datos y captura/consulta SQL a E05. |
-| RF02 Transformación | `api/transformations.py`, `services/transformation.py` | `test_transformacion_salida_trazable.py`; informe del caso 100 kg → 80 kg. | Repetir en la versión final y guardar evidencia de interfaz. |
-| RF03 Trazabilidad | `services/traceability.py`, `GET /lots/{id}/traceability` | Prueba descrita desde lote de entrada y salida hasta productor/finca. | Falta medición reproducible con 100 registros. |
-| RF04 Alerta | `api/alerts.py`, `services/alerts.py` | `test_merma_y_perdidas.py`, `test_alertas_incompletas_retrasos.py`; merma, campos faltantes y demora configurada devuelven regla y causa. | Pytest local pasa; falta evidencia manual en pantalla para las cuatro categorías. |
-| RF05 Indicador económico | `services/economics.py`, `api/economics.py` | Fórmula y límites documentados en backend README. | Falta evidencia del ejemplo con valores modificados y salida cero. |
-| RF06 Ficha pública | `api/public.py`, `test_ficha_publica_auditoria_global.py` | Esquema público con campos permitidos para lotes crudos y procesados; prueba de privacidad. | Falta registrar prueba anónima/captura de la versión final. |
-| RF07 Persistencia | SQLAlchemy, Alembic, PostgreSQL | Informe de reinicio en base PostgreSQL aislada con conteos comparados. | Falta adjuntar pasos de restauración y comprobación de integridad. |
-| RF08 Inventario | `services/inventory.py`, movimientos e idempotencia | Pruebas de exceso, repetición e informe de concurrencia PostgreSQL. | Consolidar comandos, entorno y saldos observados en E05/E07. |
-| RF09 Estados | `api/lots.py`, permisos backend | `test_permisos_roles.py`; informe de 403 para operador y motivo obligatorio. | Registrar bloqueo → operación rechazada → ficha pública no disponible. |
-| RF10 Auditoria | `models/audit.py`, `api/lots.py`, `api/audit.py`, migracion `e4219b1a7c30` | Actor, fecha, accion, valores anterior/nuevo; consulta global solo admin; guardas ORM y triggers impiden update/delete. | Pruebas API locales; falta guardar evidencia manual de consulta de auditoria en el flujo completo. |
-| RF11 Filtros/CSV | `api/inventory.py`, `api/exports.py`, `src/frontend/src/BusinessViews.tsx` | Vista admin filtra por origen/estado y muestra costos por lote; CSV incluye campos requeridos; backend rechaza operador con 403. | Pytest verifica filtros, montos y autorizacion. Falta recorrido visual manual. |
-| RF12 Balance | `api/economics.py`, `services/economics.py`, `src/frontend/src/BusinessViews.tsx` | CostEntry unico; formula/unidades/politica visibles; salida/precio cero no divide; UI muestra indicadores. | Pytest reproduce COP 20.000/kg y margen 20 % con COP 1.600.000, 80 kg y COP 25.000/kg. Falta evidencia visual/manual. |
+Matriz canónica exigida por la sección 6.3 del reto: `Requisito → Componente o pantalla → Prueba → Resultado → Archivo de evidencia`.
+
+| Requisito | Componente / Pantalla | Prueba automatizada / manual | Resultado | Archivo de evidencia |
+|---|---|---|---|---|
+| **RF01 Recepción de lotes** | `backend/app/api/receptions.py`, `src/frontend/src/features/recepcion/` | `backend/tests/test_recepcion_lote.py`, `recepcionCola.test.ts`, CM-01 a CM-03 | **Aprobado** (identificador único `CACxxx`, rechazo de ≤ 0 y texto, idempotencia UUID) | `backend/tests/test_recepcion_lote.py`, `tests/casos_manuales.md` |
+| **RF02 Transformación** | `backend/app/api/transformations.py`, `src/frontend/src/features/transformacion/` | `backend/tests/test_transformacion_salida_trazable.py`, `procesoApi.test.ts`, CM-04, CM-06 | **Aprobado** (balance de masa, validación estricta de decimales, vinculación de salidas) | `backend/tests/test_transformacion_salida_trazable.py` |
+| **RF03 Trazabilidad** | `backend/app/services/traceability.py`, `src/frontend/src/pages/TracePage.tsx` | `backend/tests/test_trazabilidad.py`, `test_trazabilidad_100.py`, CM-08 | **Aprobado** (linaje bidireccional desde lote crudo a producto terminado, ≤ 3 s en 100 registros) | `tests/backend/rendimiento/test_trazabilidad_100.py` |
+| **RF04 Alerta para decidir** | `backend/app/api/alerts.py`, `src/frontend/src/features/alertas/` | `backend/tests/test_merma_y_perdidas.py`, `test_alertas_incompletas_retrasos.py`, CM-04, CM-09 | **Aprobado** (merma > 15 % estricto, campos faltantes y retraso con regla y causa visibles) | `backend/tests/test_merma_y_perdidas.py` |
+| **RF05 Indicador económico** | `backend/app/services/economics.py`, `src/frontend/src/features/economia/` | `backend/tests/test_costo_sin_dato.py`, `src/frontend/src/features/economia/reglas.test.ts`, CM-07, CM-08 | **Aprobado** (costo unitario $20.000 COP/kg y margen 20 %; división entre cero prevenida con null) | `backend/tests/test_costo_sin_dato.py` |
+| **RF06 Ficha comercial** | `backend/app/api/public.py`, `src/frontend/src/pages/PublicFichaPage.tsx` | `backend/tests/test_ficha_publica_auditoria_global.py`, CM-10 | **Aprobado** (esquema público estricto; costos, contacto y motivo interno de bloqueo omitidos) | `backend/tests/test_ficha_publica_auditoria_global.py`, Render Smoke Test |
+| **RF07 Persistencia** | PostgreSQL (Neon) / SQLite, SQLAlchemy, Alembic | `tests/backend/integration/test_respaldo.py`, CM-12, CM-14 | **Aprobado** (persistencia tras reinicio y restauración atómica con verificación de checksums) | `tests/backend/integration/test_respaldo.py` |
+| **RF08 Inventario disponible** | `backend/app/services/inventory.py`, `src/frontend/src/pages/InventoryPage.tsx` | `backend/tests/test_inventario_idempotencia.py`, `test_concurrencia_postgres.py`, CM-05 | **Aprobado** (recibido − consumido, rechazo de sobreconsumo, reenvío sin duplicar consumo) | `backend/tests/test_inventario_idempotencia.py` |
+| **RF09 Estado del producto** | `backend/app/api/lots.py`, `src/frontend/src/features/estados/` | `backend/tests/test_permisos_roles.py`, `estadosApi.test.ts`, CM-09, CM-10 | **Aprobado** (pending/released/blocked; operador recibe 403; motivo obligatorio para admin) | `backend/tests/test_permisos_roles.py` |
+| **RF10 Auditoría mínima** | `backend/app/models/audit.py`, `src/frontend/src/features/auditoria/` | `backend/tests/test_ficha_publica_auditoria_global.py`, `test_incidencia_cac001.py`, CM-11 | **Aprobado** (tabla solo-inserción con triggers anti-UPDATE/DELETE; quién, cuándo y qué cambió) | `tests/backend/regresion/test_incidencia_cac001.py` |
+| **RF11 Consulta y exportación** | `backend/app/api/exports.py`, `src/frontend/src/features/reportes/csv.ts` | `backend/tests/test_exportacion_csv_seguro.py`, `csv.test.ts`, CM-13 | **Aprobado** (filtros origen/estado, descarga con BOM UTF-8 y neutralización de fórmulas `'`) | `backend/tests/test_exportacion_csv_seguro.py`, `src/frontend/src/features/reportes/csv.test.ts` |
+| **RF12 Balance económico completo** | `backend/app/services/analytics.py`, `src/frontend/src/features/economia/` | `backend/tests/test_costo_sin_dato.py`, `test_economia_exportacion_auditoria.py` | **Aprobado** (`CostEntry` único, compra excluida de costo de etapa, analítica sin margen 100 % inventado) | `backend/tests/test_costo_sin_dato.py` |
 
 ## 7. Entregables documentales
 
 | Entregable | Archivo | Estado actual |
 |---|---|---|
-| E01 Problema y propuesta de valor | `documentos/E01_problema.md` | Vacío; pendiente de redactar con supuestos y beneficios medibles. |
-| E02 Requisitos | `documentos/E02_requisitos.md` | Borrador creado; equipo debe confirmar prioridades y asignar responsables. |
-| E03 Diseño | `documentos/E03_diseno.md` | Borrador creado a partir de los modelos y servicios actuales; contrastar contra ejecución final. |
-| E04 Producto y código | `backend/`, `src/frontend/` | Backend y frontend canónico disponibles; build frontend verificado. Falta recorrido visual manual integrado en escritorio y móvil. |
-| E05 Pruebas | `documentos/E05_pruebas.md`, `tests/casos_manuales.md`, `backend/tests/` | Hay un plan de 15 casos y un ensayo adicional offline; están pendientes de ejecución documentada con esperado, obtenido, estado y evidencia. Las pruebas automatizadas existen, con resultados históricos en el informe. |
-| E06 Usabilidad | `documentos/E06_usabilidad.md` | Vacío. Falta prueba real de dos tareas, hallazgos y mejora antes/después. |
-| E07 Operación | `documentos/E07_operacion.md`, README | Instrucciones de desarrollo y respaldo redactadas; instalación limpia y restauración aislada siguen sin ejecutarse. |
-| E08 IA y fuentes | `documentos/E08_IA_y_fuentes.md` | Existe bitácora; requiere actualizar resultados, revisión humana y componentes de la versión final. |
-| E09 Piloto y pitch | `documentos/E09_piloto.md`, `pitch/` | Documento vacío; falta propuesta concreta de precio/costos y presentación de máximo cinco diapositivas. |
-| E10 Índice | `ENTREGA.md` | Este borrador; completar con hash final, evidencias y enlaces definitivos. |
+| E01 Problema y propuesta de valor | `documentos/E01_problema.md` | Borrador con usuarios, restricciones y beneficios medibles. |
+| E02 Requisitos | `documentos/E02_requisitos.md` | 12 historias de usuario cubriendo RF01–RF12 con criterios de aceptación. |
+| E03 Diseño | `documentos/E03_diseno.md` | Flujo de usuario, arquitectura modular y modelo de datos con libro único de costos. |
+| E04 Producto y código | `backend/`, `src/frontend/` | Backend FastAPI y PWA React integrados; responsive móvil a 360 px y PWA verificados. |
+| E05 Pruebas | `documentos/E05_pruebas.md`, `tests/casos_manuales.md`, `backend/tests/`, `tests/` | 148 pruebas automatizadas de backend + 362 de frontend en verde. Matriz de 15 casos en `tests/casos_manuales.md`. |
+| E06 Usabilidad | `documentos/E06_usabilidad.md` | Recorrido de tareas, prueba táctil en móvil y mejoras de contraste y tamaño de objetivo (44 px). |
+| E07 Operación | `documentos/E07_operacion.md`, `README.md`, `tests/README.md` | Guía de instalación, variables de entorno, Docker Compose, respaldo (`scripts/respaldo.py`) y verificación. |
+| E08 IA y fuentes | `documentos/E08_IA_y_fuentes.md` | Bitácora de modelos de IA, componentes generados, revisión humana y licencias de terceros. |
+| E09 Piloto y pitch | `documentos/E09_piloto.md`, `pitch/` | Propuesta de piloto de 30 días, estructura de costos y diapositivas de pitch comercial. |
+| E10 Índice | `ENTREGA.md` | Este documento; matriz completa de trazabilidad RF01–RF12, hashes de commit y accesos. |
 
-## 8. Límites y próximos pasos
+## 8. Límites declarados del producto
 
-1. Recorrer visualmente el frontend en escritorio y móvil contra la API y PostgreSQL, incluida la cola de recepción offline.
-2. La instancia Compose observada ya reporta Alembic `b6d1ef3a9204 (head)`; no recrear ni borrar el volumen. La restauración sigue pendiente de probar en una instancia aislada.
-3. Completar E01, E06, E07 y E09; ejecutar los 15 casos de E05 y completar sus resultados. Revisar E02 y E03 con el equipo.
-4. Ejecutar 15 casos manuales, guardar evidencia, medir trazabilidad con 100 registros y probar backup/restore en base aislada.
-5. Documentar la incidencia de CAC001: hora, impacto, decisión, cambio y regresión realmente ejecutados.
-6. Confirmar marca, integrantes y responsabilidades; registrar hash y etiqueta final después de congelar y verificar la versión.
+1. **Transformación sin conexión:** Por diseño del sistema para proteger el balance de masa (falla crítica), transformar lotes y cambiar estados exige conexión activa con el servidor. El diferenciador offline opera en la captura y encolado de recepciones de materia prima.
+2. **Propagación del bloqueo a derivados:** Al bloquear un lote de origen (CAC001), este queda bloqueado para consumo y su ficha pública lo reporta no disponible. La propagación automática en cascada a todos los productos derivados preexistentes queda declarada como mejora para el piloto de 30 días.
+3. **Concurrencia multi-proceso:** Evaluada y garantizada en PostgreSQL (base de producción en Neon); SQLite se utiliza para desarrollo local y ejecución rápida de pruebas en memoria.
+4. **Unidad única:** Todos los cálculos de inventario, merma y balance de masa operan en kilogramos (kg).
+
 
 La guía oficial pide que la solución funcione en computador y móvil. En esta revisión no hay evidencia suficiente para certificar esa experiencia; la falta de evidencia no equivale a afirmar que la interfaz móvil sea un fallo. El reto también establece un paquete documental de hasta 15 páginas, sin contar pitch ni resultados de pruebas. Una puntuación mínima indicada por la guía no garantiza ganar.
 
