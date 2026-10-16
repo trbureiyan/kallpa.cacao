@@ -1,62 +1,40 @@
-import React from 'react';
-import type { AuditEntry } from '@/db/dexieDb';
+import { Badge } from '@/components/ui'
+import { DataTable } from '@/components/shared'
+import type { EventoAuditoria } from '@/api/tipos'
+import { ACCIONES_AUDITORIA, estadoDe } from '@/shared/etiquetas'
+import { formatoFechaHora } from '@/shared/formato'
 
-export function AuditLogTable({ logs }: { logs: AuditEntry[] }) {
+// Resume un valor anterior/nuevo del servidor en una línea legible. Los estados se muestran con su etiqueta.
+function resumen(valor: Record<string, unknown> | null): string {
+  if (!valor) return '—'
+  return Object.entries(valor)
+    .filter(([, v]) => v !== null && typeof v !== 'object')
+    .map(([k, v]) => `${k}: ${k === 'status' ? estadoDe(String(v)).etiqueta : String(v)}`)
+    .join(' · ')
+}
+
+export function AuditLogTable({ eventos }: { eventos: EventoAuditoria[] }) {
   return (
-    <div className="card mt-6">
-      <div className="card-head">
-        <h3 className="section-title">Registro inmutable de auditoría</h3>
-      </div>
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha / Hora</th>
-              <th>Usuario</th>
-              <th>Acción</th>
-              <th>Lote</th>
-              <th>Campo</th>
-              <th>Valor Ant.</th>
-              <th>Valor Nuevo</th>
-              <th>Razón</th>
-            </tr>
-          </thead>
-          <tbody>
-            {logs.length === 0 ? (
-              <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: '1.5rem' }}>
-                  No hay registros de auditoría aún.
-                </td>
-              </tr>
-            ) : (
-              logs.map((log) => (
-                <tr key={log.idLocal || log.timestamp}>
-                  <td>{new Date(log.timestamp).toLocaleString('es-CO')}</td>
-                  <td><strong>{log.user}</strong></td>
-                  <td>
-                    <span
-                      className={`badge ${
-                        log.action === 'BLOQUEO'
-                          ? 'badge-red'
-                          : log.action === 'LIBERACIÓN'
-                          ? 'badge-green'
-                          : 'badge-slate'
-                      }`}
-                    >
-                      {log.action}
-                    </span>
-                  </td>
-                  <td><strong>{log.lotCode}</strong></td>
-                  <td>{log.fieldChanged}</td>
-                  <td><small>{log.previousValue}</small></td>
-                  <td><small>{log.newValue}</small></td>
-                  <td>{log.reason || 'N/A'}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+    <DataTable headers={['Fecha y hora (servidor)', 'Usuario', 'Acción', 'Entidad', 'Valor anterior', 'Valor nuevo', 'Motivo']}>
+      {eventos.length === 0 ? (
+        <tr>
+          <td colSpan={7} style={{ textAlign: 'center', padding: '1.5rem' }}>
+            No hay eventos registrados para este lote.
+          </td>
+        </tr>
+      ) : (
+        eventos.map((ev) => (
+          <tr key={ev.id}>
+            <td>{formatoFechaHora(ev.created_at)}</td>
+            <td><strong>{ev.actor_name}</strong></td>
+            <td><Badge tone={ev.action === 'status_changed' ? 'brown' : 'slate'}>{ACCIONES_AUDITORIA[ev.action] ?? ev.action}</Badge></td>
+            <td>{ev.entity_type} {ev.entity_id}</td>
+            <td><small>{resumen(ev.before_value)}</small></td>
+            <td><small>{resumen(ev.after_value)}</small></td>
+            <td>{typeof ev.after_value?.reason === 'string' ? ev.after_value.reason : '—'}</td>
+          </tr>
+        ))
+      )}
+    </DataTable>
+  )
 }

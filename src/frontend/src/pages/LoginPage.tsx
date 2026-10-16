@@ -1,32 +1,38 @@
-import React, { FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, type FormEvent } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useNetwork } from '@/context/NetworkContext';
 import { useAuth } from '@/context/AuthContext';
-import type { Role } from '@/types/app';
-import { 
-  Wifi, 
-  WifiOff, 
-  Sprout, 
-  ArrowRight, 
-  ShieldCheck, 
-  Users, 
-  Eye, 
-  ChevronRight 
-} from 'lucide-react';
+import { mensajeError } from '@/api/axiosClient';
+import { Wifi, WifiOff, Sprout, ArrowRight, Eye, ChevronRight } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { isOnline } = useNetwork();
-  const { setRol } = useAuth();
+  const { usuario, entrar } = useAuth();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
 
-  const handleEnter = (role: Role) => {
-    setRol(role === 'admin' ? 'ADMINISTRADOR' : 'OPERADOR');
-    navigate('/dashboard');
-  };
+  if (usuario) return <Navigate to="/dashboard" replace />;
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    handleEnter('operator');
+    setError(null);
+    setEnviando(true);
+    try {
+      await entrar(username.trim(), password);
+      navigate('/dashboard');
+    } catch (err) {
+      const status = (err as { response?: { status: number } }).response?.status;
+      setError(
+        status === 401
+          ? 'Usuario o contraseña incorrectos. Verifique los datos e intente de nuevo.'
+          : mensajeError(err),
+      );
+    } finally {
+      setEnviando(false);
+    }
   };
 
   return (
@@ -54,12 +60,12 @@ export const LoginPage: React.FC = () => {
 
           <div className="mt-10 grid grid-cols-3 gap-3">
             {[
-              ['100%', 'Trazable'],
-              ['Offline', 'First'],
-              ['24/7', 'Auditable'],
+              ['Lote a lote', 'Trazable'],
+              ['Recepción', 'con red limitada'],
+              ['Cada cambio', 'Auditado'],
             ].map(([stat, label]) => (
               <div key={stat} className="story-stat">
-                <strong className="text-2xl font-black text-emerald-300">{stat}</strong>
+                <strong className="text-lg font-black text-emerald-300">{stat}</strong>
                 <span className="text-xs text-emerald-100/80">{label}</span>
               </div>
             ))}
@@ -89,74 +95,58 @@ export const LoginPage: React.FC = () => {
 
           <form onSubmit={submit} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+              <label htmlFor="usuario" className="block text-xs font-bold text-slate-700 uppercase mb-1">
                 Usuario
               </label>
               <input
+                id="usuario"
                 className="input"
                 type="text"
-                defaultValue="operador.rivera"
+                autoComplete="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+              <label htmlFor="clave" className="block text-xs font-bold text-slate-700 uppercase mb-1">
                 Contraseña
               </label>
               <input
+                id="clave"
                 className="input"
                 type="password"
-                defaultValue="12345678"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </div>
 
+            {error && (
+              <div className="validation danger" role="alert">
+                <div>
+                  <strong>No se pudo iniciar sesión</strong>
+                  <span>{error}</span>
+                </div>
+              </div>
+            )}
+
             <button
               type="submit"
+              disabled={enviando || !isOnline}
               className="btn btn-primary w-full justify-center"
             >
-              Iniciar Sesión <ArrowRight size={18} />
+              {enviando ? 'Ingresando...' : 'Iniciar sesión'} <ArrowRight size={18} />
             </button>
+            {!isOnline && (
+              <p className="text-xs text-amber-700">
+                Para iniciar sesión se necesita conexión con el servidor. Si ya inició sesión antes en este
+                dispositivo, la sesión se conserva.
+              </p>
+            )}
           </form>
-
-          <div className="offline-auth">
-            <ShieldCheck size={20} className="shrink-0 text-emerald-600" />
-            <span>
-              <strong>Sesión offline habilitada</strong>
-              <br />
-              Ingreso con credenciales locales guardadas
-            </span>
-          </div>
-
-          <div className="demo-card">
-            <div className="flex items-center gap-2 text-amber-800 font-extrabold text-sm">
-              <Users size={16} /> Acceso Rápido de Prueba
-            </div>
-            <div className="text-xs text-amber-700 mt-1 mb-3">
-              Evaluación Jurado · Selecciona un perfil
-            </div>
-            
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => handleEnter('operator')}
-                className="w-full p-2.5 bg-white border border-amber-300 rounded-lg text-amber-900 font-medium text-xs flex justify-between items-center hover:bg-amber-100/50 transition-colors"
-              >
-                <span>Operador</span>
-                <span className="font-bold text-amber-700">Campo · Rivera</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleEnter('admin')}
-                className="w-full p-2.5 bg-amber-800 text-white rounded-lg font-medium text-xs flex justify-between items-center hover:bg-amber-900 transition-colors"
-              >
-                <span>Administrador</span>
-                <span className="font-bold text-amber-200">ASOCACAO</span>
-              </button>
-            </div>
-          </div>
 
           <button 
             type="button" 

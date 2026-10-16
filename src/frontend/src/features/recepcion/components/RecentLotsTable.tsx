@@ -1,17 +1,20 @@
-import React from 'react';
-import type { RecepcionOffline } from '@/db/dexieDb';
+import type { RecepcionCola } from "@/db/dexieDb"
+import { reintentar } from "@/features/offline/cola"
+import { formatoCop, formatoFechaHora, formatoKg } from "@/shared/formato"
 
-interface RecentLotsTableProps {
-  lots: RecepcionOffline[];
-}
+const ETIQUETA = {
+  SYNCED: { texto: "Enviado", clase: "badge-green" },
+  PENDING: { texto: "Pendiente de envío", clase: "badge-amber" },
+  ERROR: { texto: "Rechazado", clase: "badge-red" },
+} as const
 
-export function RecentLotsTable({ lots }: RecentLotsTableProps) {
+export function RecentLotsTable({ items }: { items: RecepcionCola[] }) {
   return (
     <div className="card mt-6">
       <div className="card-head">
         <div>
-          <h3 className="section-title">Lotes locales recientes</h3>
-          <p>Registros capturados en IndexedDB</p>
+          <h3 className="section-title">Recepciones de este dispositivo</h3>
+          <p>Cola local: se envía al servidor con una clave única por registro.</p>
         </div>
       </div>
 
@@ -20,47 +23,38 @@ export function RecentLotsTable({ lots }: RecentLotsTableProps) {
           <thead>
             <tr>
               <th>Código</th>
-              <th>Productor</th>
-              <th>Origen</th>
+              <th>Finca</th>
+              <th>Municipio</th>
               <th>Cantidad</th>
-              <th>Fecha</th>
-              <th>Estado Sinc.</th>
+              <th>Costo de compra</th>
+              <th>Capturado</th>
+              <th>Estado</th>
             </tr>
           </thead>
           <tbody>
-            {lots.length === 0 ? (
+            {items.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: '1.5rem' }}>
-                  No hay lotes registrados localmente.
+                <td colSpan={7} style={{ textAlign: "center", padding: "1.5rem" }}>
+                  Aún no hay recepciones en este dispositivo.
                 </td>
               </tr>
             ) : (
-              lots.map((lot) => (
-                <tr key={lot.idLocal || lot.idempotencyKey}>
-                  <td><strong>{lot.lotCode}</strong></td>
-                  <td>{lot.producer}</td>
-                  <td>{lot.origin}</td>
-                  <td>{lot.quantity} {lot.unit}</td>
-                  <td>{lot.date}</td>
+              items.map((r) => (
+                <tr key={r.idempotencyKey}>
+                  <td><strong>{r.codigoLote ?? "Lo asigna el servidor"}</strong></td>
+                  <td>{r.fincaNombre}</td>
+                  <td>{r.municipio}</td>
+                  <td>{formatoKg(r.cantidadKg)}</td>
+                  <td>{formatoCop(r.costoCompraCop)}</td>
+                  <td>{formatoFechaHora(r.recibidoEn)}</td>
                   <td>
-                    <span
-                      className={`badge ${
-                        lot.syncStatus === 'SYNCED'
-                          ? 'badge-green'
-                          : lot.syncStatus === 'ERROR'
-                          ? 'badge-red'
-                          : 'badge-amber'
-                      }`}
-                    >
-                      {lot.syncStatus === 'SYNCED'
-                        ? 'SINCRONIZADO'
-                        : lot.syncStatus === 'ERROR'
-                        ? 'ERROR'
-                        : 'PENDIENTE'}
-                    </span>
-                    {lot.errorMessage && (
-                      <small style={{ display: 'block', color: '#dc2626', fontSize: '0.65rem' }}>
-                        {lot.errorMessage}
+                    <span className={`badge ${ETIQUETA[r.estado].clase}`}>{ETIQUETA[r.estado].texto}</span>
+                    {r.mensajeError && (
+                      <small style={{ display: "block", color: "#b91c1c" }}>
+                        {r.mensajeError}{" "}
+                        <button type="button" className="text-link" onClick={() => void reintentar(r.idempotencyKey)}>
+                          Reintentar
+                        </button>
                       </small>
                     )}
                   </td>
@@ -71,5 +65,5 @@ export function RecentLotsTable({ lots }: RecentLotsTableProps) {
         </table>
       </div>
     </div>
-  );
+  )
 }

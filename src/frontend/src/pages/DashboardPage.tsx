@@ -1,91 +1,56 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/db/dexieDb';
 import { useNetwork } from '@/context/NetworkContext';
 import { useAuth } from '@/context/AuthContext';
 import { PageHead } from '@/components/shared';
+import { listarLotes } from '@/api/servicios';
+import { ESTADOS, ROLES, type EstadoLote } from '@/shared/etiquetas';
+import { formatoKg } from '@/shared/formato';
 
 export const DashboardPage: React.FC = () => {
   const { isOnline } = useNetwork();
-  const { rol } = useAuth();
-  const navigate = useNavigate();
+  const { usuario } = useAuth();
+  const lotes = useQuery({ queryKey: ['lotes'], queryFn: () => listarLotes(), enabled: isOnline });
+  const pendientes = useLiveQuery(() => db.colaRecepciones.where('estado').equals('PENDING').count(), [], 0);
 
-  const lotes = useLiveQuery(() => db.recepciones.toArray(), [], []);
-  const procesos = useLiveQuery(() => db.procesos.toArray(), [], []);
-  const auditLogs = useLiveQuery(() => db.auditLogs.reverse().limit(5).toArray(), [], []);
-
-  const totalKg = (lotes || []).reduce((acc, curr) => acc + (curr.availableQty ?? curr.quantity), 0);
-  const pendientesSync = (lotes || []).filter((l) => l.syncStatus === 'PENDING').length;
+  const lista = lotes.data ?? [];
+  const totalKg = lista.reduce((s, l) => s + l.available_quantity, 0);
+  const porEstado = (e: EstadoLote) => lista.filter((l) => l.status === e).length;
 
   return (
     <>
       <PageHead
-        eyebrow="Resumen General"
-        title={`Panel Principal (${rol})`}
-        text="Monitoreo de operaciones en campo, inventario y sincronización."
-        action={
-          <button onClick={() => navigate('/login')} className="btn btn-ghost">
-            Cerrar Sesión
-          </button>
-        }
+        eyebrow="Resumen general"
+        title={`Panel principal · ${usuario ? ROLES[usuario.role] : ''}`}
+        text="Estado del inventario y de los registros pendientes de envío."
       />
 
       <div className="metrics">
         <div className="metric-card">
-          <div className="metric-top">
-            <span>Total Lotes Registrados</span>
-          </div>
-          <strong>{lotes?.length || 0} Lotes</strong>
-          <small>IndexedDB Activo</small>
+          <div className="metric-top"><span>Lotes registrados</span></div>
+          <strong>{lista.length}</strong>
+          <small>{isOnline ? 'Datos del servidor' : 'Sin conexión: no se pueden consultar'}</small>
         </div>
-
         <div className="metric-card brown">
-          <div className="metric-top">
-            <span>Stock Disponible</span>
-          </div>
-          <strong>{totalKg} kg</strong>
-          <small>Cacao en bodega</small>
+          <div className="metric-top"><span>Existencia disponible</span></div>
+          <strong>{formatoKg(totalKg)}</strong>
+          <small>Suma de lotes con saldo</small>
         </div>
-
-        <div className="metric-card">
-          <div className="metric-top">
-            <span>Procesos Registrados</span>
+        {(Object.keys(ESTADOS) as EstadoLote[]).map((e) => (
+          <div className="metric-card" key={e}>
+            <div className="metric-top"><span>Lotes {ESTADOS[e].etiqueta.toLowerCase()}s</span></div>
+            <strong>{porEstado(e)}</strong>
+            <small>Estado {ESTADOS[e].valor}</small>
           </div>
-          <strong>{procesos?.length || 0} Etapas</strong>
-          <small>Fermentación / Secado</small>
-        </div>
-
-        <div className={`metric-card ${pendientesSync > 0 ? 'red' : ''}`}>
-          <div className="metric-top">
-            <span>Pendientes por Sincronizar</span>
-          </div>
-          <strong>{pendientesSync} Registros</strong>
-          <small>{isOnline ? '🟢 En línea' : '🟠 Modo Offline'}</small>
+        ))}
+        <div className={`metric-card ${pendientes > 0 ? 'red' : ''}`}>
+          <div className="metric-top"><span>Recepciones por enviar</span></div>
+          <strong>{pendientes}</strong>
+          <small>{isOnline ? 'Se envían al abrir Recepción' : 'Se enviarán al volver la conexión'}</small>
         </div>
       </div>
-
-      <section className="card mt-6">
-        <div className="card-head">
-          <div className="section-title">Última Actividad Registrada</div>
-        </div>
-        <div className="p-4 space-y-3">
-          {(!auditLogs || auditLogs.length === 0) ? (
-            <p className="text-sm text-slate-500">Sin actividad reciente registrada en el dispositivo.</p>
-          ) : (
-            auditLogs.map((log) => (
-              <div key={log.idLocal || log.timestamp} className="activity-row">
-                <div className="activity-icon">✓</div>
-                <div>
-                  <strong>{log.action} en Lote {log.lotCode}</strong>
-                  <span>Por {log.user} · {log.reason || log.fieldChanged}</span>
-                </div>
-                <small>{new Date(log.timestamp).toLocaleTimeString('es-CO')}</small>
-              </div>
-            ))
-          )}
-        </div>
-      </section>
     </>
   );
 };

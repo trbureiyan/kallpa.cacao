@@ -1,105 +1,62 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { Badge, Button, Icon } from "@/components/ui"
-import { DataTable, PageHead } from "@/components/shared"
-import { db, type RecepcionOffline } from "@/db/dexieDb"
-import { useAuth } from "@/context/AuthContext"
+import { PageHead } from "@/components/shared"
+import { descargarCsvLotes, inventarioAdmin, listarAlertas, listarEconomia } from "@/api/servicios"
+import { mensajeError } from "@/api/axiosClient"
+import { InventoryTable } from "@/features/inventario/components/InventoryTable"
+import { CambioEstadoModal } from "@/features/estados/components/CambioEstadoModal"
+import type { InventarioAdmin } from "@/api/tipos"
+import { ESTADOS, TIPOS_ALERTA, type EstadoLote } from "@/shared/etiquetas"
+import { formatoCop, formatoCopPorKg, formatoKg, formatoPorcentaje } from "@/shared/formato"
 
-export function InventoryPage({ onBlock }: { onBlock?: (lotCode: string) => void }) {
-  const { nombreUsuario } = useAuth()
-  const [lotes, setLotes] = useState<RecepcionOffline[]>([])
-  const [origenFiltro, setOrigenFiltro] = useState("Todos los orígenes")
-  const [estadoFiltro, setEstadoFiltro] = useState("Todos los estados")
-  const [busqueda, setBusqueda] = useState("")
+export function InventoryPage() {
+  const [origen, setOrigen] = useState("")
+  const [estado, setEstado] = useState("")
+  const [seleccion, setSeleccion] = useState<InventarioAdmin | null>(null)
+  const [errorCsv, setErrorCsv] = useState<string | null>(null)
 
-  const cargarInventario = async () => {
-    const todos = await db.recepciones.toArray()
-    setLotes(todos)
-  }
+  const filtros = { origin: origen || undefined, status: estado || undefined }
+  const inventario = useQuery({ queryKey: ["inventario", filtros], queryFn: () => inventarioAdmin(filtros) })
+  const alertas = useQuery({ queryKey: ["alertas"], queryFn: listarAlertas })
+  const economia = useQuery({ queryKey: ["economia"], queryFn: listarEconomia })
 
-  useEffect(() => {
-    cargarInventario()
-  }, [])
+  const lotes = inventario.data ?? []
+  const totalDisponible = lotes.reduce((s, l) => s + l.available_quantity, 0)
 
-  const toggleEstadoLote = async (lote: RecepcionOffline, nuevoEstado: 'LIBERADO' | 'BLOQUEADO') => {
-    if (lote.idLocal !== undefined) {
-      await db.recepciones.update(lote.idLocal, { status: nuevoEstado })
-      
-      // Registrar en auditLogs con la interfaz exact de AuditEntry
-      await db.auditLogs.add({
-        timestamp: new Date().toISOString(),
-        user: nombreUsuario || 'Operador',
-        action: nuevoEstado === 'BLOQUEADO' ? 'BLOQUEO' : 'LIBERACIÓN',
-        fieldChanged: 'status',
-        previousValue: lote.status || 'PENDIENTE',
-        newValue: nuevoEstado,
-        lotCode: lote.lotCode,
-        reason: `Cambio manual desde panel de inventario`,
-      })
-      await cargarInventario()
+  const exportar = async () => {
+    setErrorCsv(null)
+    try {
+      await descargarCsvLotes(filtros)
+    } catch (e) {
+      setErrorCsv(mensajeError(e))
     }
-  }
-
-  const lotesFiltrados = lotes.filter((l) => {
-    const coincideOrigen = origenFiltro === "Todos los orígenes" || l.origin === origenFiltro
-    const coincideEstado = estadoFiltro === "Todos los estados" || (l.status || "PENDIENTE") === estadoFiltro
-    const coincideCodigo = l.lotCode.toLowerCase().includes(busqueda.toLowerCase())
-    return coincideOrigen && coincideEstado && coincideCodigo
-  })
-
-  const totalStockKg = lotes.reduce((acc, curr) => acc + (curr.availableQty ?? curr.quantity), 0)
-  const COSTO_KG = 20000
-  const valorTotalStock = totalStockKg * COSTO_KG
-
-  const exportarCSV = () => {
-    const headers = ["Codigo", "Productor", "Origen", "Ingreso_kg", "Disponible_kg", "Estado", "Valor_COP"]
-    const rows = lotesFiltrados.map((l) => [
-      l.lotCode,
-      l.producer,
-      l.origin,
-      l.quantity,
-      l.availableQty ?? l.quantity,
-      l.status || "PENDIENTE",
-      (l.availableQty ?? l.quantity) * COSTO_KG,
-    ])
-    
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n")
-    const encodedUri = encodeURI(csvContent)
-    const link = document.createElement("a")
-    link.setAttribute("href", encodedUri)
-    link.setAttribute("download", `Inventario_AgroCacao_${new Date().toLocaleDateString('sv-SE')}.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
   }
 
   return (
     <>
       <PageHead
-        eyebrow="RF08 · RF11 · Inventario"
-        title="Inventario y balance económico"
-        text="Controla existencias, disponibilidad y proyección comercial."
+        eyebrow="RF08 · RF05 · RF11 · Inventario"
+        title="Inventario, costos y estados"
+        text="Existencias derivadas del libro de movimientos, costos por etapa y liberación de lotes."
         action={
-          <Button variant="secondary" onClick={exportarCSV}>
-            <Icon name="download" /> Exportar Reporte CSV
+          <Button variant="secondary" onClick={() => void exportar()}>
+            <Icon name="download" /> Exportar CSV
           </Button>
         }
       />
+      {errorCsv && <div className="validation danger mb-4" role="alert"><div><strong>No se exportó el CSV</strong><span>{errorCsv}</span></div></div>}
 
       <div className="economy-grid">
-        <div className="economy-card">
-          <span>Costo unitario promedio</span>
-          <strong>${COSTO_KG.toLocaleString('es-CO')}</strong>
-          <small>COP / kg procesado</small>
-        </div>
-        <div className="economy-card">
-          <span>Margen estimado de venta</span>
-          <strong className="text-emerald-600">20%</strong>
-          <small>Proyección sobre costo</small>
-        </div>
         <div className="economy-card featured">
-          <span>Valor total del stock</span>
-          <strong>${valorTotalStock.toLocaleString('es-CO')}</strong>
-          <small>{totalStockKg} kg disponibles</small>
+          <span>Existencia disponible (según filtros)</span>
+          <strong>{formatoKg(totalDisponible)}</strong>
+          <small>{lotes.length} lotes</small>
+        </div>
+        <div className="economy-card">
+          <span>Alertas abiertas</span>
+          <strong>{alertas.data?.length ?? "—"}</strong>
+          <small>Merma y costo, calculadas por el servidor</small>
         </div>
       </div>
 
@@ -107,101 +64,83 @@ export function InventoryPage({ onBlock }: { onBlock?: (lotCode: string) => void
         <div className="filterbar">
           <div className="section-title">Existencias por lote</div>
           <div className="filters">
-            <select
-              className="input"
-              value={origenFiltro}
-              onChange={(e) => setOrigenFiltro(e.target.value)}
-            >
-              <option>Todos los orígenes</option>
-              <option>Rivera</option>
-              <option>Campoalegre</option>
-              <option>Algeciras</option>
-              <option>Gigante</option>
+            <input className="input" placeholder="Origen (municipio)" aria-label="Filtrar por origen" value={origen} onChange={(e) => setOrigen(e.target.value)} />
+            <select className="input" aria-label="Filtrar por estado" value={estado} onChange={(e) => setEstado(e.target.value)}>
+              <option value="">Todos los estados</option>
+              {(Object.keys(ESTADOS) as EstadoLote[]).map((k) => (
+                <option key={k} value={k}>{ESTADOS[k].etiqueta}</option>
+              ))}
             </select>
-            <select
-              className="input"
-              value={estadoFiltro}
-              onChange={(e) => setEstadoFiltro(e.target.value)}
-            >
-              <option>Todos los estados</option>
-              <option>PENDIENTE</option>
-              <option>LIBERADO</option>
-              <option>BLOQUEADO</option>
-            </select>
-            <div className="search-box">
-              <Icon name="search" />
-              <input
-                placeholder="Código de lote..."
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-              />
-            </div>
           </div>
         </div>
-
-        <DataTable
-          headers={[
-            "Lote",
-            "Productor",
-            "Origen",
-            "Ingreso",
-            "Disponible",
-            "Estado",
-            "Valor estimado",
-            "Acciones",
-          ]}
-        >
-          {lotesFiltrados.length === 0 ? (
-            <tr>
-              <td colSpan={8} className="text-center py-4 text-slate-500">
-                No se encontraron lotes en el inventario.
-              </td>
-            </tr>
-          ) : (
-            lotesFiltrados.map((lote) => {
-              const disp = lote.availableQty ?? lote.quantity
-              const est = lote.status || "PENDIENTE"
-              const valor = disp * COSTO_KG
-
-              return (
-                <tr key={lote.idLocal || lote.lotCode}>
-                  <td><strong>{lote.lotCode}</strong></td>
-                  <td>{lote.producer}</td>
-                  <td>{lote.origin}</td>
-                  <td>{lote.quantity} {lote.unit}</td>
-                  <td>{disp} {lote.unit}</td>
-                  <td>
-                    {est === "LIBERADO" && <Badge tone="green">LIBERADO</Badge>}
-                    {est === "PENDIENTE" && <Badge tone="amber">PENDIENTE</Badge>}
-                    {est === "BLOQUEADO" && <Badge tone="red">BLOQUEADO</Badge>}
-                  </td>
-                  <td>${valor.toLocaleString('es-CO')}</td>
-                  <td>
-                    <div className="row-actions">
-                      {est !== "LIBERADO" && (
-                        <button onClick={() => toggleEstadoLote(lote, 'LIBERADO')}>
-                          Liberar
-                        </button>
-                      )}
-                      {est !== "BLOQUEADO" && (
-                        <button
-                          onClick={() => {
-                            if (onBlock) onBlock(lote.lotCode)
-                            else toggleEstadoLote(lote, 'BLOQUEADO')
-                          }}
-                          className="danger"
-                        >
-                          Bloquear
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              )
-            })
-          )}
-        </DataTable>
+        {inventario.isError && (
+          <div className="validation danger" role="alert"><div><strong>No se cargó el inventario</strong><span>{mensajeError(inventario.error)}</span></div></div>
+        )}
+        <InventoryTable lotes={lotes} onCambiarEstado={setSeleccion} />
       </section>
+
+      <section className="card mt-6">
+        <div className="card-head">
+          <div>
+            <div className="section-title">Costo unitario y margen por etapa</div>
+            <p>Costo unitario = costo total de la etapa / kg de salida vendible. Margen = (precio − costo unitario) / precio × 100.</p>
+          </div>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Producto</th><th>Etapa</th><th>Salida</th><th>Costo de etapa</th><th>Costo unitario</th><th>Precio</th><th>Margen</th></tr>
+            </thead>
+            <tbody>
+              {(economia.data ?? []).length === 0 ? (
+                <tr><td colSpan={7} style={{ textAlign: "center", padding: "1.5rem" }}>Aún no hay etapas con costos registradas.</td></tr>
+              ) : (
+                (economia.data ?? []).map((x) => (
+                  <tr key={x.transformation_id}>
+                    <td><strong>{x.output_code}</strong></td>
+                    <td>{x.stage}</td>
+                    <td>{formatoKg(x.output_quantity)}</td>
+                    <td>{formatoCop(x.total_cost_cop)}</td>
+                    <td>{x.unit_cost_cop === null ? "No calculable (salida 0 kg)" : formatoCopPorKg(x.unit_cost_cop)}</td>
+                    <td>{x.sale_price_cop_per_unit === null ? "Sin precio" : formatoCopPorKg(x.sale_price_cop_per_unit)}</td>
+                    <td>{formatoPorcentaje(x.margin_on_sale_percent)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        {economia.data?.[0] && (
+          <p className="privacy-note">Supuesto de costos: {economia.data[0].cost_policy}</p>
+        )}
+      </section>
+
+      <section className="card mt-6">
+        <div className="card-head">
+          <div>
+            <div className="section-title">Alertas</div>
+            <p>Regla y causa de cada alerta</p>
+          </div>
+        </div>
+        <div className="p-4 space-y-3">
+          {(alertas.data ?? []).length === 0 ? (
+            <p className="text-sm text-slate-500">No hay alertas abiertas.</p>
+          ) : (
+            (alertas.data ?? []).map((a, i) => (
+              <div key={i} className="activity-row">
+                <div className="activity-icon"><Icon name="alert" /></div>
+                <div>
+                  <strong>{TIPOS_ALERTA[a.type] ?? a.type} · {a.entity}</strong>
+                  <span>{a.rule}. {a.cause}</span>
+                </div>
+                {a.value_percent !== undefined && <Badge tone="red">{formatoPorcentaje(a.value_percent)}</Badge>}
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      {seleccion && <CambioEstadoModal lote={seleccion} onCerrar={() => setSeleccion(null)} />}
     </>
   )
 }

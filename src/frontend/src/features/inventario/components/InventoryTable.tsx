@@ -1,71 +1,47 @@
-import React from 'react';
-import type { RecepcionOffline } from '@/db/dexieDb';
+import { Badge, Button } from '@/components/ui'
+import { DataTable } from '@/components/shared'
+import type { InventarioAdmin } from '@/api/tipos'
+import { estadoDe } from '@/shared/etiquetas'
+import { formatoCop, formatoKg } from '@/shared/formato'
 
-interface InventoryTableProps {
-  lots: RecepcionOffline[];
-  onToggleStatus: (idLocal: number, currentStatus: string) => void;
+interface Props {
+  lotes: InventarioAdmin[]
+  onCambiarEstado: (lote: InventarioAdmin) => void
 }
 
-export function InventoryTable({ lots, onToggleStatus }: InventoryTableProps) {
+export function InventoryTable({ lotes, onCambiarEstado }: Props) {
   return (
-    <div className="card mt-6">
-      <div className="card-head">
-        <h3 className="section-title">Control de existencias e inventario</h3>
-      </div>
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Lote</th>
-              <th>Productor</th>
-              <th>Origen</th>
-              <th>Ingreso</th>
-              <th>Disponible</th>
-              <th>Estado</th>
-              <th>Acciones</th>
+    <DataTable headers={['Lote', 'Origen', 'Recibido', 'Consumido', 'Disponible', 'Costos acumulados', 'Estado', 'Acción']}>
+      {lotes.length === 0 ? (
+        <tr>
+          <td colSpan={8} style={{ textAlign: 'center', padding: '1.5rem' }}>
+            No hay lotes con esos filtros.
+          </td>
+        </tr>
+      ) : (
+        lotes.map((l) => {
+          const e = estadoDe(l.status)
+          return (
+            <tr key={l.id}>
+              <td><strong>{l.code}</strong></td>
+              <td>{l.origin}</td>
+              <td>{formatoKg(l.received_quantity)}</td>
+              <td>{formatoKg(l.consumed_quantity)}</td>
+              <td><strong>{formatoKg(l.available_quantity)}</strong></td>
+              <td>{formatoCop(l.costs_cop)}</td>
+              <td>
+                <Badge tone={e.tono}>{e.etiqueta}</Badge>
+                {l.status_reason && <small style={{ display: 'block' }}>{l.status_reason}</small>}
+              </td>
+              <td>
+                <Button variant="secondary" onClick={() => onCambiarEstado(l)}>
+                  Cambiar estado
+                </Button>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {lots.map((lot) => {
-              const status = lot.status || 'PENDIENTE';
-              const available = lot.availableQty ?? lot.quantity;
-
-              return (
-                <tr key={lot.idLocal || lot.lotCode}>
-                  <td><strong>{lot.lotCode}</strong></td>
-                  <td>{lot.producer}</td>
-                  <td>{lot.origin}</td>
-                  <td>{lot.quantity} {lot.unit}</td>
-                  <td>{available} {lot.unit}</td>
-                  <td>
-                    <span
-                      className={`badge ${
-                        status === 'LIBERADO'
-                          ? 'badge-green'
-                          : status === 'BLOQUEADO'
-                          ? 'badge-red'
-                          : 'badge-amber'
-                      }`}
-                    >
-                      {status}
-                    </span>
-                  </td>
-                  <td className="row-actions">
-                    {lot.idLocal && (
-                      <button
-                        onClick={() => onToggleStatus(lot.idLocal!, status)}
-                        className={status === 'LIBERADO' ? 'danger' : ''}
-                      >
-                        {status === 'LIBERADO' ? 'Bloquear' : 'Liberar'}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+          )
+        })
+      )}
+    </DataTable>
+  )
 }

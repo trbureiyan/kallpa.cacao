@@ -1,89 +1,68 @@
 import { useState } from "react"
-import { useLiveQuery } from "dexie-react-hooks"
-import { Badge, PageHead } from "@/components/shared"
-import { db, type ProcesoOffline } from "@/db/dexieDb"
+import { useQuery } from "@tanstack/react-query"
+import { PageHead } from "@/components/shared"
+import { Badge } from "@/components/ui"
+import { listarLotes } from "@/api/servicios"
+import type { TransformacionResultado } from "@/api/tipos"
 import { ProcessForm } from "@/features/transformacion/components/ProcessForm"
-import { ShrinkageAlertCard } from "@/features/transformacion/components/ShrinkageAlertCard.tsx"
+import { ShrinkageAlertCard } from "@/features/transformacion/components/ShrinkageAlertCard"
+import { estadoDe } from "@/shared/etiquetas"
+import { formatoFecha, formatoKg } from "@/shared/formato"
 
 export function ProcessPage() {
-  const [lastInputQty, setLastInputQty] = useState(250)
-  const [lastOutputQty, setLastOutputQty] = useState(200)
-
-  // Consultas reactivas
-  const lotes = useLiveQuery(() => db.recepciones.toArray(), [], [])
-  const procesosHistorial = useLiveQuery(() => db.procesos.reverse().toArray(), [], [])
-
-  const lotesDisponibles = (lotes || []).map((l) => l.lotCode)
+  const [ultimo, setUltimo] = useState<TransformacionResultado | null>(null)
+  const { data: lotes = [] } = useQuery({ queryKey: ["lotes"], queryFn: () => listarLotes() })
+  // Los lotes de salida (productos) son los que no son materia prima recibida.
+  const productos = lotes.filter((l) => l.product_type !== "raw_cocoa")
 
   return (
     <>
       <PageHead
         eyebrow="RF02 · Transformación"
         title="Transformación y control de merma"
-        text="Registra cada etapa y detecta desviaciones de peso en tiempo real."
+        text="Registre cada etapa. El servidor calcula la merma, descuenta el inventario y genera el lote de salida."
       />
 
       <div className="process-layout">
-        <ProcessForm
-          availableLots={lotesDisponibles.length > 0 ? lotesDisponibles : ["CAC128"]}
-          onSuccess={() => {}}
-        />
-
+        <ProcessForm onResultado={setUltimo} />
         <aside className="space-y-4">
-          <ShrinkageAlertCard inputQty={lastInputQty} outputQty={lastOutputQty} thresholdPercent={15} />
-
-          <div className="stock-card">
-            <div>
-              <small>Lotes en proceso de fermentación/secado</small>
-              <strong>{lotesDisponibles.length} Lotes</strong>
-            </div>
-            <Badge tone="green">DISPONIBLE</Badge>
-          </div>
+          <ShrinkageAlertCard resultado={ultimo} />
         </aside>
       </div>
 
       <section className="card mt-6">
         <div className="card-head">
           <div>
-            <div className="section-title">Procesos recientes</div>
-            <p>Historial de mermas e incidencias en planta</p>
+            <div className="section-title">Lotes de salida</div>
+            <p>Productos generados por transformaciones</p>
           </div>
         </div>
-
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Lote</th>
-                <th>Etapa</th>
-                <th>Entrada</th>
-                <th>Salida</th>
-                <th>Merma %</th>
-                <th>Responsable</th>
+                <th>Código</th>
+                <th>Origen</th>
+                <th>Cantidad</th>
                 <th>Fecha</th>
+                <th>Estado</th>
               </tr>
             </thead>
             <tbody>
-              {!procesosHistorial || procesosHistorial.length === 0 ? (
+              {productos.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-4 text-slate-500">
-                    No hay procesos de transformación registrados aún.
+                  <td colSpan={5} style={{ textAlign: "center", padding: "1.5rem" }}>
+                    Aún no hay transformaciones registradas.
                   </td>
                 </tr>
               ) : (
-                procesosHistorial.map((p: ProcesoOffline) => (
-                  <tr key={p.idLocal ?? p.lotCode}>
-                    <td><strong>{p.lotCode}</strong></td>
-                    <td>{p.stage}</td>
-                    <td>{p.inputQty} kg</td>
-                    <td>{p.outputQty} kg</td>
-                    <td>
-                      <span className={`badge ${p.shrinkagePercent > 15 ? "badge-red" : "badge-green"}`}>
-                        {p.shrinkagePercent.toFixed(1)}%
-                      </span>
-                    </td>
-                    <td>{p.responsible}</td>
-                    <td>{p.date}</td>
+                productos.map((l) => (
+                  <tr key={l.id}>
+                    <td><strong>{l.code}</strong></td>
+                    <td>{l.origin}</td>
+                    <td>{formatoKg(l.received_quantity)}</td>
+                    <td>{formatoFecha(l.received_on)}</td>
+                    <td><Badge tone={estadoDe(l.status).tono}>{estadoDe(l.status).etiqueta}</Badge></td>
                   </tr>
                 ))
               )}

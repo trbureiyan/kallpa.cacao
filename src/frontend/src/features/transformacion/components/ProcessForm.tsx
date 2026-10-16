@@ -1,112 +1,158 @@
-import React, { useState } from 'react';
-import { registrarProcesoLocal } from '../api/procesoDb';
+import { useState, type FormEvent } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Button, Field, Icon } from '@/components/ui'
+import { listarLotes, registrarTransformacion } from '@/api/servicios'
+import { mensajeError } from '@/api/axiosClient'
+import type { TransformacionResultado } from '@/api/tipos'
+import { estadoDe } from '@/shared/etiquetas'
+import { formatoKg } from '@/shared/formato'
 
-interface ProcessFormProps {
-  availableLots: string[];
-  onSuccess?: () => void;
-}
+const ETAPAS = ['Fermentación', 'Secado', 'Limpieza y selección', 'Tostado', 'Molienda']
 
-export function ProcessForm({ availableLots, onSuccess }: ProcessFormProps) {
-  const [lotCode, setLotCode] = useState(availableLots[0] || 'CAC128');
-  const [stage, setStage] = useState('FERMENTACION');
-  const [inputQty, setInputQty] = useState<number>(250);
-  const [outputQty, setOutputQty] = useState<number>(200);
-  const [responsible] = useState('Operador Campo (Rivera)');
-  const [notes, setNotes] = useState('');
-  const [loading, setLoading] = useState(false);
+const VACIO = { loteId: '', etapa: ETAPAS[0], entrada: '', salida: '', codigoSalida: '', costo: '', precio: '', incidente: '' }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (inputQty <= 0 || outputQty <= 0) {
-      alert('Las cantidades deben ser números mayores a 0 kg.');
-      return;
-    }
+export function ProcessForm({ onResultado }: { onResultado: (r: TransformacionResultado) => void }) {
+  const queryClient = useQueryClient()
+  const { data: lotes = [] } = useQuery({ queryKey: ['lotes'], queryFn: () => listarLotes() })
+  const [f, setF] = useState(VACIO)
+  // La clave identifica la operación: si el usuario cambia datos tras un error, es otra operación.
+  const [clave, setClave] = useState(() => crypto.randomUUID())
+  const [error, setError] = useState<string | null>(null)
 
-    setLoading(true);
-    try {
-      await registrarProcesoLocal({
-        lotCode,
-        stage,
-        inputQty,
-        outputQty,
-        responsible,
-        notes,
-      });
+  const cambiar = (campo: keyof typeof VACIO, valor: string) => {
+    setF((prev) => ({ ...prev, [campo]: valor }))
+    setClave(crypto.randomUUID())
+  }
 
-      if (onSuccess) onSuccess();
-      alert('Proceso de transformación registrado con éxito.');
-    } catch (err: any) {
-      alert(err?.message || 'Error al registrar la transformación.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const lote = lotes.find((l) => String(l.id) === f.loteId)
+  const transformables = lotes.filter((l) => l.available_quantity > 0 && l.status !== 'blocked')
+  const salidaMayor = Number(f.salida) > Number(f.entrada) && f.entrada !== ''
+
+  const elegirLote = (id: string) => {
+    const l = lotes.find((x) => String(x.id) === id)
+    setF((prev) => ({
+      ...prev,
+      loteId: id,
+      entrada: l ? String(l.available_quantity) : '',
+      codigoSalida: l ? `${l.code}-${prev.etapa.slice(0, 3).toUpperCase()}` : '',
+    }))
+    setClave(crypto.randomUUID())
+  }
+
+  const registrar = useMutation({
+    mutationFn: () =>
+      registrarTransformacion({
+        idempotency_key: clave,
+        lot_id: Number(f.loteId),
+        stage: f.etapa,
+        occurred_at: new Date().toISOString(),
+        input_quantity: Number(f.entrada),
+        output_quantity: Number(f.salida),
+        unit: 'kg',
+        output_code: f.codigoSalida.trim(),
+        incident: f.incidente.trim() || null,
+        costs_cop: Number(f.costo || 0),
+        sale_price_cop_per_unit: f.precio === '' ? null : Number(f.precio),
+      }),
+    onSuccess: (r) => {
+      setError(null)
+      onResultado(r)
+      setF(VACIO)
+      setClave(crypto.randomUUID())
+      void queryClient.invalidateQueries()
+    },
+    onError: (e) => setError(mensajeError(e)),
+  })
+
+  const enviar = (e: FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    registrar.mutate()
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="card form-card">
+    <form className="card form-card" onSubmit={enviar}>
       <div className="card-head">
         <div>
-          <span className="eyebrow">RF02 · Transformación</span>
-          <h3 className="section-title">Etapas y control de merma</h3>
+          <div className="section-title">Registrar etapa de transformación</div>
+          <p>Una etapa transforma un solo lote. Requiere conexión con el servidor.</p>
         </div>
+        <div className="step-badge">02</div>
       </div>
 
+      {error && (
+        <div className="validation danger mb-4" role="alert">
+          <Icon name="alert" />
+          <div>
+            <strong>No se registró la etapa</strong>
+            <span>{error}</span>
+          </div>
+        </div>
+      )}
+
       <div className="form-grid">
-        <div className="field">
-          <label className="field-label">Lote de entrada</label>
-          <select className="input" value={lotCode} onChange={(e) => setLotCode(e.target.value)}>
-            {availableLots.map((code) => (
-              <option key={code} value={code}>{code}</option>
+        <Field label="Lote de entrada">
+          <select className="input" value={f.loteId} onChange={(e) => elegirLote(e.target.value)} required>
+            <option value="">Seleccione un lote</option>
+            {transformables.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.code} · {formatoKg(l.available_quantity)} disponibles · {estadoDe(l.status).etiqueta}
+              </option>
             ))}
           </select>
-        </div>
+        </Field>
 
-        <div className="field">
-          <label className="field-label">Etapa del proceso</label>
-          <select className="input" value={stage} onChange={(e) => setStage(e.target.value)}>
-            <option value="FERMENTACION">Fermentación</option>
-            <option value="SECADO">Secado en marquesina</option>
-            <option value="SELECCION">Selección y empaque</option>
+        <Field label="Etapa">
+          <select className="input" value={f.etapa} onChange={(e) => cambiar('etapa', e.target.value)}>
+            {ETAPAS.map((x) => (
+              <option key={x}>{x}</option>
+            ))}
           </select>
-        </div>
+        </Field>
 
-        <div className="field">
-          <label className="field-label">Cantidad de entrada (kg)</label>
-          <input
-            type="number"
-            className="input"
-            value={inputQty}
-            onChange={(e) => setInputQty(Number(e.target.value))}
-          />
-        </div>
+        <Field label="Cantidad de entrada (kg)" hint={lote ? `Disponible: ${formatoKg(lote.available_quantity)}` : undefined}>
+          <div className="input-unit">
+            <input className="input" type="number" min="0.001" step="any" value={f.entrada} onChange={(e) => cambiar('entrada', e.target.value)} required />
+            <span>kg</span>
+          </div>
+        </Field>
 
-        <div className="field">
-          <label className="field-label">Cantidad de salida (kg)</label>
-          <input
-            type="number"
-            className="input"
-            value={outputQty}
-            onChange={(e) => setOutputQty(Number(e.target.value))}
-          />
-        </div>
+        <Field label="Salida vendible (kg)">
+          <div className="input-unit">
+            <input className="input" type="number" min="0" step="any" value={f.salida} onChange={(e) => cambiar('salida', e.target.value)} required />
+            <span>kg</span>
+          </div>
+        </Field>
 
-        <div className="field col-span-full">
-          <label className="field-label">Notas de observación</label>
-          <textarea
-            className="input"
-            rows={2}
-            placeholder="Anota novedades sobre temperatura, humedad o incidencias..."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-        </div>
+        <Field label="Código del lote de salida" hint="Identifica el producto resultante; debe ser único.">
+          <input className="input" value={f.codigoSalida} onChange={(e) => cambiar('codigoSalida', e.target.value)} required minLength={2} />
+        </Field>
+
+        <Field label="Costo total de la etapa (COP)" hint="Incluye los costos de procesamiento de la etapa; no incluye la compra del cacao.">
+          <div className="input-unit">
+            <input className="input" type="number" min="0" step="any" value={f.costo} onChange={(e) => cambiar('costo', e.target.value)} />
+            <span>COP</span>
+          </div>
+        </Field>
+
+        <Field label="Precio de venta (COP/kg, opcional)">
+          <div className="input-unit">
+            <input className="input" type="number" min="0" step="any" value={f.precio} onChange={(e) => cambiar('precio', e.target.value)} />
+            <span>COP/kg</span>
+          </div>
+        </Field>
+
+        <Field label={salidaMayor ? 'Justificación (obligatoria: la salida supera la entrada)' : 'Incidencia o nota (opcional)'}>
+          <input className="input" value={f.incidente} onChange={(e) => cambiar('incidente', e.target.value)} required={salidaMayor} />
+        </Field>
       </div>
 
       <div className="form-actions">
-        <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? 'Guardando...' : 'Registrar proceso'}
-        </button>
+        <Button type="submit" disabled={registrar.isPending || !f.loteId}>
+          <Icon name="process" />
+          {registrar.isPending ? 'Registrando...' : 'Registrar etapa'}
+        </Button>
       </div>
     </form>
-  );
+  )
 }

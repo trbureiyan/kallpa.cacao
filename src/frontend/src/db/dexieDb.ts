@@ -1,60 +1,50 @@
-import { type Table, Dexie } from 'dexie';
+import { type Table, Dexie } from 'dexie'
 
-// 1. Registro de Recepción (RF01, RF08)
-export interface RecepcionOffline {
-  idLocal?: number;
-  idempotencyKey: string;
-  lotCode: string;
-  producer: string;
-  origin: string;
-  date: string;
-  quantity: number;
-  unit: string;
-  syncStatus: 'PENDING' | 'SYNCED' | 'ERROR';
-  errorMessage?: string;
-  status?: 'PENDIENTE' | 'LIBERADO' | 'BLOQUEADO';
-  availableQty?: number;
+// Cola de recepciones capturadas en el dispositivo. Es la ÚNICA operación que se escribe sin conexión
+// (marco: offline solo para recepción). El código legible CACxxx lo asigna el servidor al sincronizar.
+export interface RecepcionCola {
+  idempotencyKey: string // UUID generado en el cliente; clave primaria
+  farmId: number
+  fincaNombre: string
+  municipio: string
+  cantidadKg: number
+  costoCompraCop: number
+  notas?: string
+  recibidoEn: string // hora de captura del cliente (ISO); el servidor guarda además su propia hora
+  creadoEn: number
+  estado: 'PENDING' | 'SYNCED' | 'ERROR'
+  codigoLote?: string
+  mensajeError?: string
 }
 
-// 2. Registro de Transformación / Proceso (RF02, RF04)
-export interface ProcesoOffline {
-  idLocal?: number;
-  lotCode: string;
-  stage: string;
-  inputQty: number;
-  outputQty: number;
-  shrinkagePercent: number;
-  responsible: string;
-  date: string;
-  notes?: string;
-}
-
-// 3. Registro de Auditoría e Incidencias (RF09, RF10)
-export interface AuditEntry {
-  idLocal?: number;
-  timestamp: string;
-  user: string;
-  action: 'BLOQUEO' | 'LIBERACIÓN' | 'PROCESO' | 'EDICIÓN';
-  fieldChanged: string;
-  previousValue: string;
-  newValue: string;
-  lotCode: string;
-  reason?: string;
+// Copia de lectura del catálogo de fincas para poder capturar sin conexión.
+export interface FincaCache {
+  id: number
+  producer_id: number
+  name: string
+  region: string
 }
 
 export class CacaoOfflineDB extends Dexie {
-  recepciones!: Table<RecepcionOffline, number>;
-  procesos!: Table<ProcesoOffline, number>;
-  auditLogs!: Table<AuditEntry, number>;
+  colaRecepciones!: Table<RecepcionCola, string>
+  fincas!: Table<FincaCache, number>
 
   constructor() {
-    super('CacaoOfflineDB');
+    super('CacaoOfflineDB')
+    // v2 era una maqueta con datos inventados (recepciones, procesos, auditLogs): se descarta.
     this.version(2).stores({
       recepciones: '++idLocal, idempotencyKey, lotCode, origin, syncStatus, status',
       procesos: '++idLocal, lotCode, stage, date',
       auditLogs: '++idLocal, timestamp, user, action, lotCode',
-    });
+    })
+    this.version(3).stores({
+      recepciones: null,
+      procesos: null,
+      auditLogs: null,
+      colaRecepciones: 'idempotencyKey, estado, creadoEn',
+      fincas: 'id',
+    })
   }
 }
 
-export const db = new CacaoOfflineDB();
+export const db = new CacaoOfflineDB()

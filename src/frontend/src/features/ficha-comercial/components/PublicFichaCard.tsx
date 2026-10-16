@@ -1,50 +1,37 @@
-import React, { useState, useEffect } from 'react';
-import { obtenerFichaPublica } from '../api/fichaApi';
-import { ShieldCheck, Sprout, MapPin, Calendar, Scale, Award } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { QRCodeSVG } from 'qrcode.react';
+import { ShieldCheck, MapPin, Calendar, Scale, Layers } from 'lucide-react';
+import { obtenerFichaPublica } from '@/api/servicios';
+import { estadoDe } from '@/shared/etiquetas';
+import { formatoFecha, formatoFechaHora, formatoKg } from '@/shared/formato';
 
-interface PublicFichaCardProps {
-  lotCode?: string;
-}
+// Solo muestra los campos de la lista blanca del servidor (/public/products/{code}): sin costos,
+// sin productor ni datos internos. Un lote no liberado nunca se presenta como disponible.
+export function PublicFichaCard({ codigo }: { codigo: string }) {
+  const { data: ficha, isLoading, isError } = useQuery({
+    queryKey: ['ficha', codigo],
+    queryFn: () => obtenerFichaPublica(codigo),
+    retry: false,
+  });
 
-export const PublicFichaCard: React.FC<PublicFichaCardProps> = ({ lotCode = 'CAC128' }) => {
-  const [ficha, setFicha] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  if (isLoading) {
+    return <div className="card p-8 text-center text-slate-500 max-w-4xl mx-auto my-8">Consultando la ficha...</div>;
+  }
 
-  useEffect(() => {
-    let isMounted = true;
-    setLoading(true);
-
-    obtenerFichaPublica(lotCode).then((data) => {
-      if (isMounted) {
-        setFicha(data);
-        setLoading(false);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [lotCode]);
-
-  if (loading) {
+  if (isError || !ficha) {
     return (
-      <div className="card p-8 text-center text-slate-500 max-w-4xl mx-auto my-8">
-        Cargando certificado público de trazabilidad...
+      <div className="card p-8 text-center max-w-4xl mx-auto my-8" role="alert">
+        <strong>No encontramos ese producto</strong>
+        <p className="text-sm text-slate-500 mt-1">
+          Verifique el código ({codigo}). La ficha pública existe solo para productos ya transformados.
+        </p>
       </div>
     );
   }
 
-  // Fallback si no encuentra el lote en IndexedDB
-  const lot = ficha || {
-    lotCode: lotCode,
-    producer: 'Ana Torres (Productor A)',
-    origin: 'Rivera, Huila, Colombia',
-    harvestDate: new Date().toLocaleDateString('sv-SE'),
-    quantity: 250,
-    unit: 'kg',
-    status: 'LIBERADO',
-    verified: true,
-  };
+  const estado = estadoDe(ficha.status);
+  const disponible = ficha.availability === 'available';
+  const urlFicha = `${window.location.origin}/ficha-publica?lote=${encodeURIComponent(ficha.code)}`;
 
   return (
     <div>
@@ -52,10 +39,10 @@ export const PublicFichaCard: React.FC<PublicFichaCardProps> = ({ lotCode = 'CAC
         <div className="hero-grain grain-1" />
         <div className="hero-grain grain-2" />
         <div className="public-hero-content">
-          <span className="eyebrow text-emerald-300">Certificado Público de Origen</span>
-          <h1 className="display-title text-white mt-1">Lote #{lot.lotCode}</h1>
+          <span className="eyebrow text-emerald-300">Ficha comercial pública</span>
+          <h1 className="display-title text-white mt-1">Producto {ficha.code}</h1>
           <p className="mt-2 text-emerald-100 text-sm md:text-base">
-            Cacao Fino de Aroma · Trazabilidad verificada en origen desde el departamento del Huila.
+            {ficha.stage} · Origen {ficha.origin}, Huila
           </p>
         </div>
       </div>
@@ -64,87 +51,53 @@ export const PublicFichaCard: React.FC<PublicFichaCardProps> = ({ lotCode = 'CAC
         <div className="product-main">
           <div className="card-head flex items-center justify-between">
             <div>
-              <span className="eyebrow">Cadena de Custodia</span>
-              <h2 className="section-title">Ficha Técnica e Identidad del Lote</h2>
+              <span className="eyebrow">Información autorizada</span>
+              <h2 className="section-title">Ficha del producto</h2>
             </div>
-            <span className={`badge ${lot.verified ? 'badge-green' : 'badge-amber'}`}>
+            <span className={`badge ${disponible ? 'badge-green' : 'badge-red'}`}>
               <ShieldCheck size={14} />
-              {lot.verified ? 'VERIFICADO EN SERVIDOR' : 'REGISTRO LOCAL'}
+              {disponible ? 'DISPONIBLE' : 'NO DISPONIBLE'}
             </span>
           </div>
 
           <div className="public-facts">
             <div>
-              <Sprout className="shrink-0" size={20} />
-              <span>
-                Productor
-                <strong>{lot.producer}</strong>
-              </span>
-            </div>
-            <div>
               <MapPin className="shrink-0" size={20} />
-              <span>
-                Origen
-                <strong>{lot.origin}</strong>
-              </span>
+              <span>Origen<strong>{ficha.origin}</strong></span>
             </div>
             <div>
               <Calendar className="shrink-0" size={20} />
-              <span>
-                Fecha de Recepción
-                <strong>{lot.harvestDate}</strong>
-              </span>
+              <span>Recepción del cacao<strong>{formatoFecha(ficha.received_on)}</strong></span>
+            </div>
+            <div>
+              <Layers className="shrink-0" size={20} />
+              <span>Etapa<strong>{ficha.stage} · {formatoFechaHora(ficha.occurred_at)}</strong></span>
             </div>
             <div>
               <Scale className="shrink-0" size={20} />
-              <span>
-                Volumen Lote
-                <strong>{lot.quantity} {lot.unit || 'kg'}</strong>
-              </span>
-            </div>
-            <div>
-              <Award className="shrink-0" size={20} />
-              <span>
-                Perfil de Calidad
-                <strong>Grado 1 · Premium (75% Fermentado)</strong>
-              </span>
+              <span>Cantidad<strong>{formatoKg(ficha.output_quantity)}</strong></span>
             </div>
             <div>
               <ShieldCheck className="shrink-0" size={20} />
-              <span>
-                Estado Comercial
-                <strong className="text-emerald-700">{lot.status || 'LIBERADO'}</strong>
-              </span>
+              <span>Estado<strong>{estado.etiqueta}</strong></span>
             </div>
           </div>
 
-          <div className="privacy-note mt-6">
-            <ShieldCheck size={24} className="shrink-0 text-emerald-700" />
-            <div>
-              <strong>Garantía de Sostenibilidad y Deforestación Cero</strong>
-              <p>
-                Este lote proviene de parcelas monitoreadas bajo acuerdos de producción sostenible, garantizando la conservación de bosques y el comercio justo directo con familias cacaoteras del Huila.
-              </p>
+          {ficha.status_reason && (
+            <div className="privacy-note mt-6">
+              <strong>Motivo del bloqueo:</strong> {ficha.status_reason}
             </div>
-          </div>
+          )}
         </div>
 
         <div className="qr-card">
           <div className="flex flex-col items-center">
-            <div className="qr-grid">
-              {Array.from({ length: 81 }).map((_, i) => (
-                <span key={i} className={(i * 7 + 3) % 5 === 0 || i % 2 === 0 ? 'on' : ''} />
-              ))}
-            </div>
-            <div className="qr-code-label mt-3">
-              ID: {lot.lotCode}-VERIFIED
-            </div>
-            <p className="mt-3 text-xs text-slate-500">
-              Escanea este código QR desde cualquier dispositivo móvil para validar la autenticidad del lote en la plataforma pública.
-            </p>
+            <QRCodeSVG value={urlFicha} size={160} />
+            <div className="qr-code-label mt-3">{ficha.code}</div>
+            <p className="mt-3 text-xs text-slate-500">Escanee el código para volver a esta ficha.</p>
           </div>
         </div>
       </div>
     </div>
   );
-};
+}

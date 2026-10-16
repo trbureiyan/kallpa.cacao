@@ -1,7 +1,9 @@
-import type { ReactNode } from "react"
+import { useEffect, type ReactNode } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { Badge, Button, Icon, Logo } from "@/components/ui"
-import { useAuth, type RolUsuario } from "@/context/AuthContext"
+import { useAuth } from "@/context/AuthContext"
+import { actualizarFincasCache, sincronizarCola } from "@/features/offline/cola"
+import { ROLES, type RolApi } from "@/shared/etiquetas"
 import { useNetwork } from "@/context/NetworkContext"
 import type { IconName } from "@/types/app"
 
@@ -9,53 +11,67 @@ interface NavItem {
   name: string
   path: string
   icon: IconName
-  roles: RolUsuario[]
+  roles: RolApi[]
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const { rol, nombreUsuario, setRol } = useAuth()
+  const { usuario, salir } = useAuth()
+  const rol: RolApi = usuario?.role ?? "operator"
   const { isOnline } = useNetwork()
 
   const navigation: NavItem[] = [
     {
+      name: "Resumen",
+      path: "/dashboard",
+      icon: "home",
+      roles: ["operator", "admin"],
+    },
+    {
       name: "Recepción",
       path: "/recepcion",
       icon: "box",
-      roles: ["OPERADOR", "ADMINISTRADOR"],
+      roles: ["operator", "admin"],
     },
     {
       name: "Transformación",
       path: "/transformacion",
       icon: "process",
-      roles: ["OPERADOR", "ADMINISTRADOR"],
+      roles: ["operator", "admin"],
     },
     {
       name: "Trazabilidad",
       path: "/trazabilidad",
       icon: "route",
-      roles: ["OPERADOR", "ADMINISTRADOR"],
+      roles: ["operator", "admin"],
     },
     {
       name: "Inventario",
       path: "/inventario",
       icon: "warehouse",
-      roles: ["ADMINISTRADOR"],
+      roles: ["admin"],
     },
     {
       name: "Auditoría",
       path: "/auditoria",
       icon: "shield",
-      roles: ["ADMINISTRADOR"],
+      roles: ["admin"],
     },
   ]
 
   // Filtrar ítems de menú según el rol activo
+  // Con conexión: refresca el catálogo de fincas y reenvía la cola de recepciones (idempotente).
+  useEffect(() => {
+    if (!isOnline) return
+    void actualizarFincasCache()
+    void sincronizarCola()
+  }, [isOnline])
+
   const visibleNav = navigation.filter((item) => item.roles.includes(rol))
 
   const handleLogout = () => {
-    setRol("OPERADOR")
+    salir()
     navigate("/login")
   }
 
@@ -104,16 +120,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
         </div>
 
-        {/* Tarjeta de ayuda inferior en la barra lateral */}
-        <div className="bg-emerald-50/80 border border-emerald-100 rounded-2xl p-3 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-            <Icon name="sprout" size={18} />
-          </div>
-          <div>
-            <strong className="text-xs font-bold text-emerald-950 block">¿Necesitas ayuda?</strong>
-            <span className="text-[11px] text-emerald-700 block">Guía rápida de campo</span>
-          </div>
-        </div>
       </aside>
 
       {/* 2. Área Principal de Trabajo (Header Superior + Contenido) */}
@@ -128,14 +134,14 @@ export function AppShell({ children }: { children: ReactNode }) {
 
             <Badge tone={isOnline ? "green" : "amber"}>
               <Icon name={isOnline ? "wifi" : "wifiOff"} size={14} />
-              {isOnline ? "En línea" : "Offline"}
+              {isOnline ? "En línea" : "Conectividad limitada"}
             </Badge>
           </div>
 
           <div className="flex items-center gap-4">
             <div className="flex flex-col text-right text-xs">
-              <span className="font-bold text-slate-900">{nombreUsuario}</span>
-              <span className="text-[10px] text-slate-500 uppercase tracking-wider">{rol}</span>
+              <span className="font-bold text-slate-900">{usuario?.full_name}</span>
+              <span className="text-[10px] text-slate-500 uppercase tracking-wider">{ROLES[rol]}</span>
             </div>
 
             <Button

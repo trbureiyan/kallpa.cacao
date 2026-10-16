@@ -1,13 +1,11 @@
-import { useEffect } from 'react';
+import type { ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { NetworkProvider, useNetwork } from '@/context/NetworkContext';
-import { AuthProvider } from '@/context/AuthContext';
+import { NetworkProvider } from '@/context/NetworkContext';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { AppShell } from '@/components/layout/AppShell';
+import type { RolApi } from '@/shared/etiquetas';
 
-// Importación del script de datos semilla (Seed Data)
-import { seedDatabase } from '@/db/seed';
-
-// Importación de Páginas
 import { LoginPage } from '@/pages/LoginPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { PublicFichaPage } from '@/pages/PublicFichaPage';
@@ -17,53 +15,48 @@ import { TracePage } from '@/pages/TracePage';
 import { InventoryPage } from '@/pages/InventoryPage';
 import { AuditPage } from '@/pages/AuditPage';
 
-// Envoltorio de rutas autenticadas con la barra de navegación (AppShell)
+// Solo oculta pantallas según el rol; la autorización real la hace el servidor en cada petición.
+function SoloRol({ roles, children }: { roles: RolApi[]; children: ReactNode }) {
+  const { usuario } = useAuth();
+  return usuario && roles.includes(usuario.role) ? <>{children}</> : <Navigate to="/recepcion" replace />;
+}
+
 function ProtectedLayout() {
-  const { isOnline } = useNetwork();
+  const { usuario, cargando } = useAuth();
+  if (cargando) return <p className="p-6">Verificando sesión...</p>;
+  if (!usuario) return <Navigate to="/login" replace />;
 
   return (
     <AppShell>
       <Routes>
         <Route path="/dashboard" element={<DashboardPage />} />
-        <Route
-          path="/recepcion"
-          element={
-            <ReceptionPage
-              online={isOnline}
-              addPending={() => console.log('Nuevo lote pendiente agregado')}
-            />
-          }
-        />
+        <Route path="/recepcion" element={<ReceptionPage />} />
         <Route path="/transformacion" element={<ProcessPage />} />
         <Route path="/trazabilidad" element={<TracePage />} />
-        <Route path="/inventario" element={<InventoryPage />} />
-        <Route path="/auditoria" element={<AuditPage />} />
+        <Route path="/inventario" element={<SoloRol roles={['admin']}><InventoryPage /></SoloRol>} />
+        <Route path="/auditoria" element={<SoloRol roles={['admin']}><AuditPage /></SoloRol>} />
         <Route path="*" element={<Navigate to="/recepcion" replace />} />
       </Routes>
     </AppShell>
   );
 }
 
-export default function App() {
-  // Inicializar datos semilla en IndexedDB si la base está vacía
-  useEffect(() => {
-    void seedDatabase();
-  }, []);
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } } });
 
+export default function App() {
   return (
+    <QueryClientProvider client={queryClient}>
     <NetworkProvider>
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* Rutas Públicas */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/ficha-publica" element={<PublicFichaPage />} />
-
-            {/* Rutas Protegidas / Módulos de la Aplicación */}
             <Route path="/*" element={<ProtectedLayout />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>
     </NetworkProvider>
+    </QueryClientProvider>
   );
 }
