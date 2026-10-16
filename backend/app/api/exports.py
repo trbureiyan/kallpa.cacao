@@ -11,6 +11,14 @@ from app.security.permissions import admin_only
 
 router = APIRouter(prefix="/exports", tags=["Exportaciones"])
 
+# Una hoja de cálculo ejecuta como fórmula el texto que empieza con estos caracteres. Se antepone un apóstrofo, que Excel y
+# Calc muestran como texto. Solo se aplica a columnas de texto: los números no pasan por aquí.
+_PREFIJOS_DE_FORMULA = ("=", "+", "-", "@", "\t", "\r", "\n")
+
+
+def _texto_seguro(valor: str) -> str:
+    return "'" + valor if valor.startswith(_PREFIJOS_DE_FORMULA) else valor
+
 
 @router.get("/lots.csv")
 def export_lots(origin: str | None = None, status: str | None = None,
@@ -32,7 +40,7 @@ def export_lots(origin: str | None = None, status: str | None = None,
     writer.writerow(["identificador", "origen", "recibido", "consumido", "disponible", "estado", "costos_COP"])
     for lot in lots:
         writer.writerow([
-            lot.code, lot.origin, float(lot.received_quantity), float(lot.consumed_quantity),
+            _texto_seguro(lot.code), _texto_seguro(lot.origin), float(lot.received_quantity), float(lot.consumed_quantity),
             float(lot.available_quantity), lot.status, costs_by_lot.get(lot.id, 0),
         ])
     stream.seek(0)

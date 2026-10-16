@@ -4,11 +4,11 @@ import type { FilaResumen } from './resumen'
 const ENCABEZADO = 'Codigo,Origen,Recibido_kg,Consumido_kg,Disponible_kg,Estado,CostoUnitario_COP_kg'
 
 // Un campo con coma, comilla o salto de línea va entre comillas y las comillas internas se duplican.
-// Además, el texto libre que empieza con = + - @ tab o CR se antepone con ' para que Excel no lo ejecute como fórmula.
+// Además, el texto libre que empieza con = + - @ tab CR o LF se antepone con ' para que Excel no lo ejecute como fórmula.
 // Los números se dejan intactos (un costo negativo sigue siendo -5).
 const celda = (v: string | number | null): string => {
   let t = v === null ? '' : String(v)
-  if (typeof v === 'string' && /^[=+\-@\t\r]/.test(t)) t = `'${t}`
+  if (typeof v === 'string' && /^[=+\-@\t\r\n]/.test(t)) t = `'${t}`
   return /[",\r\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t
 }
 

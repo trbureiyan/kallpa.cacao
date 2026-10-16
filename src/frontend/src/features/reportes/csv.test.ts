@@ -14,9 +14,11 @@ describe('generarCsv', () => {
     const csv = generarCsv([{ ...fila, origen: 'Vereda "El Sol", Rivera\nHuila' }])
     expect(csv).toContain('"Vereda ""El Sol"", Rivera\nHuila"')
   })
-  it.each(['=SUMA(A1)', '+1', '-1', '@cmd', '\tx'])('neutraliza texto que Excel leería como fórmula (%j)', (origen) => {
-    const linea = generarCsv([{ ...fila, origen }]).split('\r\n')[1]
-    expect(linea.split(',')[1].replace(/^"/, '').startsWith("'")).toBe(true)
+  it.each(['=SUMA(A1)', '+1', '-1', '@cmd', '\tx', '\n=cmd'])('neutraliza texto que Excel leería como fórmula (%j)', (origen) => {
+    const csv = generarCsv([{ ...fila, origen }])
+    // el salto de línea va entre comillas, así que se busca el apóstrofo tras la coma de la columna Origen
+    expect(csv).toMatch(/,"?'/)
+    expect(csv.split('\r\n')[1].split(',')[1].replace(/^"/, '').startsWith("'")).toBe(true)
   })
   it('no altera los números', () => {
     expect(generarCsv([{ ...fila, costoUnitario: -5 }]).endsWith(',-5')).toBe(true)
