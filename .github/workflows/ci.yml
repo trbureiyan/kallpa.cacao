@@ -1,0 +1,73 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+# Solo lectura: el flujo no publica ni etiqueta nada
+permissions:
+  contents: read
+
+# una ejecución nueva sobre la misma rama cancela la anterior
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: frontend (tipos, lint, pruebas, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/frontend
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: pnpm/action-setup@v6.1.0
+        with:
+          version: 11.20.0
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24.20.0
+          cache: pnpm
+          cache-dependency-path: src/frontend/pnpm-lock.yaml
+
+      # --frozen-lockfile: si el lockfile no coincide con package.json, falla en lugar de actualizarlo
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsc -b
+      - run: pnpm exec eslint .
+      - run: pnpm test
+      - run: pnpm build
+
+  backend:
+    name: backend (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      # la rama frontend no trae la API; allí este trabajo se omite en lugar de fallar
+      - id: detectar
+        run: |
+          if [ -f backend/requirements-dev.txt ]; then
+            echo "existe=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "existe=false" >> "$GITHUB_OUTPUT"
+            echo "No hay backend/requirements-dev.txt en esta rama: se omiten las pruebas del backend."
+          fi
+
+      - if: steps.detectar.outputs.existe == 'true'
+        uses: actions/setup-python@v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - if: steps.detectar.outputs.existe == 'true'
+        working-directory: backend
+        run: pip install -r requirements-dev.txt
+
+      # las pruebas usan SQLite temporal; la de concurrencia en PostgreSQL se omite sin TEST_POSTGRES_URL
+      - if: steps.detectar.outputs.existe == 'true'
+        working-directory: backend
+        run: python -m pytest -q
