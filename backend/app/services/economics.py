@@ -1,3 +1,10 @@
+def calculate_loss_percent(input_quantity: float, output_quantity: float) -> float | None:
+    """Merma % = (entrada - salida) / entrada x 100. Devuelve None si la entrada es 0 o negativa."""
+    if input_quantity <= 0:
+        return None
+    return (input_quantity - output_quantity) / input_quantity * 100
+
+
 def summarize_cost(output_quantity: float, total_cost_cop: float, sale_price_cop_per_unit: float | None,
                    included_costs: list[str] | None = None):
     unit_cost = total_cost_cop / output_quantity if output_quantity > 0 else None

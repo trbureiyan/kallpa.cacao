@@ -8,6 +8,8 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.config import settings
+from app.services.economics import calculate_loss_percent
 from app.models import (
     AuditEvent,
     CostEntry,
@@ -111,6 +113,8 @@ def _result(db: Session, transformation: Transformation) -> dict:
         .filter(TransformationOutput.transformation_id == transformation.id)
         .all()
     )
+    output_quantity = sum(float(lot.received_quantity) for lot, _ in outputs)
+    loss = calculate_loss_percent(float(transformation.input_quantity), output_quantity)
     return {
         "id": transformation.id,
         "idempotency_key": transformation.idempotency_key,
@@ -119,7 +123,10 @@ def _result(db: Session, transformation: Transformation) -> dict:
         "responsible_id": transformation.responsible_id,
         "occurred_at": transformation.occurred_at,
         "input_quantity": float(transformation.input_quantity),
-        "output_quantity": sum(float(lot.received_quantity) for lot, _ in outputs),
+        "output_quantity": output_quantity,
+        "loss_percent": round(loss, 2) if loss is not None else None,
+        "loss_alert": loss is not None and loss > settings.loss_alert_threshold_percent,
+        "loss_threshold_percent": settings.loss_alert_threshold_percent,
         "unit": transformation.unit,
         "incident": transformation.incident,
         "output_code": outputs[0][0].code if outputs else transformation.output_code,

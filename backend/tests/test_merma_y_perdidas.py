@@ -38,3 +38,27 @@ def test_calcula_merma_y_alerta_solo_si_supera_15_por_ciento(api):
         assert db.query(Transformation).count() == 2
         lot = db.get(Lot, lot_id)
         assert float(lot.available_quantity) == 0
+
+
+def test_la_transformacion_devuelve_merma_calculada_por_el_servidor(api):
+    # El operador no puede ver /alerts (solo administrador); la merma debe venir en la respuesta.
+    client = api["client"]
+    headers = auth(api["operator_token"])
+    lot_id = client.post("/api/v1/receptions", json=reception_payload(api["farm_id"]), headers=headers).json()["lot_id"]
+    second_id = client.post("/api/v1/receptions", json=reception_payload(api["farm_id"]), headers=headers).json()["lot_id"]
+
+    resultados = {}
+    for code, output, input_lot_id in (("PROD-M20", 80, lot_id), ("PROD-M10", 90, second_id)):
+        response = client.post("/api/v1/transformations", headers=headers, json={
+            "idempotency_key": str(uuid4()), "lot_id": input_lot_id, "stage": "secado",
+            "occurred_at": datetime.now(timezone.utc).isoformat(), "input_quantity": 100,
+            "output_quantity": output, "unit": "kg", "output_code": code, "costs_cop": 0,
+        })
+        assert response.status_code == 201
+        resultados[code] = response.json()
+
+    assert resultados["PROD-M20"]["loss_percent"] == 20.0
+    assert resultados["PROD-M20"]["loss_alert"] is True
+    assert resultados["PROD-M20"]["loss_threshold_percent"] == 15.0
+    assert resultados["PROD-M10"]["loss_percent"] == 10.0
+    assert resultados["PROD-M10"]["loss_alert"] is False

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.models import CostEntry, Lot, Transformation, TransformationOutput, User
 from app.security.permissions import admin_only
@@ -20,14 +21,14 @@ def list_alerts(db: Session = Depends(get_db), actor: User = Depends(admin_only)
         output_code = outputs[0][0].code if outputs else item.output_code
         if item.input_quantity > 0:
             loss = (float(item.input_quantity) - output_quantity) / float(item.input_quantity) * 100
-            if loss > 15:
+            if loss > settings.loss_alert_threshold_percent:
                 alerts.append({"type": "merma", "severity": "warning", "entity": output_code,
-                               "value_percent": round(loss, 2), "rule": "Merma mayor al 15%",
+                               "value_percent": round(loss, 2), "rule": f"Merma mayor al {settings.loss_alert_threshold_percent:g}%",
                                "cause": f"Entrada {item.input_quantity} {item.unit}; salida {output_quantity} {item.unit}"})
         stage_cost = sum((entry.amount_cop for entry in db.query(CostEntry).filter_by(
             transformation_id=item.id).all()), 0)
-        if output_quantity > 0 and float(stage_cost) / output_quantity > 25000:
+        if output_quantity > 0 and float(stage_cost) / output_quantity > settings.unit_cost_alert_cop:
             alerts.append({"type": "costo", "severity": "warning", "entity": output_code,
-                           "rule": "Costo unitario supera 25.000 COP",
+                           "rule": f"Costo unitario supera {settings.unit_cost_alert_cop:,.0f} COP".replace(",", "."),
                            "cause": f"Costo de etapa {stage_cost} COP / salida {output_quantity} {item.unit}"})
     return alerts
