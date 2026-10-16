@@ -8,6 +8,7 @@ class Transformation(Base):
     __tablename__ = "transformations"
     id: Mapped[int] = mapped_column(primary_key=True)
     idempotency_key: Mapped[str] = mapped_column(String(100), unique=True, index=True)
+    request_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     lot_id: Mapped[int] = mapped_column(ForeignKey("lots.id"), index=True)
     stage: Mapped[str] = mapped_column(String(120))
     responsible_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
