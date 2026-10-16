@@ -42,4 +42,14 @@ describe('traducirErrorApi', () => {
     expect(r.codigo).toBe('DESCONOCIDO')
     expect(r.message).not.toContain('boom')
   })
+
+  it('tiempo de espera agotado no se confunde con falta de red: el servidor puede estar arrancando', () => {
+    const r = traducirErrorApi(new AxiosError('timeout of 30000ms exceeded', 'ECONNABORTED'))
+    expect(r.codigo).toBe('SIN_RESPUESTA')
+    expect(r.message).toMatch(/arrancando/)
+    expect(r.message).not.toMatch(/Revise la red/)
+  })
+  it('sin respuesta y sin tiempo agotado sigue siendo falta de red', () => {
+    expect(traducirErrorApi(new AxiosError('Network Error', 'ERR_NETWORK')).codigo).toBe('SIN_RED')
+  })
 })

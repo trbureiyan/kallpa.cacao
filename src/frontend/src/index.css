@@ -356,6 +356,17 @@ td strong { color: var(--color-texto); }
 .conexion-pendiente { --punto: var(--color-sync-pendiente); }
 .conexion-sincronizado { --punto: var(--color-sync-ok); }
 .conexion-error { --punto: var(--color-sync-error); }
+.conexion-conectando { --punto: var(--color-sync-pendiente); }
+.conexion-conectando .conexion-punto { animation: latido 1.2s ease-in-out infinite; }
+.conexion-no-responde { --punto: var(--color-sync-error); }
+.conexion-descartado { --punto: var(--color-texto-tenue); }
+@keyframes latido { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .conexion-conectando .conexion-punto { animation: none; } }
+.aviso-errores { min-height: 2.75rem; padding: var(--space-1) var(--space-3); display: inline-flex; align-items: center; gap: var(--space-2); color: var(--color-bloqueado); border: 1.5px solid var(--color-bloqueado); border-radius: var(--radius-pill); background: var(--color-bloqueado-fondo); font-size: var(--text-sm); font-weight: 600; white-space: nowrap; }
+.fila-error { padding: var(--space-4); display: grid; gap: var(--space-3); border-top: 1px solid var(--color-borde); }
+.fila-error:first-child { border-top: 0; }
+.fila-error-acciones { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.confirmar-descarte { padding: var(--space-3); display: grid; gap: var(--space-2); border: 1.5px solid var(--color-bloqueado); border-radius: var(--radius-md); background: var(--color-bloqueado-fondo); }
 .nota-error { display: block; color: var(--color-bloqueado); font-size: var(--text-sm); }
 .skip-link { position: absolute; left: var(--space-4); top: -4rem; z-index: 200; padding: var(--space-2) var(--space-4); color: var(--color-texto-sobre-acento); background: var(--color-texto); border-radius: var(--radius-md); }
 .skip-link:focus { top: var(--space-4); }

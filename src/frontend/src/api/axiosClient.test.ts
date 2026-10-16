@@ -1,6 +1,6 @@
 import { AxiosError, type AxiosAdapter, type InternalAxiosRequestConfig } from 'axios'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { axiosClient, registrarAlExpirar } from './axiosClient'
+import { axiosClient, registrarAlExpirar, registrarAlFallarRed } from './axiosClient'
 import { guardarToken, leerToken } from './token'
 
 function adaptador(status: number): { adapter: AxiosAdapter; vistas: InternalAxiosRequestConfig[] } {
@@ -50,5 +50,18 @@ describe('axiosClient', () => {
     const { adapter } = adaptador(401)
     await expect(axiosClient.post('/auth/login', {}, { adapter })).rejects.toBeTruthy()
     expect(avisar).not.toHaveBeenCalled()
+  })
+
+  it('una petición sin respuesta avisa para volver a comprobar el servidor; una con respuesta no', async () => {
+    const avisar = vi.fn()
+    registrarAlFallarRed(avisar)
+    const sinRespuesta: AxiosAdapter = async (config) => {
+      throw new AxiosError('Network Error', 'ERR_NETWORK', config)
+    }
+    await expect(axiosClient.get('/x', { adapter: sinRespuesta })).rejects.toBeTruthy()
+    expect(avisar).toHaveBeenCalledTimes(1)
+    await expect(axiosClient.get('/x', { adapter: adaptador(500).adapter })).rejects.toBeTruthy()
+    expect(avisar).toHaveBeenCalledTimes(1)
+    registrarAlFallarRed(() => {})
   })
 })

@@ -1,24 +1,23 @@
 import React from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/db/dexieDb';
 import { useAuditoria } from '@/features/auditoria/useAuditoria';
 import { AlertasPanel } from '@/features/alertas/components/AlertasPanel';
 import { useFilasInventario } from '@/features/inventario/useFilasInventario';
 import { useNetwork } from '@/context/NetworkContext';
 import { useAuth } from '@/context/AuthContext';
+import { useEstadoCola } from '@/features/recepcion/useEstadoCola';
 import { PageHead } from '@/components/shared';
 import { Icon } from '@/components/ui';
 import { estadoConexion } from '@/components/ui/conexion';
 import { IndicadorConexion } from '@/components/ui/marca';
 
 export const DashboardPage: React.FC = () => {
-  const { isOnline } = useNetwork();
+  const { estadoServidor } = useNetwork();
   const { rol, modo } = useAuth();
   const esApi = modo === 'api';
   const esAdmin = rol === 'ADMINISTRADOR';
 
   // La cola de recepciones siempre vive en Dexie; lotes, existencias y actividad vienen del modo activo
-  const cola = useLiveQuery(() => db.recepciones.where('syncStatus').equals('PENDING').count(), [], 0);
+  const { pendientes: cola } = useEstadoCola();
   const { filas } = useFilasInventario(modo, rol);
   // en modo API solo el administrador puede leer la auditoría del servidor
   const { logs } = useAuditoria(esApi && !esAdmin ? 'local' : modo);
@@ -57,7 +56,7 @@ export const DashboardPage: React.FC = () => {
             <span>Pendientes por Sincronizar</span>
           </div>
           <strong>{pendientesSync} Registros</strong>
-          <small><IndicadorConexion estado={estadoConexion({ enLinea: isOnline, pendientes: pendientesSync, error: false })} pendientes={pendientesSync} /></small>
+          <small><IndicadorConexion estado={estadoConexion({ servidor: estadoServidor, pendientes: pendientesSync })} pendientes={pendientesSync} /></small>
         </div>
       </div>
 

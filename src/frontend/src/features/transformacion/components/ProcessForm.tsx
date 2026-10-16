@@ -91,7 +91,7 @@ export function ProcessForm({ lotes, onBorrador, onSuccess }: ProcessFormProps) 
       setV({ ...VACIO, lotCode })
       onSuccess?.()
     } catch (err) {
-      const incierto = err instanceof ErrorDominio && (err.codigo === 'SIN_RED' || err.codigo === 'SERVIDOR')
+      const incierto = err instanceof ErrorDominio && (err.codigo === 'SIN_RED' || err.codigo === 'SIN_RESPUESTA' || err.codigo === 'SERVIDOR')
       if (!incierto) intento.current = null
       setError(
         err instanceof ErrorDominio

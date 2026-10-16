@@ -1,13 +1,12 @@
 import type { ReactNode } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
-import { useLiveQuery } from "dexie-react-hooks"
 import { Button, Icon, Logo } from "@/components/ui"
 import { estadoConexion } from "@/components/ui/conexion"
 import { IndicadorConexion } from "@/components/ui/marca"
-import { db } from "@/db/dexieDb"
 import { useAuth } from "@/context/AuthContext"
 import { rutasPermitidas } from "@/context/rutas"
 import { useNetwork } from "@/context/NetworkContext"
+import { useEstadoCola } from "@/features/recepcion/useEstadoCola"
 import { prefetchRuta } from "@/utils/prefetch"
 import type { IconName } from "@/types/app"
 
@@ -21,9 +20,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
   const { rol, nombreUsuario, modo, cerrarSesion } = useAuth()
-  const { isOnline } = useNetwork()
-  const pendientes = useLiveQuery(() => db.recepciones.where("syncStatus").equals("PENDING").count(), [], 0)
-  const hayError = useLiveQuery(async () => (await db.recepciones.where("syncStatus").equals("ERROR").count()) > 0, [], false)
+  const { estadoServidor } = useNetwork()
+  const { pendientes, errores } = useEstadoCola()
 
   const navigation: NavItem[] = [
     {
@@ -136,7 +134,19 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Logo />
             </button>
 
-            <IndicadorConexion estado={estadoConexion({ enLinea: isOnline, pendientes, error: hayError })} pendientes={pendientes} />
+            <IndicadorConexion estado={estadoConexion({ servidor: estadoServidor, pendientes })} pendientes={pendientes} />
+            {errores > 0 && modo === "api" && (
+              <button
+                type="button"
+                className="aviso-errores"
+                onClick={() => navigate("/recepcion#errores-sincronizacion")}
+                aria-label={`${errores === 1 ? "Una recepción" : `${errores} recepciones`} con error de sincronización. Revisar en Recepción.`}
+              >
+                <Icon name="alert" size={16} />
+                {errores} con error
+                <span className="hidden sm:inline">· Revisar</span>
+              </button>
+            )}
             {modo === "local" && (
               <span className="badge" title="Los datos de este modo viven solo en este dispositivo">
                 Modo local

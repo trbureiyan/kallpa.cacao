@@ -18,6 +18,9 @@ export function traducirErrorApi(e: unknown): ErrorDominio {
   if (!isAxiosError(e)) {
     return new ErrorDominio('DESCONOCIDO', 'No se pudo completar la operación. Ocurrió un error inesperado. Intente de nuevo y, si persiste, avise al administrador.')
   }
+  if (!e.response && (e.code === 'ECONNABORTED' || e.code === 'ETIMEDOUT')) {
+    return new ErrorDominio('SIN_RESPUESTA', 'El servidor tardó demasiado en responder. Puede estar arrancando después de un rato sin uso. Espere un minuto e intente de nuevo; lo guardado en el dispositivo no se pierde.')
+  }
   if (!e.response) {
     return new ErrorDominio('SIN_RED', 'No se pudo contactar al servidor. Sin conexión no se puede completar esta acción. Revise la red e intente de nuevo.')
   }

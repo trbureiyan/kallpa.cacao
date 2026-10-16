@@ -12,7 +12,7 @@ import portada from '@/assets/login-cacao.webp';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { isOnline } = useNetwork();
+  const { estadoServidor } = useNetwork();
   const { iniciarSesion } = useAuth();
   const [usuario, setUsuario] = useState('');
   const [clave, setClave] = useState('');
@@ -61,7 +61,7 @@ export const LoginPage: React.FC = () => {
         <div className="login-card">
           <div className="login-head">
             <h2 className="page-title">Iniciar sesión</h2>
-            <IndicadorConexion estado={estadoConexion({ enLinea: isOnline, pendientes: 0, error: false })} pendientes={0} />
+            <IndicadorConexion estado={estadoConexion({ servidor: estadoServidor, pendientes: 0 })} pendientes={0} />
           </div>
 
           <form onSubmit={submit} className="space-y-6">

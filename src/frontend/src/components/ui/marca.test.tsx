@@ -26,13 +26,14 @@ describe('SelloLote', () => {
 })
 
 describe('estadoConexion', () => {
-  it('sin red manda sobre todo lo demás', () => {
-    expect(estadoConexion({ enLinea: false, pendientes: 3, error: true })).toBe('sin_red')
+  it('sin red, servidor arrancando o sin respuesta mandan sobre lo pendiente', () => {
+    expect(estadoConexion({ servidor: 'sin_red', pendientes: 3 })).toBe('sin_red')
+    expect(estadoConexion({ servidor: 'conectando', pendientes: 3 })).toBe('conectando')
+    expect(estadoConexion({ servidor: 'no_responde', pendientes: 3 })).toBe('no_responde')
   })
-  it('con red: error, luego pendientes, luego sincronizado', () => {
-    expect(estadoConexion({ enLinea: true, pendientes: 3, error: true })).toBe('error')
-    expect(estadoConexion({ enLinea: true, pendientes: 3, error: false })).toBe('pendiente')
-    expect(estadoConexion({ enLinea: true, pendientes: 0, error: false })).toBe('sincronizado')
+  it('con el servidor en línea: pendientes, luego sincronizado', () => {
+    expect(estadoConexion({ servidor: 'en_linea', pendientes: 3 })).toBe('pendiente')
+    expect(estadoConexion({ servidor: 'en_linea', pendientes: 0 })).toBe('sincronizado')
   })
 })
 
@@ -49,6 +50,9 @@ describe('IndicadorConexion', () => {
   it.each([
     ['sincronizado', 'Sincronizado'],
     ['error', 'Error al sincronizar'],
+    ['conectando', 'Conectando con el servidor...'],
+    ['no_responde', 'El servidor no responde'],
+    ['descartado', 'Descartado'],
   ] as const)('%s', (estado, texto) => {
     expect(renderToStaticMarkup(<IndicadorConexion estado={estado} pendientes={0} />)).toContain(texto)
   })

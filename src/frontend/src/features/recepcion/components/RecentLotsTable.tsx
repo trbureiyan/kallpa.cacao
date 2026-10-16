@@ -6,6 +6,7 @@ const ESTADO_SYNC: Record<RecepcionOffline['syncStatus'], EstadoConexion> = {
   SYNCED: 'sincronizado',
   ERROR: 'error',
   PENDING: 'pendiente',
+  DISCARDED: 'descartado',
 };
 
 interface RecentLotsTableProps {
