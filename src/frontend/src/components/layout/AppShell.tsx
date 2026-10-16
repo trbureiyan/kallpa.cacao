@@ -8,6 +8,7 @@ import { db } from "@/db/dexieDb"
 import { useAuth } from "@/context/AuthContext"
 import { rutasPermitidas } from "@/context/rutas"
 import { useNetwork } from "@/context/NetworkContext"
+import { prefetchRuta } from "@/utils/prefetch"
 import type { IconName } from "@/types/app"
 
 interface NavItem {
@@ -67,7 +68,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside className="w-64 bg-superficie border-r border-borde min-h-screen flex flex-col justify-between p-4 shrink-0 hidden md:flex">
         <div>
           {/* Logo del sistema */}
-          <button type="button" className="px-2 py-3 mb-6 text-left" onClick={() => navigate("/recepcion")} aria-label="KallpaCacao, ir a Recepción">
+          <button
+            type="button"
+            className="px-2 py-3 mb-6 text-left"
+            onClick={() => navigate("/recepcion")}
+            onMouseEnter={() => prefetchRuta("/recepcion")}
+            onFocus={() => prefetchRuta("/recepcion")}
+            aria-label="KallpaCacao, ir a Recepción"
+          >
             <Logo />
           </button>
 
@@ -84,6 +92,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                   key={item.path}
                   type="button"
                   onClick={() => navigate(item.path)}
+                  onMouseEnter={() => prefetchRuta(item.path)}
+                  onFocus={() => prefetchRuta(item.path)}
                   aria-current={active ? "page" : undefined}
                   className={`w-full min-h-11 flex items-center justify-between px-3 py-2 rounded-md font-semibold text-base ${
                     active
@@ -112,7 +122,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="bg-superficie border-b border-borde px-6 py-3 flex items-center justify-between sticky top-0 z-40">
           <div className="flex items-center gap-3">
             {/* Logo visible solo en pantallas móviles */}
-            <button type="button" className="md:hidden text-left" onClick={() => navigate("/recepcion")} aria-label="KallpaCacao, ir a Recepción">
+            <button
+              type="button"
+              className="md:hidden text-left"
+              onClick={() => navigate("/recepcion")}
+              onMouseEnter={() => prefetchRuta("/recepcion")}
+              onFocus={() => prefetchRuta("/recepcion")}
+              aria-label="KallpaCacao, ir a Recepción"
+            >
               <Logo />
             </button>
 
@@ -151,6 +168,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               key={item.path}
               type="button"
               onClick={() => navigate(item.path)}
+              onMouseEnter={() => prefetchRuta(item.path)}
+              onFocus={() => prefetchRuta(item.path)}
               aria-current={active ? "page" : undefined}
               className={`min-h-11 min-w-11 flex flex-col items-center gap-1 p-2 text-xs font-semibold ${
                 active ? "text-acento-suave-texto bg-acento-suave rounded-md" : "text-texto-suave"

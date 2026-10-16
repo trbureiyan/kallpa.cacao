@@ -3,11 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { NetworkProvider, useNetwork } from '@/context/NetworkContext';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { rutasPermitidas } from '@/context/rutas';
-import { AppShell } from '@/components/layout/AppShell';
 import { EsqueletoPagina } from '@/components/shared/EsqueletoPagina';
-
-// Importación del script de datos semilla (Seed Data)
-import { seedDatabase } from '@/db/seed';
+// Importación diferida del layout con Dexie y componentes del shell
+const AppShell = lazy(() => import('@/components/layout/AppShell').then(m => ({ default: m.AppShell })));
 
 // Code splitting por ruta: cada página se descarga solo cuando se navega a ella.
 // PublicFichaPage va en su propio chunk sin Dexie ni contextos de autenticación.
@@ -34,31 +32,33 @@ function ProtectedLayout() {
   if (!rutasPermitidas(rol).includes(pathname)) return <Navigate to="/dashboard" replace />;
 
   return (
-    <AppShell>
-      <Routes>
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route
-          path="/recepcion"
-          element={
-            <ReceptionPage
-              online={isOnline}
-              addPending={() => console.log('Nuevo lote pendiente agregado')}
-            />
-          }
-        />
-        <Route path="/transformacion" element={<ProcessPage />} />
-        <Route path="/trazabilidad" element={<TracePage />} />
-        <Route path="/inventario" element={<InventoryPage />} />
-        <Route path="/auditoria" element={<AuditPage />} />
-              </Routes>
-    </AppShell>
+    <Suspense fallback={<EsqueletoPagina />}>
+      <AppShell>
+        <Routes>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route
+            path="/recepcion"
+            element={
+              <ReceptionPage
+                online={isOnline}
+                addPending={() => console.log('Nuevo lote pendiente agregado')}
+              />
+            }
+          />
+          <Route path="/transformacion" element={<ProcessPage />} />
+          <Route path="/trazabilidad" element={<TracePage />} />
+          <Route path="/inventario" element={<InventoryPage />} />
+          <Route path="/auditoria" element={<AuditPage />} />
+        </Routes>
+      </AppShell>
+    </Suspense>
   );
 }
 
 export default function App() {
-  // Inicializar datos semilla en IndexedDB si la base está vacía
+  // Inicializar datos semilla en IndexedDB si la base está vacía (sin bloquear el chunk principal)
   useEffect(() => {
-    void seedDatabase();
+    void import('@/db/seed').then(m => m.seedDatabase());
   }, []);
 
   return (

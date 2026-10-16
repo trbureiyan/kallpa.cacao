@@ -6,6 +6,7 @@ import { estadoConexion } from '@/components/ui/conexion';
 import { IndicadorConexion } from '@/components/ui/marca';
 import { useNetwork } from '@/context/NetworkContext';
 import { useAuth } from '@/context/AuthContext';
+import { prefetchRuta } from '@/utils/prefetch';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -91,16 +92,34 @@ export const LoginPage: React.FC = () => {
             <p className="demo-note">Datos de demostración. Seleccione un perfil.</p>
 
             <div className="demo-actions">
-              <button type="button" onClick={() => entrar('operador', 'demo-operador')} className="btn btn-secondary">
+              <button
+                type="button"
+                onClick={() => entrar('operador', 'demo-operador')}
+                onMouseEnter={() => prefetchRuta('/dashboard')}
+                onFocus={() => prefetchRuta('/dashboard')}
+                className="btn btn-secondary"
+              >
                 Operador
               </button>
-              <button type="button" onClick={() => entrar('admin', 'demo-admin')} className="btn btn-secondary">
+              <button
+                type="button"
+                onClick={() => entrar('admin', 'demo-admin')}
+                onMouseEnter={() => prefetchRuta('/dashboard')}
+                onFocus={() => prefetchRuta('/dashboard')}
+                className="btn btn-secondary"
+              >
                 Administrador
               </button>
             </div>
           </div>
 
-          <button type="button" onClick={() => navigate('/ficha-publica')} className="public-link">
+          <button
+            type="button"
+            onClick={() => navigate('/ficha-publica')}
+            onMouseEnter={() => prefetchRuta('/ficha-publica')}
+            onFocus={() => prefetchRuta('/ficha-publica')}
+            className="public-link"
+          >
             <Eye size={18} aria-hidden="true" />
             <span>
               <strong>¿Es comprador?</strong> Consulte la ficha pública

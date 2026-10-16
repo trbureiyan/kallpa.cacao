@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Logo } from '@/components/ui';
+import { prefetchRuta } from '@/utils/prefetch';
 import { PublicFichaCard } from '@/features/ficha-comercial/components/PublicFichaCard.tsx';
 
 export const PublicFichaPage: React.FC = () => {
@@ -13,7 +14,12 @@ export const PublicFichaPage: React.FC = () => {
     <div className="public-shell">
       <header className="public-header">
         <Logo />
-        <button onClick={() => navigate('/login')} className="btn btn-secondary">
+        <button
+          onClick={() => navigate('/login')}
+          onMouseEnter={() => prefetchRuta('/login')}
+          onFocus={() => prefetchRuta('/login')}
+          className="btn btn-secondary"
+        >
           Acceso interno
         </button>
       </header>
