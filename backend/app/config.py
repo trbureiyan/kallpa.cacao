@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     secret_key: str = "change-this-key-before-deployment"
     access_token_minutes: int = 60
     cors_origins: str = "http://localhost:3000,http://localhost:5173"
+    # carpeta del build del frontend; vacío = src/frontend/dist del repositorio
+    frontend_dist: str = ""
     seed_demo_data: bool = True
     loss_alert_threshold_percent: float = 15.0
     delay_alert_days: int = Field(default=7, ge=0)

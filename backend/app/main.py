@@ -1,7 +1,9 @@
 from datetime import date
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
+from app.frontend import montar_frontend
 from app.database import SessionLocal
 from app import models
 from app.api import auth, receptions, transformations, lots, inventory, economics, public, exports, alerts, users, analytics, audit
@@ -54,3 +56,7 @@ for router in (auth.router, users.router, receptions.router, transformations.rou
 @app.get("/health", tags=["Estado"])
 def health():
     return {"status": "ok", "service": settings.app_name}
+
+
+# debe ir al final: la ruta comodín del frontend solo atiende lo que ningún router tomó
+montar_frontend(app, Path(settings.frontend_dist) if settings.frontend_dist else Path(__file__).resolve().parents[2] / "src" / "frontend" / "dist")

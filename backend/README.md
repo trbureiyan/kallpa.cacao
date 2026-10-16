@@ -29,6 +29,12 @@ Las pruebas locales usan una base SQLite temporal aislada; no modifican `cacao.d
 
 Por defecto usa SQLite en `backend/cacao.db`; el esquema se crea mediante Alembic y los datos sint√©ticos se cargan al iniciar. API base: `http://localhost:8000/api/v1`; OpenAPI: `http://localhost:8000/docs`; salud: `http://localhost:8000/health`.
 
+## Servir el frontend desde la API (un solo proceso)
+
+Si existe `../src/frontend/dist/index.html` (resultado de `pnpm build` en `src/frontend`), la API sirve la PWA en `http://localhost:8000/`: las rutas de la aplicaci√≥n (`/ficha-publica`, `/dashboard`) caen en el `index.html`, los archivos de `assets/` se cachean por un a√±o y `sw.js` y el manifiesto no se cachean. Una ruta `/api/...` desconocida responde 404 JSON, no el HTML. Si el build no existe, no se monta nada (es el caso de Docker, donde sirve nginx).
+
+`FRONTEND_DIST` cambia la carpeta del build (por defecto `src/frontend/dist` en la ra√≠z del repositorio). El frontend se compila con `VITE_API_URL` apuntando a esta misma API; el valor por defecto `http://localhost:8000/api/v1` ya coincide.
+
 ## Docker
 
 Desde `backend/`, ejecuta `docker compose up --build db api` para levantar PostgreSQL y la API. El contenedor aplica las migraciones Alembic antes de iniciar la API, disponible en el puerto 8000. PostgreSQL guarda datos en el volumen `postgres_data`.
@@ -137,13 +143,13 @@ Las revisiones `c2a7f4b89d10`, `d843a91c5e2b` y `e4219b1a7c30` materializan lote
 
 ## Pantallas conectadas con backend
 
-La PWA canÛnica est· en `../src/frontend`. Incluye captura offline de recepciones y vistas conectadas a FastAPI para panel, transformaciÛn, trazabilidad, inventario, alertas, economÌa, auditorÌa, usuarios y ficha p˙blica. Transformaciones y cambios de estado requieren conexiÛn; no se guardan como operaciones offline. Los prototipos importados se conservan en `design-reference/legacy` y no forman parte del build.
+La PWA can√≥nica est√° en `../src/frontend`. Incluye captura offline de recepciones y vistas conectadas a FastAPI para panel, transformaci√≥n, trazabilidad, inventario, alertas, econom√≠a, auditor√≠a, usuarios y ficha p√∫blica. Transformaciones y cambios de estado requieren conexi√≥n; no se guardan como operaciones offline. Los prototipos importados se conservan en `design-reference/legacy` y no forman parte del build.
 
 Rutas incorporadas: `GET/POST/PATCH /api/v1/users` (solo administrador), `GET /api/v1/transformations` (usuario interno) y `GET /api/v1/analytics/dashboard` (solo administrador). El correo se guarda en `username`. Municipios: Rivera, Campoalegre y Algeciras. La migracion `b6d1ef3a9204` agrega `users.municipality`; el servicio Compose actual informa esa revision como head.
 
-`LOSS_ALERT_THRESHOLD_PERCENT` configura la alerta de merma (15 por defecto). La alerta de costo est· desactivada salvo que se configure `COST_ALERT_THRESHOLD_COP_PER_KG`.
+`LOSS_ALERT_THRESHOLD_PERCENT` configura la alerta de merma (15 por defecto). La alerta de costo est√° desactivada salvo que se configure `COST_ALERT_THRESHOLD_COP_PER_KG`.
 
-La ficha p˙blica tambiÈn cuenta con `GET /api/v1/public/products/{code}/traceability`, que devuelve una lÌnea temporal con lista permitida de origen, etapas, cantidades y fechas; omite datos privados y financieros. La respuesta de `POST /api/v1/transformations` incluye porcentaje y alerta de merma calculados con la misma configuraciÛn del endpoint `/alerts`.
+La ficha p√∫blica tambi√©n cuenta con `GET /api/v1/public/products/{code}/traceability`, que devuelve una l√≠nea temporal con lista permitida de origen, etapas, cantidades y fechas; omite datos privados y financieros. La respuesta de `POST /api/v1/transformations` incluye porcentaje y alerta de merma calculados con la misma configuraci√≥n del endpoint `/alerts`.
 
 
 ## Reglas y configuracion de alertas
