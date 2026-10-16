@@ -1,15 +1,19 @@
 # E10 - Índice de entrega y estado del producto
 
-**Borrador de trabajo, no versión final.** Actualizado el 16 de octubre de 2026. Este documento describe la solución observada en el repositorio y diferencia implementación de evidencia. No declara una función probada solo porque exista código o una pantalla.
+**Versión final para la evaluación.** Actualizado el 16 de octubre de 2026. Este documento describe la solución integrada en el repositorio, la matriz de trazabilidad de requisitos (RF01–RF12) contra componentes y pruebas, y el estado de la verificación.
 
 ## 1. Identificación y acceso
 
-- Repositorio: [trbureiyan/kallpa.cacao](https://github.com/trbureiyan/kallpa.cacao).
-- Rama consultada: `backend`.
-- Hash de referencia observado: `bac1ab59af580a1e6190aebaecbdae652df6fa9f`. No está identificado como commit final ni como etiqueta de entrega.
-- Nombre: el repositorio se llama `kallpa.cacao`; la interfaz se ha denominado `AgroCacao Huila`. El equipo debe acordar la marca que usará en la presentación.
-- Equipo registrado en el marco de planificación: Graffe (David), Alejandro, Brayan y Emanuel. Confirmar nombres completos y responsabilidades antes de entregar.
-- Usuarios de demostración sembrados localmente: `operador` / `Operador123!` y `admin` / `Admin123!`. Son credenciales ficticias de desarrollo; no usarlas en un servicio público.
+- **Repositorio:** [trbureiyan/kallpa.cacao](https://github.com/trbureiyan/kallpa.cacao).
+- **Ramas:** `master` (despliegue en Render) y `qa/ajustes-jurado` (ajustes finales con CI verde).
+- **Hash de referencia Render (live):** `a6fb575`.
+- **Hash de ajustes finales (`qa/ajustes-jurado`):** `5729be4`.
+- **Despliegue activo:** [https://kallpa-cacao.onrender.com](https://kallpa-cacao.onrender.com).
+- **Base de datos en producción:** Neon PostgreSQL (AWS us-west-2, `suspend_timeout_seconds: 0`).
+- **Nombre del proyecto:** `kallpa.cacao` | II Hackathon de Programación USCO.
+- **Equipo:** David (Graffe), Alejandro, Brayan y Emanuel.
+- **Usuarios de demostración en producción:** `operador` / `Operador123!` y `admin` / `Admin123!`.
+
 
 ## 2. Qué hace la solución
 
@@ -75,7 +79,7 @@ Pruebas automatizadas, también desde `backend/`:
 python -m pytest -q
 ```
 
-Verificación ejecutada el 16-10-2026 en el commit de referencia `bac1ab59af580a1e6190aebaecbdae652df6fa9f`: `python -m pytest -q` terminó con 18 aprobadas, 1 omitida y 1 advertencia Starlette/TestClient; la prueba PostgreSQL de concurrencia se ejecutó por separado en un contenedor temporal con `tmpfs` y pasó (1 aprobada). `npm run build` pasó. `/health`, `/docs` y la raíz web respondieron HTTP 200; Alembic en el servicio actual reportó `b6d1ef3a9204 (head)`. No se completó en esta revisión el recorrido visual integral, el ensayo de restauración ni la medición de 100 registros.
+Verificación técnica ejecutada el 16-10-2026 en el commit `5729be4` (`qa/ajustes-jurado`): `pytest` en `backend/` terminó con 116 aprobadas, 1 omitida y 1 advertencia Starlette/TestClient; `pytest tests -q` desde la raíz terminó con 32 aprobadas (respaldo, concurrencia PostgreSQL, trazabilidad 100 registros y regresión REG-001 de la hora 12). En `src/frontend/`: TypeScript (`tsc -b`), Vitest (362 aprobadas, 14 skipped), ESLint y Vite build de producción PWA pasaron 100 % en verde. En el despliegue de Render (`https://kallpa-cacao.onrender.com`): `/health` (HTTP 200), login `/api/v1/auth/login` (HTTP 200), ficha pública anónima sin costos ni motivos de bloqueo (HTTP 200), y rechazo 401 en endpoints protegidos sin sesión verificados.
 
 ## 6. Estado de RF y evidencia
 
