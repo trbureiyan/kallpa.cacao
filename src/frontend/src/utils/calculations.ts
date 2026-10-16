@@ -1,24 +1,27 @@
-// Regla del ejercicio: % Merma = ((Entrada - Salida) / Entrada) * 100
-export const calcularMerma = (entradaKg: number, salidaKg: number): number => {
-  if (entradaKg <= 0) return 0;
-  const merma = ((entradaKg - salidaKg) / entradaKg) * 100;
-  return Number(merma.toFixed(2));
-};
+import { UMBRAL_MERMA_PCT } from '@/config'
 
-// Evaluar si supera el umbral del 15% para activar la alerta (RF04)
-export const esMermaCritica = (porcentajeMerma: number): boolean => {
-  return porcentajeMerma > 15;
-};
+// Un resultado null significa "no calculable": la UI debe explicar el motivo, nunca mostrar 0.
+const redondear = (n: number): number => Number(n.toFixed(2))
+const finitos = (...v: number[]): boolean => v.every(Number.isFinite)
 
-// Regla: Costo Unitario = Costo Total / Salida Vendible
-export const calcularCostoUnitario = (costoTotalCOP: number, salidaKg: number): number => {
-  if (salidaKg <= 0) return 0;
-  return Number((costoTotalCOP / salidaKg).toFixed(2));
-};
+/** Merma % = (entrada − salida) / entrada × 100. Kg. Null si la entrada no es positiva. */
+export const calcularMerma = (entradaKg: number, salidaKg: number): number | null => {
+  if (!finitos(entradaKg, salidaKg) || entradaKg <= 0) return null
+  return redondear(((entradaKg - salidaKg) / entradaKg) * 100)
+}
 
-// Regla: Margen sobre Venta = ((Precio - Costo Unitario) / Precio) * 100
-export const calcularMargenVenta = (precioVentaCOP: number, costoUnitarioCOP: number): number => {
-  if (precioVentaCOP <= 0) return 0;
-  const margen = ((precioVentaCOP - costoUnitarioCOP) / precioVentaCOP) * 100;
-  return Number(margen.toFixed(2));
-};
+/** Alerta solo si la merma supera estrictamente el umbral (configurable). */
+export const esMermaCritica = (mermaPct: number, umbralPct: number = UMBRAL_MERMA_PCT): boolean =>
+  mermaPct > umbralPct
+
+/** Costo unitario = costo total de la etapa / kg de salida vendible. COP y kg. Null si la salida no es positiva. */
+export const calcularCostoUnitario = (costoTotalCOP: number, salidaVendibleKg: number): number | null => {
+  if (!finitos(costoTotalCOP, salidaVendibleKg) || salidaVendibleKg <= 0) return null
+  return redondear(costoTotalCOP / salidaVendibleKg)
+}
+
+/** Margen sobre venta % = (precio − costo unitario) / precio × 100. COP/kg. Null si el precio no es positivo. */
+export const calcularMargenVenta = (precioCOP: number, costoUnitarioCOP: number): number | null => {
+  if (!finitos(precioCOP, costoUnitarioCOP) || precioCOP <= 0) return null
+  return redondear(((precioCOP - costoUnitarioCOP) / precioCOP) * 100)
+}
