@@ -1,22 +1,27 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { NetworkProvider, useNetwork } from '@/context/NetworkContext';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { rutasPermitidas } from '@/context/rutas';
 import { AppShell } from '@/components/layout/AppShell';
+import { EsqueletoPagina } from '@/components/shared/EsqueletoPagina';
 
 // Importación del script de datos semilla (Seed Data)
 import { seedDatabase } from '@/db/seed';
 
-// Importación de Páginas
-import { LoginPage } from '@/pages/LoginPage';
-import { DashboardPage } from '@/pages/DashboardPage';
-import { PublicFichaPage } from '@/pages/PublicFichaPage';
-import { ReceptionPage } from '@/pages/RecepcionPage';
-import { ProcessPage } from '@/pages/ProcessPage';
-import { TracePage } from '@/pages/TracePage';
-import { InventoryPage } from '@/pages/InventoryPage';
-import { AuditPage } from '@/pages/AuditPage';
+// Code splitting por ruta: cada página se descarga solo cuando se navega a ella.
+// PublicFichaPage va en su propio chunk sin Dexie ni contextos de autenticación.
+// [DECISION] React.lazy + Suspense — mínimo cambio, sin herramientas externas.
+// El navegador precachea todos los chunks con el service worker (vite-plugin-pwa),
+// por lo que la segunda visita es siempre instantánea, incluso offline.
+const LoginPage      = lazy(() => import('@/pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const PublicFichaPage = lazy(() => import('@/pages/PublicFichaPage').then(m => ({ default: m.PublicFichaPage })));
+const DashboardPage  = lazy(() => import('@/pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
+const ReceptionPage  = lazy(() => import('@/pages/RecepcionPage').then(m => ({ default: m.ReceptionPage })));
+const ProcessPage    = lazy(() => import('@/pages/ProcessPage').then(m => ({ default: m.ProcessPage })));
+const TracePage      = lazy(() => import('@/pages/TracePage').then(m => ({ default: m.TracePage })));
+const InventoryPage  = lazy(() => import('@/pages/InventoryPage').then(m => ({ default: m.InventoryPage })));
+const AuditPage      = lazy(() => import('@/pages/AuditPage').then(m => ({ default: m.AuditPage })));
 
 // Envoltorio de rutas autenticadas con la barra de navegación (AppShell)
 function ProtectedLayout() {
@@ -60,14 +65,16 @@ export default function App() {
     <NetworkProvider>
       <AuthProvider>
         <BrowserRouter>
-          <Routes>
-            {/* Rutas Públicas */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/ficha-publica" element={<PublicFichaPage />} />
+          <Suspense fallback={<EsqueletoPagina />}>
+            <Routes>
+              {/* Rutas Públicas */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/ficha-publica" element={<PublicFichaPage />} />
 
-            {/* Rutas Protegidas / Módulos de la Aplicación */}
-            <Route path="/*" element={<ProtectedLayout />} />
-          </Routes>
+              {/* Rutas Protegidas / Módulos de la Aplicación */}
+              <Route path="/*" element={<ProtectedLayout />} />
+            </Routes>
+          </Suspense>
         </BrowserRouter>
       </AuthProvider>
     </NetworkProvider>
