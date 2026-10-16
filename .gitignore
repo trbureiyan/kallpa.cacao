@@ -15,3 +15,6 @@ dist/
 dev-dist/
 *.tsbuildinfo
 .docs/
+.pytest_cache/
+datos/runtime/*
+!datos/runtime/.gitkeep

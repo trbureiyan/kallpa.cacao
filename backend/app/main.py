@@ -34,6 +34,11 @@ def initialize_database():
                 models.Lot(code="CAC002", producer_id=producers["PROD-B"], farm_id=farms["Campoalegre"], origin="Campoalegre", received_on=date.today(), received_quantity=150, available_quantity=150, consumed_quantity=0, unit="kg"),
                 models.Lot(code="CAC003", producer_id=producers["PROD-C"], farm_id=farms["Algeciras"], origin="Algeciras", received_on=date.today(), received_quantity=80, available_quantity=80, consumed_quantity=0, unit="kg"),
             ])
+            db.flush()
+            # El disponible se deriva del libro: cada lote semilla necesita su movimiento de recepcion.
+            for lot in db.query(models.Lot).all():
+                db.add(models.InventoryMovement(lot_id=lot.id, reference=f"seed:{lot.code}", movement_type="reception",
+                                                quantity=lot.received_quantity, unit=lot.unit))
             db.commit()
 
 @asynccontextmanager

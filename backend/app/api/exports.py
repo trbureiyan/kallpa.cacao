@@ -11,6 +11,13 @@ from app.security.permissions import admin_only
 
 router = APIRouter(prefix="/exports", tags=["Exportaciones"])
 
+_FORMULA_PREFIXES = ("=", "+", "-", "@", chr(9), chr(13))
+
+
+def _safe_text(value: str) -> str:
+    # Excel y LibreOffice ejecutan como formula una celda que empieza con estos caracteres (inyeccion CSV).
+    return "'" + value if value.startswith(_FORMULA_PREFIXES) else value
+
 
 @router.get("/lots.csv")
 def export_lots(origin: str | None = None, status: str | None = None,
@@ -32,7 +39,7 @@ def export_lots(origin: str | None = None, status: str | None = None,
     writer.writerow(["identificador", "origen", "recibido", "consumido", "disponible", "estado", "costos_COP"])
     for lot in lots:
         writer.writerow([
-            lot.code, lot.origin, float(lot.received_quantity), float(lot.consumed_quantity),
+            _safe_text(lot.code), _safe_text(lot.origin), float(lot.received_quantity), float(lot.consumed_quantity),
             float(lot.available_quantity), lot.status, costs_by_lot.get(lot.id, 0),
         ])
     stream.seek(0)

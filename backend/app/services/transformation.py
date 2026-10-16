@@ -145,15 +145,25 @@ def _result(db: Session, transformation: Transformation) -> dict:
     }
 
 
+def _find_by_key(db: Session, idempotency_key):
+    return db.query(Transformation).filter_by(idempotency_key=idempotency_key).first()
+
+
 def create_transformation(db: Session, data, actor: User):
     request_hash = _payload_hash(_request_payload(data))
-    previous = db.query(Transformation).filter_by(idempotency_key=data.idempotency_key).first()
+    previous = _find_by_key(db, data.idempotency_key)
     if previous:
         return _replay_or_conflict(db, previous, request_hash)
 
     lot = db.query(Lot).filter(Lot.id == data.lot_id).with_for_update().first()
     if not lot:
         raise HTTPException(404, "Lote no encontrado")
+    # [DECISION] Se reconsulta la clave con el lote ya bloqueado: un reenvio concurrente que esperó el bloqueo
+    # veria el saldo ya consumido y respondería "existencia insuficiente" en vez de repetir el resultado original.
+    previous = _find_by_key(db, data.idempotency_key)
+    if previous:
+        db.rollback()
+        return _replay_or_conflict(db, previous, request_hash)
     if lot.status == "blocked":
         raise HTTPException(409, "No se puede transformar un lote bloqueado")
     if data.unit != lot.unit:

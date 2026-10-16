@@ -20,8 +20,6 @@ Contexto del evento:
 
 Documento: `.docs/00_marco_del_proyecto.md`. **Versión sincronizada con este resumen: v0.2 (2026-10-16).** Lo que no esté en el marco no está decidido.
 
-<!-- Versión previa (rama backend), conservada por la integración: -->
-Documento: `.docs/00_marco_del_proyecto.md`. **Versión sincronizada con este resumen: v0.1 (2026-10-15).** Lo que no esté en el marco no está decidido.
 
 ### Qué manda cada documento
 
@@ -40,9 +38,6 @@ Documento: `.docs/00_marco_del_proyecto.md`. **Versión sincronizada con este re
 - **Offline `[DECIDIDO]` en alcance:** solo recepción de lotes y lectura de lo ya cargado. Transformar y cambiar estados exigen conexión. La cola local guarda solo operaciones y una copia de lectura; el esquema real vive en el servidor. Sin Background Sync. Forma débil con lectura desde caché `[DECIDIDO]` (reintentos, indicador de pendientes, regla de uso: no recargar sin conexión; texto de interfaz "con conectividad limitada"). La forma "fuerte" sigue `[EN VALIDACIÓN]`: el resultado de Graffe (marco, Anexo A) falló el punto 1 y dejó pendiente el 5. La cola es un módulo único `offline/`; solo recepción escribe en ella. Si falla la idempotencia, se corrige primero en el servidor: también protege el inventario.
 - **Propuestos, solo si el usuario lo pide:** ficha pública como plantilla servida por el backend (la SPA no la renderiza; `/api` y `/publico` fuera del fallback del service worker) y contrato de idempotencia con hash (misma clave y otro contenido, 422; claves sin caducidad). Hoy el árbol de arriba aún lista `features/ficha-publica/`.
 
-<!-- Versión previa (rama backend), conservada por la integración: -->
-- **Límites declarados:** una transformación consume un solo lote de entrada (si se mezclan, se conservan todos los orígenes); unidad única kg; datos sintéticos.
-- **Offline `[DECIDIDO]` en alcance:** solo recepción de lotes y lectura de lo ya cargado. Transformar y cambiar estados exigen conexión. La cola local guarda solo operaciones y una copia de lectura; el esquema real vive en el servidor. Sin Background Sync. La forma "fuerte" (sin red total) sigue `[EN VALIDACIÓN]` con el criterio del marco, Anexo A; si falla, forma débil (reintentos, tiempos límite, indicador de pendientes) sobre la misma cola idempotente. Si falla la idempotencia, se corrige primero en el servidor: también protege el inventario.
 - **Esquema de datos `[ABIERTO]`:** no crear modelos ni migraciones definitivas sin acuerdo; proponer. Puntos pendientes en marco §8 (fuente única de costos, motivo en auditoría, propagación del bloqueo a derivados, compra del cacao fuera del costo de etapa).
 - **Reglas de corte `[PROPUESTO]`:** hora 14 sin núcleo demostrable, offline pasa a forma débil y la analítica a tres consultas fijas; hora 21 congelar funcionalidades; hora 23 solo el integrador toca la rama principal.
 - **Responsables:** matriz en marco §10 (`[PROPUESTO]`). El agente no asigna ni reasigna trabajo.
@@ -163,7 +158,7 @@ Crear módulos y directorios solo cuando se vayan a usar de inmediato. No dejar 
 |---|---|---|
 | `make setup` | Instala dependencias de backend y frontend | Instalación limpia en pocos comandos; por definir |
 | `make run` | Construye el frontend y arranca el backend en un solo proceso | Puerto por definir |
-| `make test` | Ejecuta pytest (unit, integration, regresión) | Debe pasar antes de cada commit |
+| `make test` | Corre `scripts/verificar.sh`: pytest desde `backend/` (recoge `backend/tests/` y `tests/backend/`) y, si hay `node_modules`, typecheck y lint del frontend | Revisión local rápida. La autoridad es el CI (`.github/workflows/ci.yml`: migraciones y pruebas sobre PostgreSQL, typecheck, lint y build). Sin `make` (Windows), `sh scripts/verificar.sh` |
 | `make perf` | Mide trazabilidad sobre 100 registros sintéticos | Declarar método y equipo; objetivo <= 3 s |
 | `make seed` | Carga CAC001–003 y usuarios demo | Ver Dangerous Commands |
 | `make backup` | Respalda la base a `datos/respaldo/` con checksum (método por definir) | Idempotente |
@@ -216,6 +211,7 @@ When assigned a task:
 - `AGENTS.md` es documentación versionada del proyecto, no una nota local desechable.
 - Todo cambio grande en arquitectura, auth, seguridad, base de datos, dependencias, rutas o flujo de trabajo debe revisar este archivo y los docs relacionados, y actualizarlos en el mismo commit.
 - Si tras la revisión no se necesita ninguna edición, registrar esa decisión en el resumen del cambio.
+- **Brief y reporte por tarea:** copiar `documentos/tareas/_plantilla.md` a `T-NNN_tema.md`; el reporte alimenta la bitácora de IA y la matriz de `ENTREGA.md`.
 - **Bitácora de IA obligatoria:** cada vez que se genere un componente relevante, añadir una entrada a `documentos/E08_IA_y_fuentes.md` con: herramienta, propósito, archivos afectados y qué debe revisar un humano.
 - **Declaración de terceros:** toda librería y plantilla se declara con fuente y licencia en `documentos/E08_IA_y_fuentes.md`.
 - **Precedencia de documentos:** `.docs/reto_cacao.md` (normativo) > `.docs/00_marco_del_proyecto.md` (decisiones del equipo) > este archivo > `documentos/` > comentarios en código.
@@ -244,6 +240,10 @@ Document known landmines here. Be specific: name the files, describe the behavio
 - **[Incidencia hora 12]**: bloquear CAC001, identificar origen y explicar cantidades afectadas, sin borrar historial. Requiere tarjeta de cambio (`documentos/cambios/CC-001`), ajuste de un criterio de aceptación y prueba de regresión en `tests/backend/regresion/`. Bloquear es un cambio de estado auditado, nunca un borrado.
 - **[CSV]**: el CSV (RF11) y los cálculos autoritativos se generan en el servidor, solo para administrador.
 - **[Datos sintéticos]**: solo datos sintéticos. Sin contraseñas, claves ni información privada en el repo ni en herramientas de IA.
+- **[Sincronía de espejos]**: lo que vive en dos lados cambia en los dos. (1) Estados y roles: la API usa `pending/released/blocked` y `admin/operator`; `src/frontend/src/shared/etiquetas.ts` es el único lugar que los traduce a `pendiente/liberado/bloqueado` y a etiquetas (desviación de Domain Language, ya anotada ahí). (2) Umbral de merma y costo: sale de `settings` en `backend/app/config.py` y de la respuesta de la API; el frontend no repite 15 ni 25.000. (3) Nombre de la URL de la API: `VITE_API_URL` en `.env.example`, `vite-env.d.ts`, `axiosClient.ts` y `backend/docker-compose.yml`.
+- **[Idempotencia de transformaciones]**: `services/transformation.py::create_transformation` busca la clave dos veces: antes y después de bloquear el lote con `with_for_update()`. Sin la segunda, un reenvío concurrente que esperó el bloqueo ve el saldo ya consumido y responde "existencia insuficiente" en vez de repetir el resultado original (`tests/test_endurecimiento.py`). En SQLite el bloqueo no existe; la concurrencia real se prueba con `test_concurrencia_postgres.py` y `TEST_POSTGRES_URL`.
+- **[CSV]** (ampliación): `api/exports.py::_safe_text` antepone `'` a texto que empieza con `=`, `+`, `-`, `@`, tabulación o retorno. Todo campo de texto nuevo del CSV pasa por ahí; los numéricos no.
+- **[Configuración]**: `ENVIRONMENT=production` rechaza arrancar con la `SECRET_KEY` por defecto. `SEED_DEMO_DATA` sigue en `true` por defecto porque el demo depende de CAC001–003; en un despliegue real se apaga. El sembrado deja un movimiento `reception` por lote para que el libro cuadre con el disponible.
 - **[Dependencias]**: `[RESUELTO]` FastAPI y PostgreSQL ya están `[DECIDIDO]` en el marco (SQLite descartado). Sigue vigente: no instalar dependencias sin aprobación, versión exacta y declaración en E08 (ver Manual Actions).
 
 Esta sección es un documento vivo. Agregar una entrada cada vez que se descubre un gotcha. Nunca borrar: marcar como `[RESUELTO]` si ya no aplica.

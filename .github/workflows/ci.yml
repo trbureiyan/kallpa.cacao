@@ -1,0 +1,77 @@
+name: ci
+
+on:
+  push:
+    branches: [master, integracion]
+  pull_request:
+    branches: [master, integracion]
+
+# Token de solo lectura: el CI no necesita escribir en el repositorio.
+permissions:
+  contents: read
+
+# Un push nuevo a la misma rama cancela la corrida anterior.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      # PostgreSQL real: activa la prueba de consumos concurrentes (sobreconsumo = falla critica del reto)
+      # y permite aplicar las migraciones sobre el motor que usa el proyecto.
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: cacao_test
+          POSTGRES_USER: cacao
+          POSTGRES_PASSWORD: cacao_ci_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cacao -d cacao_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      TEST_POSTGRES_URL: postgresql+psycopg://cacao:cacao_ci_only@localhost:5432/cacao_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Migraciones sobre PostgreSQL
+        env:
+          DATABASE_URL: postgresql+psycopg://cacao:cacao_ci_only@localhost:5432/cacao_test
+        run: python -m alembic upgrade head
+      - name: Pruebas (backend/tests y tests/backend)
+        run: python -m pytest -q -ra
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: src/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: src/frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsc -b
+      - run: pnpm lint
+      - run: pnpm build

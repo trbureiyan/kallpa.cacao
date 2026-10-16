@@ -1,8 +1,6 @@
-import sys
 import unittest
 from datetime import datetime, timezone
 from decimal import Decimal
-from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy import create_engine, func
@@ -10,12 +8,10 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 from fastapi import HTTPException
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "backend"))
-
-from app import models  # noqa: E402
-from app.api.receptions import create_reception  # noqa: E402
-from app.database import Base  # noqa: E402
-from app.schemas.api import ReceptionCreate  # noqa: E402
+from app import models
+from app.api.receptions import create_reception
+from app.database import Base
+from app.schemas.api import ReceptionCreate
 
 
 class OfflineReceptionTests(unittest.TestCase):
