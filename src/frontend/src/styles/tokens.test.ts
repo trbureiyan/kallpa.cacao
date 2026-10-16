@@ -46,7 +46,7 @@ describe('tokens de marca: contraste WCAG 2.x', () => {
     expect(contraste(fg, bg)).toBeGreaterThanOrEqual(minimo)
   })
 
-  it('el acento sobre su fondo suave falla, por eso existe acento-suave-texto', () => {
-    expect(contraste('--color-acento', '--color-acento-suave')).toBeLessThan(4.5)
+  it('el texto sobre fondo suave de acento cumple WCAG AA', () => {
+    expect(contraste('--color-acento-suave-texto', '--color-acento-suave')).toBeGreaterThanOrEqual(4.5)
   })
 })

@@ -1,30 +1,49 @@
-/* KallpaCacao — tokens de diseño v0.1
- * Fuente de verdad visual. Pegar en src/styles/tokens.css e importar una sola vez.
- * Los ratios de contraste de abajo fueron calculados con la fórmula WCAG 2.x
- * (script en documentos/01_branding_kallpacacao.md, sección 6), no estimados.
+/* KallpaCacao — tokens de diseño v0.2
+ * Paleta actualizada por decisión del equipo:
+ * - Theme: Emerald Green (#059669)
+ * - Cocoa Brown (#78350F)
+ * - Neutral Slate Gray (#F8FAFC)
+ * - Alert Amber (#D97706)
+ * - Alert Red (#DC2626)
+ *
+ * Los ratios de contraste de abajo fueron calculados con la fórmula WCAG 2.x.
  * Regla: los componentes consumen SOLO tokens semánticos (--color-*), nunca primitivos.
  */
 /* Fuentes: autoalojadas con @fontsource, importadas en main.tsx. Sin CDN. */
 
 :root {
-  /* ---------- 1. PRIMITIVOS ---------- */
-  --p-papel-50:  #FFFBF4;
-  --p-papel-100: #F6F0E6;
-  --p-papel-200: #EDE4D5;
-  --p-cacao-950: #2B1B14;
-  --p-cacao-700: #5A463B;
-  --p-cacao-600: #6B574B;
-  --p-cacao-400: #8C7A6B;
-  --p-mazorca-600: #B8420F;
-  --p-mazorca-700: #9A3509;
-  --p-mazorca-100: #F6DCCB;
-  --p-ambar-700: #8A5A00;
-  --p-ambar-100: #F8E7BF;
-  --p-hoja-700:  #2F6B3A;
-  --p-hoja-100:  #DDEBD9;
-  --p-ladrillo-700: #A62B1F;
-  --p-ladrillo-100: #F4D6D0;
-  --p-red-700:   #1F5F7A;
+  /* ---------- 1. PRIMITIVOS (Nueva paleta del equipo) ---------- */
+  /* Neutral Slate Gray (#F8FAFC) */
+  --p-slate-50:  #F8FAFC;
+  --p-slate-100: #F1F5F9;
+  --p-slate-200: #E2E8F0;
+  --p-slate-400: #94A3B8;
+  --p-slate-500: #64748B;
+  --p-blanco:    #FFFFFF;
+
+  /* Cocoa Brown (#78350F) */
+  --p-cacao-950: #451A03;
+  --p-cacao-800: #78350F;
+  --p-cacao-700: #92400E;
+
+  /* Emerald Green (#059669) - Theme principal */
+  --p-emerald-600: #059669;
+  --p-emerald-700: #047857;
+  --p-emerald-800: #065F46;
+  --p-emerald-100: #D1FAE5;
+
+  /* Alert Amber (#D97706) */
+  --p-amber-600: #D97706;
+  --p-amber-700: #B45309;
+  --p-amber-100: #FEF3C7;
+
+  /* Alert Red (#DC2626) */
+  --p-red-600: #DC2626;
+  --p-red-700: #B91C1C;
+  --p-red-100: #FEE2E2;
+
+  /* Conectividad (diferenciador) */
+  --p-teal-700: #0F766E;
 
   /* escala de espaciado (base 4 px) */
   --space-1: 0.25rem;
@@ -40,7 +59,6 @@
   --radius-md: 4px;
   --radius-lg: 8px;
   --radius-pill: 999px;
-
 }
 
 /* Semánticos, fuentes y escala de texto: Tailwind v4 genera bg-fondo, text-texto, font-mono...
@@ -58,41 +76,41 @@
   --text-2xl: 2rem;
   --text-3xl: 2.75rem;
 
-  /* superficies */
-  --color-fondo:        var(--p-papel-100);
-  --color-superficie:   var(--p-papel-50);
-  --color-hundido:      var(--p-papel-200);   /* campos de formulario, filas alternas */
+  /* superficies (Neutral Slate Gray) */
+  --color-fondo:        var(--p-slate-50);    /* #F8FAFC - Neutral Slate Gray */
+  --color-superficie:   var(--p-blanco);      /* #FFFFFF */
+  --color-hundido:      var(--p-slate-100);   /* #F1F5F9 - campos de formulario, filas alternas */
 
-  /* texto */
-  --color-texto:        var(--p-cacao-950);   /* 14.59:1 sobre fondo */
-  --color-texto-suave:  var(--p-cacao-700);   /*  7.80:1 sobre fondo */
-  --color-texto-tenue:  var(--p-cacao-600);   /*  6.00:1 sobre fondo; mínimo permitido para texto */
-  --color-texto-sobre-acento: var(--p-papel-100); /* 4.84:1 sobre acento */
+  /* texto (Cocoa Brown) */
+  --color-texto:        var(--p-cacao-950);   /* #451A03 - 14.31:1 sobre fondo */
+  --color-texto-suave:  var(--p-cacao-800);   /* #78350F - Cocoa Brown (8.67:1 sobre fondo) */
+  --color-texto-tenue:  var(--p-cacao-700);   /* #92400E - 6.78:1 sobre fondo */
+  --color-texto-sobre-acento: var(--p-blanco);/* 5.48:1 sobre acento */
 
   /* bordes */
-  --color-borde:        var(--p-papel-200);   /* decorativo, no porta información */
-  --color-borde-fuerte: var(--p-cacao-400);   /* 3.62:1 fondo, 3.98:1 superficie: límite de campos (UI >= 3:1) */
+  --color-borde:        var(--p-slate-200);   /* #E2E8F0 - decorativo */
+  --color-borde-fuerte: var(--p-slate-500);   /* #64748B - 4.55:1 fondo: límite de campos (UI >= 3:1) */
 
-  /* acento y foco */
-  --color-acento:        var(--p-mazorca-600); /* 4.84:1 fondo, 5.32:1 superficie */
-  --color-acento-hover:  var(--p-mazorca-700); /* 7.05:1 con texto claro encima */
-  --color-acento-suave:  var(--p-mazorca-100);
-  --color-acento-suave-texto: var(--p-mazorca-700); /* 5.55:1 sobre acento-suave. NO usar --color-acento aquí: 4.19:1 falla */
-  --color-foco:          var(--p-mazorca-600); /* 4.84:1 fondo; anillo de 2 px + offset 2 px */
+  /* acento y foco (Emerald Green) */
+  --color-acento:        var(--p-emerald-700); /* #047857 - 5.24:1 fondo, 5.48:1 con texto blanco */
+  --color-acento-hover:  var(--p-emerald-800); /* #065F46 - 7.68:1 con texto blanco */
+  --color-acento-suave:  var(--p-emerald-100); /* #D1FAE5 */
+  --color-acento-suave-texto: var(--p-emerald-800); /* #065F46 - 6.78:1 sobre acento-suave */
+  --color-foco:          var(--p-emerald-600); /* #059669 - Emerald Green (3.60:1 fondo UI >= 3:1) */
 
   /* estados del producto (RF09) */
-  --color-pendiente:        var(--p-ambar-700);     /* 5.23:1 fondo */
-  --color-pendiente-fondo:  var(--p-ambar-100);     /* 4.85:1 con su texto */
-  --color-liberado:         var(--p-hoja-700);      /* 5.64:1 fondo */
-  --color-liberado-fondo:   var(--p-hoja-100);      /* 5.16:1 con su texto */
-  --color-bloqueado:        var(--p-ladrillo-700);  /* 6.20:1 fondo */
-  --color-bloqueado-fondo:  var(--p-ladrillo-100);  /* 5.15:1 con su texto */
+  --color-pendiente:        var(--p-amber-700);     /* #B45309 - Alert Amber calibrado (4.51:1 con su fondo) */
+  --color-pendiente-fondo:  var(--p-amber-100);     /* #FEF3C7 */
+  --color-liberado:         var(--p-emerald-800);   /* #065F46 - Emerald Green (6.78:1 con su fondo) */
+  --color-liberado-fondo:   var(--p-emerald-100);   /* #D1FAE5 */
+  --color-bloqueado:        var(--p-red-700);       /* #B91C1C - Alert Red calibrado (5.30:1 con su fondo) */
+  --color-bloqueado-fondo:  var(--p-red-100);       /* #FEE2E2 */
 
   /* conectividad (diferenciador) */
-  --color-sync-pendiente: var(--p-ambar-700);
-  --color-sync-ok:        var(--p-hoja-700);
-  --color-sync-sin-red:   var(--p-red-700);         /* 6.22:1 fondo */
-  --color-sync-error:     var(--p-ladrillo-700);
+  --color-sync-pendiente: var(--p-amber-700);
+  --color-sync-ok:        var(--p-emerald-700);
+  --color-sync-sin-red:   var(--p-teal-700);        /* #0F766E - 5.23:1 fondo */
+  --color-sync-error:     var(--p-red-700);
 }
 
 :root {
@@ -108,7 +126,7 @@
   --foco-anillo: 2px solid var(--color-foco);
   --foco-offset: 2px;
 
-  --sombra-tarjeta: 0 1px 0 rgb(43 27 20 / 0.08);
+  --sombra-tarjeta: 0 1px 0 rgb(69 26 3 / 0.08);
 }
 
 /* Foco visible global: requisito de E06 (navegación por teclado) */

@@ -16,8 +16,8 @@ export default defineConfig({
         name: 'KallpaCacao - Trazabilidad',
         short_name: 'KallpaCacao',
         description: 'PWA Offline-First para captura de cacao en campo',
-        theme_color: '#F6F0E6',
-        background_color: '#F6F0E6',
+        theme_color: '#F8FAFC',
+        background_color: '#F8FAFC',
         display: 'standalone',
         icons: [
           {
