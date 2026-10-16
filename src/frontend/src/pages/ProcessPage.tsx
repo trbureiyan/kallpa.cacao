@@ -1,14 +1,11 @@
 import { useState } from "react"
-import { useLiveQuery } from "dexie-react-hooks"
 import { Badge, PageHead } from "@/components/shared"
-import { db, type ProcesoOffline } from "@/db/dexieDb"
-import { alertasDeProceso, camposFaltantes } from "@/features/alertas/reglas"
-import { indicadoresDeProceso } from "@/features/economia/reglas"
+import { useAuth } from "@/context/AuthContext"
 import { IndicadoresEconomicos } from "@/features/economia/IndicadoresEconomicos"
-import { disponibleKg } from "@/features/inventario/api/inventarioDb"
+import { useFilasInventario } from "@/features/inventario/useFilasInventario"
 import { ProcessForm, type Borrador } from "@/features/transformacion/components/ProcessForm"
 import { ShrinkageAlertCard } from "@/features/transformacion/components/ShrinkageAlertCard.tsx"
-import { esMermaCritica } from "@/utils/calculations"
+import { useProcesos } from "@/features/transformacion/useProcesos"
 import { formatearKg, formatearPct } from "@/utils/formato"
 
 const BORRADOR_VACIO: Borrador = { inputQty: NaN, outputQty: NaN }
@@ -16,15 +13,11 @@ const BORRADOR_VACIO: Borrador = { inputQty: NaN, outputQty: NaN }
 export function ProcessPage() {
   const [borrador, setBorrador] = useState<Borrador>(BORRADOR_VACIO)
 
-  const lotes = useLiveQuery(
-    async () => {
-      const todos = await db.recepciones.toArray()
-      return Promise.all(todos.map(async (l) => ({ code: l.lotCode, disponibleKg: await disponibleKg(l.lotCode) })))
-    },
-    [],
-    [],
-  )
-  const procesosHistorial = useLiveQuery(() => db.procesos.reverse().toArray(), [], [])
+  const { modo, rol } = useAuth()
+  const { filas, recargar: recargarInventario, error: errorInventario } = useFilasInventario(modo, rol)
+  const { procesos: procesosHistorial, error: errorHistorial, recargar: recargarHistorial } = useProcesos(modo, rol)
+  // un lote bloqueado no se ofrece para transformar
+  const lotes = filas.filter((f) => f.estado !== "BLOQUEADO").map((f) => ({ code: f.codigo, disponibleKg: f.disponibleKg }))
 
   const totalDisponible = lotes.reduce((acc, l) => acc + l.disponibleKg, 0)
 
@@ -42,7 +35,11 @@ export function ProcessPage() {
           key={lotes.map((l) => l.code).join()}
           lotes={lotes}
           onBorrador={setBorrador}
-          onSuccess={() => setBorrador(BORRADOR_VACIO)}
+          onSuccess={() => {
+            setBorrador(BORRADOR_VACIO)
+            recargarInventario()
+            recargarHistorial()
+          }}
         />
 
         <aside className="space-y-4">
@@ -58,6 +55,15 @@ export function ProcessPage() {
           </div>
         </aside>
       </div>
+
+      {(errorInventario || errorHistorial) && (
+        <div className="validation danger mt-6" role="alert">
+          <div>
+            <strong>No se pudo cargar la información</strong>
+            <span>{errorInventario ?? errorHistorial}</span>
+          </div>
+        </div>
+      )}
 
       <section className="card mt-6">
         <div className="card-head">
@@ -89,8 +95,8 @@ export function ProcessPage() {
                   </td>
                 </tr>
               ) : (
-                procesosHistorial.map((p: ProcesoOffline) => (
-                  <tr key={p.idLocal ?? p.lotCode}>
+                procesosHistorial.map((p) => (
+                  <tr key={p.clave}>
                     <td><strong>{p.lotCode}</strong></td>
                     <td>{p.stage}</td>
                     <td>{formatearKg(p.inputQty)}</td>
@@ -99,18 +105,14 @@ export function ProcessPage() {
                       {p.shrinkagePercent === null ? (
                         "—"
                       ) : (
-                        <span className={`badge ${esMermaCritica(p.shrinkagePercent) ? "badge-red" : "badge-green"}`}>
+                        <span className={`badge ${p.alertas.some((a) => a.tipo === "merma") ? "badge-red" : "badge-green"}`}>
                           {formatearPct(p.shrinkagePercent)}
                         </span>
                       )}
                     </td>
                     <td>{p.responsible}</td>
                     <td>
-                      {alertasDeProceso({
-                        mermaPct: p.shrinkagePercent,
-                        costoUnitario: indicadoresDeProceso(p).costoUnitario,
-                        camposFaltantes: camposFaltantes(p),
-                      }).map((a) => (
+                      {p.alertas.map((a) => (
                         <span key={a.tipo} className="badge badge-amber" title={`${a.regla}. ${a.causa}`}>
                           {a.tipo}
                         </span>

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { ErrorDominio } from '@/utils/errores'
 import { formatearKg, parsearNumero } from '@/utils/formato'
+import { registrarProcesoApi } from '../api/procesoApi'
 import { registrarProcesoLocal } from '../api/procesoDb'
 
 export interface Borrador {
@@ -41,7 +42,7 @@ function aBorrador(v: typeof VACIO): Borrador {
 }
 
 export function ProcessForm({ lotes, onBorrador, onSuccess }: ProcessFormProps) {
-  const { nombreUsuario } = useAuth()
+  const { nombreUsuario, modo, rol } = useAuth()
   const [v, setV] = useState({ ...VACIO, lotCode: lotes[0]?.code ?? '' })
   // Una clave por intento: reenviar el mismo formulario nunca consume dos veces
   const [clave, setClave] = useState(() => crypto.randomUUID())
@@ -65,7 +66,7 @@ export function ProcessForm({ lotes, onBorrador, onSuccess }: ProcessFormProps) 
     setLoading(true)
     try {
       const b = aBorrador(v)
-      await registrarProcesoLocal({
+      const datos = {
         lotCode,
         stage: v.stage,
         inputQty: b.inputQty,
@@ -77,7 +78,9 @@ export function ProcessForm({ lotes, onBorrador, onSuccess }: ProcessFormProps) 
         incidencias: v.incidencias,
         notes: v.notes,
         claveIdempotencia: clave,
-      })
+      }
+      if (modo === 'api' && rol) await registrarProcesoApi(rol, datos)
+      else await registrarProcesoLocal(datos)
       setOk(true)
       setClave(crypto.randomUUID())
       setV({ ...VACIO, lotCode })
