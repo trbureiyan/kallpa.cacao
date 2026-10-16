@@ -144,3 +144,10 @@ Rutas incorporadas: `GET/POST/PATCH /api/v1/users` (solo administrador), `GET /a
 `LOSS_ALERT_THRESHOLD_PERCENT` configura la alerta de merma (15 por defecto). La alerta de costo está desactivada salvo que se configure `COST_ALERT_THRESHOLD_COP_PER_KG`.
 
 La ficha pública también cuenta con `GET /api/v1/public/products/{code}/traceability`, que devuelve una línea temporal con lista permitida de origen, etapas, cantidades y fechas; omite datos privados y financieros. La respuesta de `POST /api/v1/transformations` incluye porcentaje y alerta de merma calculados con la misma configuración del endpoint `/alerts`.
+
+
+## Reglas y configuracion de alertas
+
+`GET /api/v1/alerts` calcula las alertas en el backend y devuelve `type`, `entity`, `rule` y `cause`; el frontend solo las presenta. `LOSS_ALERT_THRESHOLD_PERCENT` controla la merma (15 por defecto). `DELAY_ALERT_DAYS` es un entero configurable (7 por defecto): se alerta si el lote tiene existencia positiva, no esta bloqueado y supera ese tiempo desde la ultima transformacion; sin transformaciones se usa la recepcion. En lotes sinteticos heredados sin fila de recepcion, se usa la fecha del lote.
+
+Una etapa genera `registro_incompleto` si no tiene responsable o no tiene ningun `CostEntry` de categoria `processing` asociado. Un costo registrado de COP 0 cuenta como presente; la ausencia del registro genera la alerta. Las alertas por costo siguen opcionales mediante `COST_ALERT_THRESHOLD_COP_PER_KG`. En Docker Compose, los valores `LOSS_ALERT_THRESHOLD_PERCENT` y `DELAY_ALERT_DAYS` se toman del `.env` o de sus valores por defecto.

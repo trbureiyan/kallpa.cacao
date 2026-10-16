@@ -112,3 +112,20 @@ Ajuste de alcance de esta implementación: `src/frontend/src/db.ts` ahora guarda
 - Archivos afectados: `backend/app/api/public.py`, `backend/app/api/audit.py`, `backend/app/main.py`, `backend/tests/test_ficha_publica_auditoria_global.py`, `backend/README.md`, `documentos/E05_pruebas.md`, `ENTREGA.md`.
 - Revision humana requerida: revisar que la etiqueta `recepcion` y la cantidad de lote crudo coincidan con la interfaz; probar `GET /api/v1/public/products/{code}` para CAC001-CAC003 y `GET /api/v1/audit` con ambos roles contra la version desplegada.
 - Verificacion observada: `python -m pytest tests/test_ficha_publica_auditoria_global.py -q`: 2 aprobadas; suite completa `python -m pytest -q`: 20 aprobadas, 1 omitida y 1 advertencia deprecada de Starlette/TestClient. La prueba omitida requiere `TEST_POSTGRES_URL`; no se escribio en la base persistente.
+
+## Alertas por registro incompleto y retraso (2026-10-16)
+
+- Herramienta: ChatGPT (OpenAI), agente de codigo.
+- Proposito: calcular en el backend alertas de etapa sin responsable/costo de procesamiento y de lotes con existencia positiva sin actividad reciente, con limite de dias configurable.
+- Archivos afectados: `backend/app/services/alerts.py`, `backend/app/config.py`, `backend/.env.example`, `backend/docker-compose.yml`, `src/frontend/src/api.ts`, `backend/tests/test_alertas_incompletas_retrasos.py`, `backend/README.md`, `documentos/E03_diseno.md`, `documentos/E05_pruebas.md`, `ENTREGA.md`.
+- Criterios: `DELAY_ALERT_DAYS` vale 7 por defecto; se alerta estrictamente al superar los dias desde la ultima etapa (entrada o salida) o, si no existe, desde la recepcion. Se excluyen lotes bloqueados y sin saldo. Un registro processing de COP 0 se considera costo presente; la falta del registro se marca como incompleta. Los lotes legacy sin fila Reception usan `Lot.received_on`.
+- Revision humana requerida: confirmar que costo COP 0 debe contar como dato registrado y que la fecha de `Lot.received_on` es el fallback aceptable para CAC001-CAC003 legacy. Verificar alertas en UI y ensayar un valor `DELAY_ALERT_DAYS` distinto de 7 en Compose.
+- Verificacion observada: `python -m pytest -q` desde `backend/`: 24 aprobadas, 1 omitida y 1 advertencia deprecada de Starlette/TestClient; `npm run build` desde `src/frontend/` exitoso. La prueba omitida requiere `TEST_POSTGRES_URL`; no se modifico la base persistente.
+
+## Comandos Make para desarrollo (2026-10-16)
+
+- Herramienta: ChatGPT (OpenAI), agente de codigo.
+- Proposito: reemplazar objetivos vacios del Makefile por atajos para instalacion, Compose, pruebas y frontend, y hacer que las operaciones no implementadas fallen con una explicacion en vez de aparentar exito.
+- Archivos afectados: `Makefile`, `README.md`, este archivo.
+- Revision humana requerida: confirmar que los comandos setup/run coincidan con el entorno del equipo. `seed`, `backup`, `restore` y `perf` siguen pendientes; no se automatizo ninguna mutacion de datos ni se afirmo que existan esos procedimientos.
+- Verificacion observada: pendiente de ejecutar GNU Make en el entorno del equipo; no se ejecutaron instalaciones, servicios, sembrado, respaldo, restauracion ni pruebas como parte de este cambio.

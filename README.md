@@ -54,8 +54,22 @@ python -m pytest -q
 
 Las pruebas ordinarias usan una base SQLite temporal. La prueba de concurrencia PostgreSQL requiere `TEST_POSTGRES_URL` apuntando a una base de ensayo aislada cuyo nombre incluya `test`; no la apuntes a la base de demostración.
 
+## Comandos con Make
+
+Desde la raíz del repositorio, con GNU Make instalado:
+
+```sh
+make setup           # instala dependencias Python y Node
+make run             # inicia PostgreSQL, API y PWA con Docker Compose
+make test            # ejecuta las pruebas del backend
+make frontend-dev    # inicia Vite para desarrollo
+make frontend-build  # compila y verifica TypeScript/PWA
+```
+
+`make seed`, `make backup`, `make restore` y `make perf` fallan explícitamente: no hay un sembrado, respaldo con checksum ni prueba de rendimiento independientes implementados. La restauración puede reemplazar datos; siga el procedimiento manual de `backend/README.md` solo en una base aislada.
+
 ## Alcance y estado de verificación
 
 La captura offline se limita a recepciones. Transformaciones y cambios de estado requieren conexión. No hay ciclo de ventas implementado. El build y pruebas automatizadas no sustituyen los recorridos manuales RF01–RF12, la validación móvil ni la prueba de restauración; esos resultados se registran en [E05](documentos/E05_pruebas.md) y [ENTREGA](ENTREGA.md).
 
-El `Makefile` existe, pero sus objetivos no tienen recetas todavía; usa los comandos anteriores.
+Los comandos Make son atajos para los flujos de desarrollo documentados arriba. Si GNU Make no está instalado, ejecuta los comandos directos de las secciones anteriores.
