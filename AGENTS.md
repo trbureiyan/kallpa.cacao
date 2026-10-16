@@ -92,6 +92,8 @@ kallpa.cacao/
 
 Crear módulos y directorios solo cuando se vayan a usar de inmediato. No dejar directorios vacíos sin propósito. El árbol de arriba es el destino; no todo existe todavía. El scaffolding actual está vacío (stubs de 0 bytes), así que antes de proponer nada inspeccionar `src/` y respetar lo que haya agregado el equipo.
 
+`src/frontend/` is the canonical frontend and the Docker Compose build context. The root `frontend/` folder is a retained legacy copy; do not develop there.
+
 **Layer architecture:** `Request → router (require_role) → service → rules (funciones puras) / models → DB`. El frontend solo muestra: consume la API y nunca decide.
 
 ---

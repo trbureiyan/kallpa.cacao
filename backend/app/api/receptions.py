@@ -1,5 +1,6 @@
 from datetime import timezone
 from decimal import Decimal
+from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -44,12 +45,25 @@ def _same_reception(existing: Reception, data: ReceptionCreate) -> bool:
             and persisted_time == data.received_at.astimezone(timezone.utc))
 
 
+def _assign_lot_code(db: Session, lot: Lot, idempotency_key) -> str:
+    # [DECISION] El ID persistido produce un codigo estable sin colision entre capturas offline de distintos dispositivos.
+    code = f"CAC{lot.id:03d}"
+    if db.query(Lot.id).filter(Lot.code == code, Lot.id != lot.id).first():
+        code = f"{code}-{idempotency_key.hex[:6].upper()}"
+    return code
+
+
 @router.post("/receptions", response_model=ReceptionOut, status_code=201)
 def create_reception(data: ReceptionCreate, db: Session = Depends(get_db), actor: User = Depends(operator_or_admin)):
-    existing = db.query(Reception).filter_by(idempotency_key=data.idempotency_key).first()
+    occurred_at = data.received_at
+    if occurred_at.tzinfo is None:
+        raise HTTPException(422, "received_at debe incluir zona horaria, por ejemplo Z")
+
+    idempotency_key = str(data.idempotency_key)
+    existing = db.query(Reception).filter_by(idempotency_key=idempotency_key).first()
     if existing:
         lot = db.get(Lot, existing.lot_id)
-        if not lot or lot.code != data.lot_code or not _same_reception(existing, data):
+        if not lot or not _same_reception(existing, data):
             raise HTTPException(409, "La clave de idempotencia ya fue usada con otra recepción")
         return _reception_result(existing, lot)
 
@@ -57,17 +71,15 @@ def create_reception(data: ReceptionCreate, db: Session = Depends(get_db), actor
     if not farm:
         raise HTTPException(404, "Finca no encontrada")
     producer = db.get(Producer, farm.producer_id)
-    occurred_at = data.received_at
-    if occurred_at.tzinfo is None:
-        raise HTTPException(422, "received_at debe incluir zona horaria, por ejemplo Z")
-
     try:
-        lot = Lot(code=data.lot_code, producer_id=producer.id, farm_id=farm.id, origin=farm.region,
+        lot = Lot(code=f"TMP{uuid4().hex}", producer_id=producer.id, farm_id=farm.id, origin=farm.region,
                   received_on=occurred_at.date(), received_quantity=data.quantity_kg, unit="kg",
                   available_quantity=data.quantity_kg, consumed_quantity=Decimal("0"), status="pending")
         db.add(lot)
         db.flush()
-        reception = Reception(idempotency_key=data.idempotency_key, lot_id=lot.id, farm_id=farm.id,
+        lot.code = _assign_lot_code(db, lot, data.idempotency_key)
+        db.flush()
+        reception = Reception(idempotency_key=idempotency_key, lot_id=lot.id, farm_id=farm.id,
                               received_at=occurred_at.astimezone(timezone.utc), quantity_kg=data.quantity_kg,
                               purchase_total_cop=data.purchase_total_cop, quality_notes=data.quality_notes)
         db.add(reception)
@@ -87,10 +99,10 @@ def create_reception(data: ReceptionCreate, db: Session = Depends(get_db), actor
         return _reception_result(reception, lot)
     except IntegrityError:
         db.rollback()
-        existing = db.query(Reception).filter_by(idempotency_key=data.idempotency_key).first()
+        existing = db.query(Reception).filter_by(idempotency_key=idempotency_key).first()
         if existing:
             lot = db.get(Lot, existing.lot_id)
-            if lot and lot.code == data.lot_code and _same_reception(existing, data):
+            if lot and _same_reception(existing, data):
                 return _reception_result(existing, lot)
         raise HTTPException(409, "Código de lote duplicado o recepción conflictiva")
     except Exception:
