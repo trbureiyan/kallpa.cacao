@@ -5,7 +5,7 @@ import { DataTable, PageHead } from "@/components/shared"
 import { useAuth } from "@/context/AuthContext"
 import { ModalCambioEstado } from "@/features/estados/components/ModalCambioEstado"
 import { useFilasInventario } from "@/features/inventario/useFilasInventario"
-import { filtrarFilas, generarCsv } from "@/features/reportes/csv"
+import { describirFiltros, filtrarFilas, generarCsv, prepararArchivoCsv } from "@/features/reportes/csv"
 import { descargarCsvApi } from "@/features/reportes/exportApi"
 import type { EstadoLote } from "@/types/app"
 import { ahoraISO } from "@/utils/clock"
@@ -24,6 +24,8 @@ export function InventoryPage() {
 
   const { filas: todas, cargando, error, recargar, economia } = useFilasInventario(modo, rol)
   const [errorExport, setErrorExport] = useState<string | null>(null)
+  const [exportando, setExportando] = useState(false)
+  const [okExport, setOkExport] = useState<string | null>(null)
 
   const origenes = [...new Set(todas.map((f) => f.origen))].sort()
   const filas = filtrarFilas(todas, { origen: origenFiltro || undefined, estado: estadoFiltro || undefined }).filter((f) =>
@@ -35,23 +37,33 @@ export function InventoryPage() {
   const costoPromedio = conCosto.length ? conCosto.reduce((a, f) => a + (f.costoUnitario ?? 0), 0) / conCosto.length : null
   const valorStock = conCosto.reduce((a, f) => a + f.disponibleKg * (f.costoUnitario ?? 0), 0)
 
+  const filtrosExport = { origen: origenFiltro || undefined, estado: estadoFiltro || undefined }
+
   const exportarCSV = async () => {
     setErrorExport(null)
+    setOkExport(null)
+    setExportando(true)
     try {
       // en modo API el CSV es el del servidor; en modo local se arma con las filas de pantalla
       const texto =
         modo === "api"
           ? await descargarCsvApi({ origen: origenFiltro || undefined, estado: estadoFiltro || undefined })
           : generarCsv(filas)
-      const blob = new Blob([texto], { type: "text/csv;charset=utf-8" })
-      const url = URL.createObjectURL(blob)
+      const archivo = prepararArchivoCsv(texto, ahoraISO().slice(0, 10))
+      const url = URL.createObjectURL(archivo.blob)
       const link = document.createElement("a")
       link.href = url
-      link.download = `inventario_${ahoraISO().slice(0, 10)}.csv`
+      link.download = archivo.nombre
+      // en el documento y revocado después: revocar enseguida cancelaba la descarga en Safari y Firefox móvil
+      document.body.appendChild(link)
       link.click()
-      URL.revokeObjectURL(url)
+      link.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+      setOkExport(`Se descargó ${archivo.nombre} con ${archivo.filas} ${archivo.filas === 1 ? "lote" : "lotes"} (${describirFiltros(filtrosExport)}).`)
     } catch (e) {
-      setErrorExport(e instanceof Error ? e.message : "No se pudo exportar el CSV. Intente de nuevo.")
+      setErrorExport(e instanceof Error ? e.message : "No se exportó el CSV. Ocurrió un error inesperado y no se descargó nada. Intente de nuevo.")
+    } finally {
+      setExportando(false)
     }
   }
 
@@ -63,9 +75,12 @@ export function InventoryPage() {
         text="Existencias derivadas del libro de movimientos, con costos calculados."
         action={
           esAdmin ? (
-            <Button variant="secondary" onClick={() => void exportarCSV()}>
-              <Icon name="download" /> Exportar CSV
-            </Button>
+            <div className="flex flex-col gap-1">
+              <Button variant="secondary" onClick={() => void exportarCSV()} disabled={exportando} aria-describedby="filtros-export">
+                <Icon name="download" /> {exportando ? "Preparando CSV..." : "Exportar CSV"}
+              </Button>
+              <small id="filtros-export" className="text-sm text-texto-suave">Exporta: {describirFiltros(filtrosExport)}</small>
+            </div>
           ) : undefined
         }
       />
@@ -91,6 +106,13 @@ export function InventoryPage() {
           <small>{formatearKg(totalDisponible)} disponibles · valor = kg disponibles × costo unitario</small>
         </div>
       </div>
+
+      {okExport && (
+        <div className="validation success mt-6" role="status">
+          <Icon name="check" />
+          <span>{okExport}</span>
+        </div>
+      )}
 
       {(error || errorExport) && (
         <div className="validation danger mt-6" role="alert">

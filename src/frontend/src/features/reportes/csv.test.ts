@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { generarCsv, filtrarFilas } from './csv'
+import { describirFiltros, generarCsv, filtrarFilas, prepararArchivoCsv } from './csv'
 import { construirFilas } from './resumen'
 
 const fila = { codigo: 'CAC001', origen: 'Rivera', recibidoKg: 100, consumidoKg: 100, disponibleKg: 0, estado: 'PENDIENTE', costoUnitario: 20000 } as const
@@ -55,4 +55,24 @@ describe('construirFilas', () => {
     expect(a).toMatchObject({ codigo: 'CAC001', recibidoKg: 100, consumidoKg: 40, disponibleKg: 60, estado: 'LIBERADO', costoUnitario: 20000 })
     expect(b).toMatchObject({ codigo: 'CAC002', disponibleKg: 150, estado: 'PENDIENTE', costoUnitario: null })
   })
+})
+
+describe('prepararArchivoCsv', () => {
+  it('antepone un solo BOM aunque el servidor ya lo traiga', async () => {
+    const a = prepararArchivoCsv('\uFEFFidentificador,origen\r\nCAC001,Rivera', '2026-10-16')
+    const bytes = new Uint8Array(await a.blob.arrayBuffer())
+    expect([...bytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf])
+    expect([...bytes.slice(3, 6)]).not.toEqual([0xef, 0xbb, 0xbf])
+  })
+  it('nombre lotes_AAAA-MM-DD.csv y cuenta las filas sin el encabezado', () => {
+    const a = prepararArchivoCsv('a,b\r\n1,2\r\n3,4\r\n', '2026-10-16')
+    expect(a.nombre).toBe('lotes_2026-10-16.csv')
+    expect(a.filas).toBe(2)
+  })
+  it('solo encabezado son 0 filas', () => expect(prepararArchivoCsv('a,b', '2026-10-16').filas).toBe(0))
+})
+
+describe('describirFiltros', () => {
+  it('sin filtros', () => expect(describirFiltros({})).toBe('Todos los lotes'))
+  it('con origen y estado', () => expect(describirFiltros({ origen: 'Rivera', estado: 'BLOQUEADO' })).toBe('Origen: Rivera · Estado: Bloqueado'))
 })
