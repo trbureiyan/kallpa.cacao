@@ -70,7 +70,8 @@ def test_alembic_migra_costos_y_protege_auditoria(tmp_path):
         assert not {"output_quantity", "output_status", "status_reason", "costs_cop"} & transformation_columns
         assert "quantity" not in output_link_columns
         with engine.connect() as connection:
-            assert connection.scalar(text("select version_num from alembic_version")) == "e4219b1a7c30"
+            assert connection.scalar(text("select version_num from alembic_version")) == "b6d1ef3a9204"
+            assert "municipality" in {column["name"] for column in inspect(engine).get_columns("users")}
             product = connection.execute(text("select code, product_type, origin, received_quantity, available_quantity "
                                               "from lots where code='DRY-LEGACY'")).mappings().one()
             assert product["product_type"] == "processed_cocoa"
