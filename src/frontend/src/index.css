@@ -39,7 +39,7 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 .input-unit span { padding: var(--space-2) var(--space-3); display: flex; align-items: center; color: var(--color-texto-suave); border-left: 1.5px solid var(--color-borde-fuerte); font-size: var(--text-sm); font-weight: 600; }
 
 /* --- BADGES (DISTINTIVOS) --- */
-.badge { width: fit-content; padding: .38rem .55rem; display: inline-flex; align-items: center; gap: .32rem; border-radius: 999px; font-size: 0.75rem; line-height: 1; font-weight: 850; letter-spacing: .05em; var(--color-superficie)-space: nowrap; }
+.badge { width: fit-content; padding: .38rem .55rem; display: inline-flex; align-items: center; gap: .32rem; border-radius: 999px; font-size: 0.75rem; line-height: 1; font-weight: 850; letter-spacing: .05em; white-space: nowrap; }
 .badge-green { color: var(--color-acento-hover); background: var(--color-acento-suave); }
 .badge-amber { color: var(--color-pendiente); background: var(--color-pendiente-fondo); }
 .badge-red { color: var(--color-bloqueado); background: var(--color-bloqueado-fondo); }
@@ -208,9 +208,8 @@ td strong { color: var(--color-texto); }
 .audit-notice p { margin: .2rem 0 0; color: var(--color-texto-suave); font-size: 0.75rem; }
 
 /* --- VENTANAS MODALES --- */
-.modal-backdrop { position: fixed; inset: 0; z-index: 100; padding: 1rem; display: grid; place-items: center; background: var(--color-borde);  }
-.modal { width: min(34rem, 100%); overflow: hidden; border-radius: var(--radius-lg); background: var(--color-superficie);  animation: modal-in .2s ease-out; }
-@keyframes modal-in { from { transform: translateY(12px) scale(.98); opacity: 0; } }
+.modal { width: min(34rem, calc(100% - 2rem)); padding: 0; overflow: hidden; color: var(--color-texto); border: 1px solid var(--color-borde-fuerte); border-radius: var(--radius-lg); background: var(--color-superficie); }
+.modal::backdrop { background: rgb(43 27 20 / .6); }
 .modal-head { padding: 1.2rem 1.4rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--color-borde); }
 .modal-body { padding: 1.4rem; }
 .modal-actions { padding: 1rem 1.4rem; display: flex; justify-content: flex-end; gap: .5rem; border-top: 1px solid var(--color-borde); background: var(--color-fondo); }

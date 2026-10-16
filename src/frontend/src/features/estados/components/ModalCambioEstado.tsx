@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button, Field, Icon } from '@/components/ui'
 import { useAuth } from '@/context/AuthContext'
 import { ErrorDominio } from '@/utils/errores'
@@ -21,6 +21,15 @@ export function ModalCambioEstado({ lotes, loteInicial, nuevoInicial, onClose, o
   const [nuevo, setNuevo] = useState<Accion>(nuevoInicial)
   const [motivo, setMotivo] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const dialogo = useRef<HTMLDialogElement>(null)
+
+  // [DECISION] <dialog> nativo con showModal() — el navegador resuelve foco atrapado, Esc y fondo inerte sin código propio.
+  // close() al desmontar devuelve el foco al botón que abrió el modal.
+  useEffect(() => {
+    const d = dialogo.current
+    d?.showModal()
+    return () => d?.close()
+  }, [])
 
   const confirmar = async () => {
     setError(null)
@@ -37,11 +46,21 @@ export function ModalCambioEstado({ lotes, loteInicial, nuevoInicial, onClose, o
   }
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="titulo-cambio-estado">
+    <dialog
+      ref={dialogo}
+      className="modal"
+      aria-labelledby="titulo-cambio-estado"
+      onCancel={(e) => {
+        e.preventDefault()
+        onClose()
+      }}
+    >
+      <div>
         <div className="modal-head">
           <h3 id="titulo-cambio-estado" className="section-title">Gestionar estado del lote</h3>
-          <button onClick={onClose} className="icon-button" aria-label="Cerrar">✕</button>
+          <button type="button" onClick={onClose} className="icon-button" aria-label="Cerrar">
+            <Icon name="x" size={18} />
+          </button>
         </div>
 
         <div className="modal-body space-y-4">
@@ -84,6 +103,6 @@ export function ModalCambioEstado({ lotes, loteInicial, nuevoInicial, onClose, o
           </Button>
         </div>
       </div>
-    </div>
+    </dialog>
   )
 }
