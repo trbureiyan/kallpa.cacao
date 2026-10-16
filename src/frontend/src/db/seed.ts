@@ -1,87 +1,17 @@
-import { db } from '@/db/dexieDb';
+import { db } from '@/db/dexieDb'
+import { guardarRecepcionLocal } from '@/features/recepcion/api/recepcionDb'
 
-export async function seedDatabase() {
-  const count = await db.recepciones.count();
-  
-  // Solo inyectar si la base de datos está vacía
-  if (count === 0) {
-    console.log('🌱 Inyectando datos semilla en IndexedDB...');
+// Datos sintéticos del caso (reto, sección 5). Municipios son referencias, no afirmaciones sobre productores reales.
+const LOTES_BASE = [
+  { lotCode: 'CAC001', producer: 'Productor A', origin: 'Rivera', quantity: 100 },
+  { lotCode: 'CAC002', producer: 'Productor B', origin: 'Campoalegre', quantity: 150 },
+  { lotCode: 'CAC003', producer: 'Productor C', origin: 'Algeciras', quantity: 80 },
+]
 
-    await db.recepciones.bulkAdd([
-      {
-        idempotencyKey: crypto.randomUUID(),
-        lotCode: 'CAC128',
-        producer: 'Ana Torres · Finca El Porvenir',
-        origin: 'Rivera',
-        date: '2025-05-20',
-        quantity: 320,
-        availableQty: 256,
-        unit: 'kg',
-        syncStatus: 'SYNCED',
-        status: 'LIBERADO',
-      },
-      {
-        idempotencyKey: crypto.randomUUID(),
-        lotCode: 'CAC127',
-        producer: 'Carlos Díaz · Finca La Esperanza',
-        origin: 'Campoalegre',
-        date: '2025-05-22',
-        quantity: 185,
-        availableQty: 185,
-        unit: 'kg',
-        syncStatus: 'PENDING',
-        status: 'PENDIENTE',
-      },
-      {
-        idempotencyKey: crypto.randomUUID(),
-        lotCode: 'CAC126',
-        producer: 'Luz Peña · Finca Los Cacaos',
-        origin: 'Algeciras',
-        date: '2025-05-23',
-        quantity: 240,
-        availableQty: 198,
-        unit: 'kg',
-        syncStatus: 'SYNCED',
-        status: 'BLOQUEADO',
-      },
-    ]);
-
-    await db.procesos.bulkAdd([
-      {
-        lotCode: 'CAC128',
-        stage: 'Fermentación',
-        inputQty: 320,
-        outputQty: 293,
-        shrinkagePercent: 8.4,
-        responsible: 'José Rivera',
-        date: '24/05/2025',
-        notes: 'Fermentación de 6 días en cajones de madera',
-      },
-      {
-        lotCode: 'CAC126',
-        stage: 'Secado',
-        inputQty: 240,
-        outputQty: 198,
-        shrinkagePercent: 17.5,
-        responsible: 'Marta Perdomo',
-        date: '24/05/2025',
-        notes: 'Merma alta por lluvia continua durante el secado',
-      },
-    ]);
-
-    await db.auditLogs.bulkAdd([
-      {
-        timestamp: '24/05/2025, 10:42:15',
-        user: 'Administrador ASOCACAO',
-        action: 'BLOQUEO',
-        fieldChanged: 'Estado · CAC126',
-        previousValue: 'LIBERADO',
-        newValue: 'BLOQUEADO',
-        lotCode: 'CAC126',
-        reason: 'Humedad superior al 12% detectada en inspección',
-      },
-    ]);
-
-    console.log('✅ Base de datos sembrada correctamente.');
+/** Solo carga si la base está vacía, así que repetirla no duplica ni pisa registros. */
+export async function seedDatabase(): Promise<void> {
+  if ((await db.recepciones.count()) > 0) return
+  for (const l of LOTES_BASE) {
+    await guardarRecepcionLocal({ ...l, date: '2026-01-05', unit: 'kg', usuario: 'Carga inicial' })
   }
 }

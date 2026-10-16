@@ -1,46 +1,69 @@
-import { db, type RecepcionOffline } from '@/db/dexieDb';
+import { db, type RecepcionOffline } from '@/db/dexieDb'
+import { registrarAuditoria } from '@/features/auditoria/api/auditoriaDb'
+import { registrarMovimientoRecibido } from '@/features/inventario/api/inventarioDb'
+import { ErrorDominio } from '@/utils/errores'
 
 export async function obtenerTodasRecepciones(): Promise<RecepcionOffline[]> {
-  return await db.recepciones.orderBy('idLocal').reverse().toArray();
+  return await db.recepciones.orderBy('idLocal').reverse().toArray()
 }
 
+const invalido = (que: string, hacer: string) =>
+  new ErrorDominio('DATO_INVALIDO', `No se guardó el lote. ${que} Corrija el dato: ${hacer}`)
+
+async function siguienteCodigo(): Promise<string> {
+  const codigos = await db.recepciones.toArray()
+  const max = codigos.reduce((m, l) => Math.max(m, Number(/^CAC(\d+)$/.exec(l.lotCode)?.[1] ?? 0)), 0)
+  return `CAC${String(max + 1).padStart(3, '0')}`
+}
+
+/** Único camino de escritura de recepciones: lote, movimiento y auditoría juntos o nada. */
 export async function guardarRecepcionLocal(datos: {
-  producer: string;
-  origin: string;
-  quantity: number;
-  unit: string;
-  date: string;
+  lotCode?: string
+  producer: string
+  origin: string
+  date: string
+  quantity: number
+  unit: string
+  usuario?: string
 }): Promise<RecepcionOffline> {
-  const idempotencyKey = crypto.randomUUID();
-  const lotCodeProvisional = `TEMP-${Math.floor(1000 + Math.random() * 9000)}`;
+  if (!datos.producer.trim()) throw invalido('Falta el productor.', 'seleccione un productor.')
+  if (!datos.origin.trim()) throw invalido('Falta el municipio de origen.', 'seleccione el origen.')
+  if (!datos.date) throw invalido('Falta la fecha de recepción.', 'indique la fecha.')
+  if (!Number.isFinite(datos.quantity) || datos.quantity <= 0) {
+    throw invalido('La cantidad recibida debe ser un número mayor a 0 kg.', 'escriba el peso neto, por ejemplo 100 o 12,5.')
+  }
 
-  const nuevoLote: RecepcionOffline = {
-    idempotencyKey,
-    lotCode: lotCodeProvisional,
-    producer: datos.producer,
-    origin: datos.origin,
-    date: datos.date || new Date().toLocaleDateString('sv-SE'),
-    quantity: datos.quantity,
-    availableQty: datos.quantity,
-    unit: datos.unit || 'kg',
-    syncStatus: 'PENDING',
-    status: 'PENDIENTE',
-  };
+  return db.transaction('rw', db.recepciones, db.movimientos, db.auditLogs, async () => {
+    const lotCode = datos.lotCode?.trim() || (await siguienteCodigo())
+    if (await db.recepciones.where('lotCode').equals(lotCode).first()) {
+      throw new ErrorDominio(
+        'LOTE_DUPLICADO',
+        `No se guardó el lote. El código ${lotCode} ya existe y duplicaría el registro. Use otro código o deje el campo vacío para asignarlo automáticamente.`,
+      )
+    }
 
-  const idLocal = await db.recepciones.add(nuevoLote);
-  nuevoLote.idLocal = idLocal;
-
-  // Registrar auditoría con tu estructura AuditEntry
-  await db.auditLogs.add({
-    timestamp: new Date().toISOString(),
-    user: 'Operador Campo',
-    action: 'EDICIÓN',
-    fieldChanged: 'recepciones',
-    previousValue: 'N/A',
-    newValue: `Lote ${lotCodeProvisional} (${datos.quantity} ${datos.unit})`,
-    lotCode: lotCodeProvisional,
-    reason: 'Ingreso offline registrado en campo',
-  });
-
-  return nuevoLote;
+    const lote: RecepcionOffline = {
+      idempotencyKey: crypto.randomUUID(),
+      lotCode,
+      producer: datos.producer.trim(),
+      origin: datos.origin.trim(),
+      date: datos.date,
+      quantity: datos.quantity,
+      unit: datos.unit || 'kg',
+      syncStatus: 'PENDING',
+      status: 'PENDIENTE',
+    }
+    lote.idLocal = await db.recepciones.add(lote)
+    await registrarMovimientoRecibido(lotCode, datos.quantity)
+    await registrarAuditoria({
+      user: datos.usuario ?? 'Operador Campo',
+      action: 'EDICIÓN',
+      fieldChanged: 'recepciones',
+      previousValue: 'N/A',
+      newValue: `Lote ${lotCode} (${datos.quantity} ${lote.unit})`,
+      lotCode,
+      reason: 'Recepción de lote',
+    })
+    return lote
+  })
 }

@@ -22,13 +22,12 @@ export async function sincronizarRecepcionesPendientes(): Promise<number> {
         await db.recepciones.update(lote.idLocal, {
           lotCode: serverLotCode,
           syncStatus: 'SYNCED',
-          status: 'LIBERADO',
           errorMessage: undefined,
         });
         sincronizadosCount++;
       }
-    } catch (error: any) {
-      if (error.response) {
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
         if (lote.idLocal) {
           await db.recepciones.update(lote.idLocal, {
             syncStatus: 'ERROR',

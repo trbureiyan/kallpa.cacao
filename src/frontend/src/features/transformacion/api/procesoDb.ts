@@ -1,47 +1,82 @@
-import { db, type ProcesoOffline } from '@/db/dexieDb';
+import { db, type ProcesoOffline } from '@/db/dexieDb'
+import { registrarAuditoria } from '@/features/auditoria/api/auditoriaDb'
+import { consumirExistencia, disponibleKg } from '@/features/inventario/api/inventarioDb'
+import { ahoraISO } from '@/utils/clock'
+import { calcularMerma } from '@/utils/calculations'
+import { ErrorDominio } from '@/utils/errores'
+import { validarTransformacion } from '../reglas'
 
-export async function registrarProcesoLocal(datos: {
-  lotCode: string;
-  stage: string;
-  inputQty: number;
-  outputQty: number;
-  responsible: string;
-  notes?: string;
-}): Promise<ProcesoOffline> {
-  const shrinkagePercent = Number((((datos.inputQty - datos.outputQty) / datos.inputQty) * 100).toFixed(1));
+export interface DatosProceso {
+  lotCode: string
+  stage: string
+  inputQty: number
+  outputQty: number
+  responsible: string
+  costoTotalCOP?: number
+  precioVentaCOP?: number
+  justificacion?: string
+  incidencias?: string
+  notes?: string
+  claveIdempotencia: string
+}
 
-  const nuevoProceso: ProcesoOffline = {
-    lotCode: datos.lotCode,
-    stage: datos.stage,
-    inputQty: datos.inputQty,
-    outputQty: datos.outputQty,
-    shrinkagePercent,
-    responsible: datos.responsible,
-    date: new Date().toLocaleDateString('sv-SE'),
-    notes: datos.notes,
-  };
+/**
+ * Registra una transformación: valida, consume existencia, guarda y audita en una transacción.
+ * Misma claveIdempotencia = misma operación: devuelve el proceso original sin consumir otra vez.
+ */
+export async function registrarProcesoLocal(d: DatosProceso): Promise<ProcesoOffline> {
+  return db.transaction('rw', db.recepciones, db.procesos, db.movimientos, db.auditLogs, async () => {
+    const previo = await db.procesos.where('claveIdempotencia').equals(d.claveIdempotencia).first()
+    if (previo) return previo
 
-  await db.procesos.add(nuevoProceso);
+    const lote = await db.recepciones.where('lotCode').equals(d.lotCode).first()
+    if (!lote) {
+      throw new ErrorDominio(
+        'LOTE_NO_ENCONTRADO',
+        `No se registró la transformación. El lote ${d.lotCode} no existe. Seleccione un lote registrado en Recepción.`,
+      )
+    }
 
-  // Actualizar la cantidad disponible en la recepción correspondiente
-  const lote = await db.recepciones.where('lotCode').equals(datos.lotCode).first();
-  if (lote && lote.idLocal) {
-    await db.recepciones.update(lote.idLocal, {
-      availableQty: datos.outputQty,
-    });
-  }
+    const disponible = await disponibleKg(d.lotCode)
+    const errores = validarTransformacion({
+      entradaKg: d.inputQty,
+      salidaKg: d.outputQty,
+      disponibleKg: disponible,
+      justificacion: d.justificacion,
+    })
+    if (errores.length > 0) {
+      const sinExistencia = Number.isFinite(d.inputQty) && d.inputQty > disponible
+      throw new ErrorDominio(sinExistencia ? 'EXISTENCIA_INSUFICIENTE' : 'DATO_INVALIDO', errores.join(' '))
+    }
 
-  // Auditoría con tu enum action: 'PROCESO'
-  await db.auditLogs.add({
-    timestamp: new Date().toISOString(),
-    user: datos.responsible,
-    action: 'PROCESO',
-    fieldChanged: 'availableQty',
-    previousValue: `${datos.inputQty} kg`,
-    newValue: `${datos.outputQty} kg`,
-    lotCode: datos.lotCode,
-    reason: `Etapa ${datos.stage} con merma de ${shrinkagePercent}%`,
-  });
+    await consumirExistencia({ lotCode: d.lotCode, kg: d.inputQty, claveIdempotencia: d.claveIdempotencia })
 
-  return nuevoProceso;
+    const proceso: ProcesoOffline = {
+      lotCode: d.lotCode,
+      stage: d.stage,
+      inputQty: d.inputQty,
+      outputQty: d.outputQty,
+      shrinkagePercent: calcularMerma(d.inputQty, d.outputQty),
+      responsible: d.responsible.trim(),
+      date: ahoraISO().slice(0, 10),
+      notes: d.notes,
+      claveIdempotencia: d.claveIdempotencia,
+      costoTotalCOP: d.costoTotalCOP,
+      precioVentaCOP: d.precioVentaCOP,
+      justificacion: d.justificacion?.trim() || undefined,
+      incidencias: d.incidencias?.trim() || undefined,
+    }
+    proceso.idLocal = await db.procesos.add(proceso)
+
+    await registrarAuditoria({
+      user: proceso.responsible || 'Operador',
+      action: 'PROCESO',
+      fieldChanged: 'disponible',
+      previousValue: `${disponible} kg`,
+      newValue: `${disponible - d.inputQty} kg`,
+      lotCode: d.lotCode,
+      reason: `Etapa ${d.stage}: entrada ${d.inputQty} kg, salida ${d.outputQty} kg`,
+    })
+    return proceso
+  })
 }
