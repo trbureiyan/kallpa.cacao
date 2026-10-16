@@ -13,6 +13,7 @@ python -m pytest -q
 ```
 
 Resultado ejecutado en esta revision: `python -m pytest -q` desde `backend/` termino con 18 aprobadas, 1 omitida y 1 advertencia deprecada de Starlette/TestClient. La omitida es la prueba opcional de concurrencia PostgreSQL, que requiere `TEST_POSTGRES_URL`. Esta ejecucion usa bases temporales; no migro ni escribio en la base persistente del proyecto. La carrera PostgreSQL previamente descrita es evidencia historica y debe repetirse en instancia desechable para validar esta version.
+Ensayo de migracion PostgreSQL 16 ejecutado en un contenedor temporal con `tmpfs`, sin volumen persistente: se aplico `d843a91c5e2b`, se insertaron datos sinteticos, se hizo upgrade a `e4219b1a7c30`, se verificaron costos migrados, columnas duplicadas retiradas y triggers PostgreSQL contra UPDATE/DELETE; el downgrade restauro campos/valores y el upgrade final volvio a head. El contenedor temporal se elimino. No se uso ni modifico la base persistente del proyecto.
 
 La comprobación de navegador/IndexedDB reportada por el usuario debe repetirse en la versión que se entregará y conservar capturas antes y después de sincronizar. La prueba de interacción visual, restauración del respaldo y medición con 100 registros todavía no tienen evidencia adjunta.
 
