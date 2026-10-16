@@ -1,4 +1,12 @@
 import type { RecepcionOffline } from '@/db/dexieDb';
+import type { EstadoConexion } from '@/components/ui/conexion';
+import { IndicadorConexion, SelloLote } from '@/components/ui/marca';
+
+const ESTADO_SYNC: Record<RecepcionOffline['syncStatus'], EstadoConexion> = {
+  SYNCED: 'sincronizado',
+  ERROR: 'error',
+  PENDING: 'pendiente',
+};
 
 interface RecentLotsTableProps {
   lots: RecepcionOffline[];
@@ -36,29 +44,15 @@ export function RecentLotsTable({ lots }: RecentLotsTableProps) {
             ) : (
               lots.map((lot) => (
                 <tr key={lot.idLocal || lot.idempotencyKey}>
-                  <td><strong>{lot.lotCode}</strong></td>
+                  <td><SelloLote codigo={lot.lotCode} /></td>
                   <td>{lot.producer}</td>
                   <td>{lot.origin}</td>
                   <td>{lot.quantity} {lot.unit}</td>
                   <td>{lot.date}</td>
                   <td>
-                    <span
-                      className={`badge ${
-                        lot.syncStatus === 'SYNCED'
-                          ? 'badge-green'
-                          : lot.syncStatus === 'ERROR'
-                          ? 'badge-red'
-                          : 'badge-amber'
-                      }`}
-                    >
-                      {lot.syncStatus === 'SYNCED'
-                        ? 'SINCRONIZADO'
-                        : lot.syncStatus === 'ERROR'
-                        ? 'ERROR'
-                        : 'PENDIENTE'}
-                    </span>
+                    <IndicadorConexion estado={ESTADO_SYNC[lot.syncStatus]} pendientes={1} />
                     {lot.errorMessage && (
-                      <small style={{ display: 'block', color: '#dc2626', fontSize: '0.65rem' }}>
+                      <small className="nota-error">
                         {lot.errorMessage}
                       </small>
                     )}

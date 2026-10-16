@@ -84,7 +84,7 @@ export function ProcessPage() {
             <tbody>
               {procesosHistorial.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-4 text-slate-500">
+                  <td colSpan={8} className="text-center py-4 text-texto-suave">
                     No hay procesos de transformación registrados aún.
                   </td>
                 </tr>

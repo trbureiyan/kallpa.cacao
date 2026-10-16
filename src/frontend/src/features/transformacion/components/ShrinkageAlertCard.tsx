@@ -18,7 +18,7 @@ export function ShrinkageAlertCard({ inputQty, outputQty, thresholdPercent = UMB
         <span className="eyebrow">Control de merma</span>
         <strong>—</strong>
         <div className="shrink-formula">((entrada − salida) / entrada) × 100</div>
-        <p className="text-sm text-slate-500">Ingrese una entrada mayor a 0 kg para calcular la merma.</p>
+        <p className="text-sm text-texto-suave">Ingrese una entrada mayor a 0 kg para calcular la merma.</p>
       </div>
     )
   }

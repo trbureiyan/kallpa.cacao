@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
 import { PageHead } from "@/components/shared"
+import { Icon } from "@/components/ui"
 import { db } from "@/db/dexieDb"
 import { sincronizarRecepcionesPendientes } from "@/features/recepcion/api/recepcionSync"
 import { RecepcionForm } from "@/features/recepcion/components/RecepcionForm.tsx"
@@ -52,7 +53,7 @@ export function ReceptionPage({
 
         <aside className="field-tip">
           <div className="tip-icon">
-            <span style={{ fontSize: "1.8rem" }}>🌱</span>
+            <Icon name="sprout" size={28} />
           </div>
 
           <div className="eyebrow">Consejo de campo</div>

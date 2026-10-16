@@ -5,6 +5,9 @@ import { db } from '@/db/dexieDb';
 import { useNetwork } from '@/context/NetworkContext';
 import { useAuth } from '@/context/AuthContext';
 import { PageHead } from '@/components/shared';
+import { Icon } from '@/components/ui';
+import { estadoConexion } from '@/components/ui/conexion';
+import { IndicadorConexion } from '@/components/ui/marca';
 
 export const DashboardPage: React.FC = () => {
   const { isOnline } = useNetwork();
@@ -12,7 +15,6 @@ export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
 
   const lotes = useLiveQuery(() => db.recepciones.toArray(), [], []);
-  const procesos = useLiveQuery(() => db.procesos.toArray(), [], []);
   const auditLogs = useLiveQuery(() => db.auditLogs.reverse().limit(5).toArray(), [], []);
 
   const movimientos = useLiveQuery(() => db.movimientos.toArray(), [], []);
@@ -38,10 +40,10 @@ export const DashboardPage: React.FC = () => {
             <span>Total Lotes Registrados</span>
           </div>
           <strong>{lotes?.length || 0} Lotes</strong>
-          <small>IndexedDB Activo</small>
+          <small>Guardados en este dispositivo</small>
         </div>
 
-        <div className="metric-card brown">
+        <div className="metric-card">
           <div className="metric-top">
             <span>Stock Disponible</span>
           </div>
@@ -51,18 +53,10 @@ export const DashboardPage: React.FC = () => {
 
         <div className="metric-card">
           <div className="metric-top">
-            <span>Procesos Registrados</span>
-          </div>
-          <strong>{procesos?.length || 0} Etapas</strong>
-          <small>Fermentación / Secado</small>
-        </div>
-
-        <div className={`metric-card ${pendientesSync > 0 ? 'red' : ''}`}>
-          <div className="metric-top">
             <span>Pendientes por Sincronizar</span>
           </div>
           <strong>{pendientesSync} Registros</strong>
-          <small>{isOnline ? '🟢 En línea' : '🟠 Modo Offline'}</small>
+          <small><IndicadorConexion estado={estadoConexion({ enLinea: isOnline, pendientes: pendientesSync, error: false })} pendientes={pendientesSync} /></small>
         </div>
       </div>
 
@@ -72,11 +66,11 @@ export const DashboardPage: React.FC = () => {
         </div>
         <div className="p-4 space-y-3">
           {(!auditLogs || auditLogs.length === 0) ? (
-            <p className="text-sm text-slate-500">Sin actividad reciente registrada en el dispositivo.</p>
+            <p className="text-sm text-texto-suave">Sin actividad reciente registrada en el dispositivo.</p>
           ) : (
             auditLogs.map((log) => (
               <div key={log.idLocal || log.timestamp} className="activity-row">
-                <div className="activity-icon">✓</div>
+                <div className="activity-icon"><Icon name="check" size={16} /></div>
                 <div>
                   <strong>{log.action} en Lote {log.lotCode}</strong>
                   <span>Por {log.user} · {log.reason || log.fieldChanged}</span>

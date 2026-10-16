@@ -61,7 +61,7 @@ export function AuditPage() {
         >
           {logs.length === 0 ? (
             <tr>
-              <td colSpan={8} className="text-center py-4 text-slate-500">
+              <td colSpan={8} className="text-center py-4 text-texto-suave">
                 No hay eventos registrados en la auditoría.
               </td>
             </tr>

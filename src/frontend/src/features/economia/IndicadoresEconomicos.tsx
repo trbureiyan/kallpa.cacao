@@ -32,7 +32,7 @@ export function IndicadoresEconomicos(props: Props) {
         {margenPct === null && <small>No calculable: ingrese el precio de venta hipotético (mayor a 0 COP/kg).</small>}
       </div>
 
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-texto-suave">
         Supuestos: el costo total incluye únicamente los costos de esta etapa que usted ingresó (por ejemplo mano de
         obra, energía e insumos); no incluye el costo del cacao recibido. El precio es hipotético.
       </p>

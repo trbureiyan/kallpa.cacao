@@ -1,6 +1,6 @@
 import { db } from '@/db/dexieDb'
 import { disponibleKg } from '@/features/inventario/api/inventarioDb'
-import type { IconName } from '@/types/app'
+import type { EstadoLote, IconName } from '@/types/app'
 import { formatearKg, formatearPct } from '@/utils/formato'
 
 export interface TimelineStep {
@@ -15,7 +15,7 @@ export interface TraceInfo {
   producer: string
   origin: string
   availableQty: number
-  status: string
+  status: EstadoLote
   steps: TimelineStep[]
 }
 

@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { Badge, Button, Icon } from "@/components/ui"
+import { Button, Icon } from "@/components/ui"
+import { ChipEstado, SelloLote } from "@/components/ui/marca"
 import { PageHead, Timeline } from "@/components/shared"
 import { obtenerTrazabilidadLote, type TraceInfo } from "@/features/trazabilidad/api/trazabilidadDb"
 import { formatearKg } from "@/utils/formato"
@@ -30,7 +31,7 @@ export function TracePage() {
           >
             <label className="relative flex-1">
               <span className="sr-only">Código del lote</span>
-              <Icon name="search" className="absolute left-3 top-3 text-slate-400" />
+              <Icon name="search" className="absolute left-3 top-3 text-texto-suave" />
               <input
                 className="input pl-9"
                 value={codigo}
@@ -45,7 +46,7 @@ export function TracePage() {
 
       {!consultado && (
         <section className="card mt-6">
-          <p className="p-4 text-slate-500">Escriba el código de un lote para ver su recorrido.</p>
+          <p className="p-4 text-texto-suave">Escriba el código de un lote para ver su recorrido.</p>
         </section>
       )}
 
@@ -65,10 +66,8 @@ export function TracePage() {
               <Icon name="leaf" size={30} />
             </div>
             <div>
-              <Badge tone={traza.status === "BLOQUEADO" ? "red" : traza.status === "LIBERADO" ? "green" : "amber"}>
-                {traza.status}
-              </Badge>
-              <div className="text-2xl font-extrabold text-slate-900 mt-2">{traza.lotCode}</div>
+              <ChipEstado estado={traza.status} />
+              <div className="mt-2"><SelloLote codigo={traza.lotCode} /></div>
             </div>
             <div className="trace-meta">
               <span>

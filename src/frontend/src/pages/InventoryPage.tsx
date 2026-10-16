@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useLiveQuery } from "dexie-react-hooks"
-import { Badge, Button, Icon } from "@/components/ui"
+import { Button, Icon } from "@/components/ui"
+import { ChipEstado, SelloLote } from "@/components/ui/marca"
 import { DataTable, PageHead } from "@/components/shared"
 import { useAuth } from "@/context/AuthContext"
 import { db } from "@/db/dexieDb"
@@ -118,7 +119,7 @@ export function InventoryPage() {
         >
           {filtrados.length === 0 ? (
             <tr>
-              <td colSpan={esAdmin ? 9 : 8} className="text-center py-4 text-slate-500">
+              <td colSpan={esAdmin ? 9 : 8} className="text-center py-4 text-texto-suave">
                 No se encontraron lotes con esos filtros.
               </td>
             </tr>
@@ -127,16 +128,14 @@ export function InventoryPage() {
               const f = estadoPorCodigo.get(lote.lotCode)!
               return (
                 <tr key={lote.lotCode}>
-                  <td><strong>{lote.lotCode}</strong></td>
+                  <td><SelloLote codigo={lote.lotCode} /></td>
                   <td>{lote.producer}</td>
                   <td>{lote.origin}</td>
                   <td>{formatearKg(f.recibidoKg)}</td>
                   <td>{formatearKg(f.consumidoKg)}</td>
                   <td>{formatearKg(f.disponibleKg)}</td>
                   <td>
-                    {f.estado === "LIBERADO" && <Badge tone="green">LIBERADO</Badge>}
-                    {f.estado === "PENDIENTE" && <Badge tone="amber">PENDIENTE</Badge>}
-                    {f.estado === "BLOQUEADO" && <Badge tone="red">BLOQUEADO</Badge>}
+                    <ChipEstado estado={f.estado} />
                   </td>
                   <td>{f.costoUnitario === null ? "—" : `${formatearCOP(f.costoUnitario)}/kg`}</td>
                   {esAdmin && (

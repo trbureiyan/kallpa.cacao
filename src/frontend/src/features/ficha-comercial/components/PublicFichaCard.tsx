@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { ShieldCheck, MapPin, Calendar, Layers } from 'lucide-react'
+import { SelloLote } from '@/components/ui/marca'
 import { obtenerFichaPublica, type FichaPublica } from '../api/fichaApi'
 
 const ETIQUETA_ESTADO = {
@@ -24,14 +25,14 @@ export function PublicFichaCard({ lotCode }: { lotCode: string }) {
   }, [lotCode])
 
   if (ficha === undefined) {
-    return <div className="card p-8 text-center text-slate-500 max-w-4xl mx-auto my-8">Cargando ficha del lote...</div>
+    return <div className="card p-8 text-center text-texto-suave max-w-4xl mx-auto my-8">Cargando ficha del lote...</div>
   }
 
   if (ficha === null) {
     return (
       <div className="card p-8 text-center max-w-4xl mx-auto my-8" role="alert">
         <strong>No encontramos ese lote.</strong>
-        <p className="mt-2 text-slate-600">
+        <p className="mt-2 text-texto-suave">
           El código {lotCode} no está en el registro. Revise que esté bien escrito o escanee de nuevo el código QR.
         </p>
       </div>
@@ -43,12 +44,10 @@ export function PublicFichaCard({ lotCode }: { lotCode: string }) {
   return (
     <div>
       <div className="public-hero">
-        <div className="hero-grain grain-1" />
-        <div className="hero-grain grain-2" />
         <div className="public-hero-content">
-          <span className="eyebrow text-emerald-300">Ficha comercial del lote</span>
-          <h1 className="display-title text-white mt-1">Lote {ficha.codigo}</h1>
-          <p className="mt-2 text-emerald-100 text-sm md:text-base">Cacao seco · Origen {ficha.origen}</p>
+          <span className="eyebrow text-hundido">Ficha comercial del lote</span>
+          <h1 className="display-title text-superficie mt-2">Lote {ficha.codigo}</h1>
+          <p className="mt-4 text-lg">Cacao seco · Origen {ficha.origen}</p>
         </div>
       </div>
 
@@ -93,7 +92,7 @@ export function PublicFichaCard({ lotCode }: { lotCode: string }) {
               <Layers size={14} /> Etapas de transformación
             </span>
             {ficha.etapas.length === 0 ? (
-              <p className="text-slate-500 mt-2">Aún no hay etapas registradas.</p>
+              <p className="text-texto-suave mt-2">Aún no hay etapas registradas.</p>
             ) : (
               <ul className="mt-2 space-y-1">
                 {ficha.etapas.map((e, i) => (
@@ -109,8 +108,8 @@ export function PublicFichaCard({ lotCode }: { lotCode: string }) {
         <div className="qr-card">
           <div className="flex flex-col items-center">
             <QRCodeSVG value={urlFicha} size={160} role="img" aria-label={`Código QR de la ficha del lote ${ficha.codigo}`} />
-            <div className="qr-code-label mt-3">{ficha.codigo}</div>
-            <p className="mt-3 text-xs text-slate-500">Escanee este código para abrir la ficha del lote desde cualquier dispositivo.</p>
+            <div className="mt-4"><SelloLote codigo={ficha.codigo} /></div>
+            <p className="mt-3 text-xs text-texto-suave">Escanee este código para abrir la ficha del lote desde cualquier dispositivo.</p>
           </div>
         </div>
       </div>

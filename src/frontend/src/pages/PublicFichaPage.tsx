@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Logo } from '@/components/ui';
 import { PublicFichaCard } from '@/features/ficha-comercial/components/PublicFichaCard.tsx';
 
 export const PublicFichaPage: React.FC = () => {
@@ -11,9 +12,7 @@ export const PublicFichaPage: React.FC = () => {
   return (
     <div className="public-shell">
       <header className="public-header">
-        <div className="flex items-center gap-2 font-black text-lg text-emerald-800">
-          <span>AGROCACAO HUILA</span>
-        </div>
+        <Logo />
         <button onClick={() => navigate('/login')} className="btn btn-secondary">
           Acceso interno
         </button>
@@ -36,7 +35,7 @@ export const PublicFichaPage: React.FC = () => {
       {lotCodeParam ? (
         <PublicFichaCard lotCode={lotCodeParam} />
       ) : (
-        <p className="max-w-4xl mx-auto text-slate-600">Escriba el código del lote para ver su ficha comercial.</p>
+        <p className="max-w-4xl mx-auto text-texto-suave">Escriba el código del lote para ver su ficha comercial.</p>
       )}
 
       <footer className="public-footer">
