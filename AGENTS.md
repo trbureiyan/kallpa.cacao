@@ -11,6 +11,7 @@ Contexto del evento:
 - 24 horas continuas de construcción. El código se congela con una etiqueta o commit final; después no se edita.
 - Caso y datos 100 % simulados. Sin datos reales, sin secretos.
 - Especificación completa del reto: `.docs/reto_cacao.md`. Es normativa; si este archivo y el reto chocan, gana el reto y se corrige este archivo.
+- Marco del proyecto: `.docs/00_marco_del_proyecto.md`. Fuente de verdad de las decisiones del equipo (alcance, supuestos, etiquetas `[DECIDIDO]`, `[EN VALIDACIÓN]`, `[PROPUESTO]`, `[ABIERTO]`). Lo que no esté ahí no está decidido; no se modifica sin preguntar.
 - `.docs/` existe y no se modifica sin preguntar.
 
 ---
@@ -127,7 +128,7 @@ Los targets del `Makefile` existen pero aún están vacíos. Completarlos antes 
 
 When assigned a task:
 
-1. Leer `AGENTS.md` primero y, si la tarea toca requisitos o criterios, la sección correspondiente de `.docs/reto_cacao.md`.
+1. Leer `AGENTS.md` primero, el marco `.docs/00_marco_del_proyecto.md` para alcance y decisiones, y, si la tarea toca requisitos o criterios, la sección correspondiente de `.docs/reto_cacao.md`.
 2. Leer el prompt con atención. Identificar objetivo, restricciones y alcance (qué RF toca) antes de tocar archivos.
 3. Inspeccionar los archivos relevantes con lecturas exactas y dirigidas. No hacer escaneos amplios de directorios cuando se conocen rutas específicas.
 4. Verificar la implementación actual antes de escribir código. Nunca asumir la estructura: inspeccionarla.
@@ -157,7 +158,7 @@ When assigned a task:
 - Si tras la revisión no se necesita ninguna edición, registrar esa decisión en el resumen del cambio.
 - **Bitácora de IA obligatoria:** cada vez que se genere un componente relevante, añadir una entrada a `documentos/E08_IA_y_fuentes.md` con: herramienta, propósito, archivos afectados y qué debe revisar un humano.
 - **Declaración de terceros:** toda librería y plantilla se declara con fuente y licencia en `documentos/E08_IA_y_fuentes.md`.
-- **Precedencia de documentos:** `.docs/reto_cacao.md` (normativo) > este archivo > `documentos/` > comentarios en código.
+- **Precedencia de documentos:** `.docs/reto_cacao.md` (normativo) > `.docs/00_marco_del_proyecto.md` (decisiones del equipo) > este archivo > `documentos/` > comentarios en código.
 - `ENTREGA.md` debe coincidir con el commit final; mantener la matriz requisito→componente→prueba→resultado al día.
 
 ---
