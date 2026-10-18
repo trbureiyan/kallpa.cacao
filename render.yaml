@@ -10,6 +10,19 @@ services:
     dockerContext: .
     healthCheckPath: /health
     autoDeploy: true
+    # Solo el código que entra a la imagen dispara un build; un cambio de documentación o de pruebas no gasta minutos
+    # de build ni mantiene el servicio despierto. Si cambia el Dockerfile, backend/ o src/frontend/, sí se despliega.
+    buildFilter:
+      ignoredPaths:
+        - "**/*.md"
+        - documentos/**
+        - tests/**
+        - backend/tests/**
+        - scripts/**
+        - datos/**
+        - pitch/**
+        - .github/**
+        - .docs/**
     envVars:
       - key: APP_ENV
         value: production

@@ -412,9 +412,11 @@ No guarde respaldos reales en el repositorio. Los respaldos de demostración deb
 
 ## Demo desplegada: costos y reinicio semanal
 
-La demo corre en planes gratuitos (Render y Neon), compartidos con otros proyectos, así que se cuida su cuota:
+La demo corre en planes gratuitos (Render y Neon), compartidos con otros proyectos, así que se cuida su cuota.
 
-- **Sin keep-alive programado.** `.github/workflows/keep-alive.yml` es solo manual: ejecútelo unos minutos antes de presentar. Si nadie la usa, la demo duerme y el primer visitante espera ~1 min.
+Demo en línea: https://kallpa-cacao.onrender.com. **La primera carga puede tardar cerca de 1 minuto**: el servicio gratuito se duerme tras 15 minutos sin visitas y despierta con la primera petición. Después responde con normalidad. Usuarios de prueba en [Datos de demostración](#datos-de-demostración).
+
+- **Sin keep-alive programado.** `.github/workflows/keep-alive.yml` es solo manual: ejecútelo unos minutos antes de mostrar la demo. Si nadie la usa, la demo duerme y el primer visitante espera ~1 min.
 - **Reinicio semanal.** `.github/workflows/reset-demo.yml` corre los domingos (08:00 UTC) y deja la base con los usuarios demo y CAC001-003. Se conecta directo a Neon, sin despertar Render. Requiere el secreto de Actions `DEMO_DATABASE_URL`. **Borra todos los datos de esa base, auditoría incluida**: nunca apunte a datos reales. Manualmente: `cd backend && python ../scripts/reiniciar_demo.py --confirmar` con `DATABASE_URL` de la demo.
 - **Límite por IP** (ver `RATE_LIMIT_*`) y cabeceras de seguridad básicas. En Render la IP se toma de `CF-Connecting-IP` (Cloudflare); no se confía en `X-Forwarded-For`. El límite vive en memoria de una sola instancia y se reinicia con cada despliegue.
 
