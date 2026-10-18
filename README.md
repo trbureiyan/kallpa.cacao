@@ -163,6 +163,8 @@ Para levantar también la interfaz en `http://localhost:8080`, ejecute `docker c
 | `LOSS_ALERT_THRESHOLD_PERCENT` | `15` | Umbral de alerta de merma, en % |
 | `DELAY_ALERT_DAYS` | `7` | Días para la alerta de retraso |
 | `COST_ALERT_THRESHOLD_COP_PER_KG` | (vacío) | Si se define, activa la alerta de costo por kg, en COP/kg |
+| `RATE_LIMIT_PER_MINUTE` | `120` | Peticiones por minuto y por IP a la API (responde 429 al excederlo) |
+| `RATE_LIMIT_LOGIN_PER_MINUTE` | `10` | Intentos de inicio de sesión por minuto y por IP |
 
 Si no existe `.env`, la API usa los valores por defecto del código, que son de desarrollo: `SECRET_KEY` con un texto de ejemplo y `SEED_DEMO_DATA=true`. No use esos valores fuera de la máquina local.
 
@@ -391,6 +393,14 @@ No guarde respaldos reales en el repositorio. Los respaldos de demostración deb
 - El reenvío de una recepción con la misma clave devuelve el registro original. Las pruebas automáticas cubren este reintento en el backend. La recuperación de la red en el navegador se verifica a mano.
 - Las transformaciones y los cambios de estado requieren conexión.
 - Con `VITE_PERMITIR_MODO_LOCAL=true`, la PWA muestra datos de demostración si el servidor no responde. En la evaluación debe estar en `false`.
+
+## Demo desplegada: costos y reinicio semanal
+
+La demo corre en planes gratuitos (Render y Neon), compartidos con otros proyectos, así que se cuida su cuota:
+
+- **Sin keep-alive programado.** `.github/workflows/keep-alive.yml` es solo manual: ejecútelo unos minutos antes de presentar. Si nadie la usa, la demo duerme y el primer visitante espera ~1 min.
+- **Reinicio semanal.** `.github/workflows/reset-demo.yml` corre los domingos (08:00 UTC) y deja la base con los usuarios demo y CAC001-003. Se conecta directo a Neon, sin despertar Render. Requiere el secreto de Actions `DEMO_DATABASE_URL`. **Borra todos los datos de esa base, auditoría incluida**: nunca apunte a datos reales. Manualmente: `cd backend && python ../scripts/reiniciar_demo.py --confirmar` con `DATABASE_URL` de la demo.
+- **Límite por IP** (ver `RATE_LIMIT_*`) y cabeceras de seguridad básicas. En Render la IP se toma de `CF-Connecting-IP` (Cloudflare); no se confía en `X-Forwarded-For`. El límite vive en memoria de una sola instancia y se reinicia con cada despliegue.
 
 ## Servicios externos y costos
 
