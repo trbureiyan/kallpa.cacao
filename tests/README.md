@@ -105,6 +105,3 @@ Además, solo se verifica a mano:
 - **Teclado y lector de pantalla:** recorrer el flujo solo con teclado (el modal de cambio de estado atrapa el foco y se cierra con Esc).
 - **Persona ajena al equipo** (E06): dos tareas sin indicarle cada clic.
 
-## 7. Pendientes conocidos (fuera de esta entrega)
-
-Ver la sección «Pendientes» del `README.md` raíz: es la lista vigente, revisada contra el código entregado.

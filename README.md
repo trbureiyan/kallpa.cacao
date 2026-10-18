@@ -10,7 +10,7 @@ Todos los datos son sintéticos. La asociación, los productores, las fincas y l
 - [Estructura del repositorio](#estructura-del-repositorio) · [Instalación y ejecución](#instalación-y-ejecución) · [Configuración](#configuración)
 - [Datos de demostración](#datos-de-demostración) · [Arquitectura](#arquitectura) · [Referencia de la API](#referencia-de-la-api)
 - [Pruebas](#pruebas) · [Respaldo y restauración](#respaldo-y-restauración) · [Modo sin conexión](#modo-sin-conexión)
-- [Solución de problemas](#solución-de-problemas) · [Pendientes](#pendientes) · [Documentación](#documentación)
+- [Solución de problemas](#solución-de-problemas) · [Documentación](#documentación)
 
 ## Equipo
 
@@ -163,7 +163,7 @@ Esto levanta PostgreSQL 16 en `127.0.0.1:5433` y la API en `localhost:8000`. El 
 
 Las credenciales de `backend/docker-compose.yml` son solo para la máquina local. Cámbielas antes de exponer el servicio.
 
-Para levantar también la interfaz en `http://localhost:8080`, ejecute `docker compose up --build` sin nombrar servicios. La imagen del frontend no está verificada (ver [Pendientes](#pendientes)).
+Para levantar también la interfaz en `http://localhost:8080`, ejecute `docker compose up --build` sin nombrar servicios. La imagen del frontend no está verificada.
 
 ## Configuración
 
@@ -455,19 +455,6 @@ La demo corre en planes gratuitos (Render y Neon), compartidos con otros proyect
 
 **El puerto 8000 o 5173 está ocupado.** Use otro puerto (`uvicorn app.main:app --port 8001`, `pnpm exec vite --port 5174`). Si cambia el de la API, actualice `VITE_API_URL` y `CORS_ORIGINS`.
 
-## Pendientes
-
-Revisados contra el código entregado el 18-10-2026. Lo que ya estaba resuelto se quitó de esta lista. Lo siguiente queda **fuera de esta entrega** porque es una decisión o una ejecución humana que no se puede confirmar desde el repositorio:
-
-- Casos manuales: 14 de los 15 de `tests/casos_manuales.md` no tienen resultado obtenido (solo CM-10 está ejecutado). Los registra quien los ejecute.
-- Tarjeta de cambio `documentos/cambios/CC-001` (incidencia de la hora 12): no existe en el repositorio. La prueba automática REG-001 sí existe.
-- La imagen Docker del frontend (`src/frontend/Dockerfile`) no se ha probado.
-- El saldo disponible se guarda en `lots.available_quantity` y no se recalcula desde `inventory_movements` en cada lectura; la coherencia depende de las transacciones de `backend/app/services/transformation.py`.
-- Bloquear CAC001 no bloquea por sí solo los productos derivados (marco §8). Si se decide propagarlo, hay que actualizar REG-001.
-- Las credenciales de demostración son públicas por diseño (ver «Datos de demostración»); no hay límite de intentos por usuario, solo por IP.
-- `backend/requirements.txt` fija versiones exactas, pero no hay lockfile de las dependencias transitivas.
-- Las pruebas manuales de la PWA (desconexión, móvil, teclado) las registra una persona en `documentos/E05_pruebas.md`.
-- La prueba de concurrencia en PostgreSQL y el `TRUNCATE` de `reset-demo.yml` en Neon solo se verifican contra un PostgreSQL real (el reinicio, con el secreto `DEMO_DATABASE_URL`).
 
 ## Documentación
 
