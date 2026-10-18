@@ -6,11 +6,27 @@ Todos los datos son sintéticos. La asociación, los productores, las fincas y l
 
 ## Índice
 
-- [Qué hace](#qué-hace) · [Stack](#stack) · [Requisitos](#requisitos)
+- [Equipo](#equipo) · [Qué hace](#qué-hace) · [Stack](#stack) · [Requisitos](#requisitos)
 - [Estructura del repositorio](#estructura-del-repositorio) · [Instalación y ejecución](#instalación-y-ejecución) · [Configuración](#configuración)
 - [Datos de demostración](#datos-de-demostración) · [Arquitectura](#arquitectura) · [Referencia de la API](#referencia-de-la-api)
 - [Pruebas](#pruebas) · [Respaldo y restauración](#respaldo-y-restauración) · [Modo sin conexión](#modo-sin-conexión)
 - [Solución de problemas](#solución-de-problemas) · [Pendientes](#pendientes) · [Documentación](#documentación)
+
+## Equipo
+
+Desarrolladores del proyecto en la II Hackathon de Programación USCO:
+
+- Brayan Toro Bustos
+- David Ricardo Graffe
+- Alejandro Puentes Salazar
+- Emanuel González Hio
+
+Perfiles de GitHub:
+
+- [alejopro26](https://github.com/alejopro26)
+- [EliteBoku](https://github.com/EliteBoku)
+- [MrEnviss](https://github.com/MrEnviss)
+- [trbureiyan](https://github.com/trbureiyan)
 
 ## Qué hace
 
