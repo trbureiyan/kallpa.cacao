@@ -34,9 +34,9 @@ Documento: `.docs/00_marco_del_proyecto.md`. **Versión sincronizada con este re
 - **Dentro:** RF01–RF12 con CAC001–003, tres perfiles (operador, administrador, comprador anónimo), recepción con conectividad limitada `[EN VALIDACIÓN]` y un panel de analítica en el servidor con tres preguntas: origen o productor con más merma, lotes con menor margen, lotes bloqueados o con alerta abierta.
 - **Fuera:** IA, sensores, pagos, notificaciones, varias asociaciones, transformación sin conexión, resolución manual de conflictos de sincronización, mapas, roles adicionales. Lo que no esté en "dentro" se pospone aunque tiente.
 - **Límites declarados:** una transformación consume un solo lote de entrada (si se mezclan, se conservan todos los orígenes); unidad única kg; datos sintéticos. Trazabilidad por lote sin parcela: no afirmar cumplimiento de EUDR ni de GS1.
-- **Offline `[DECIDIDO]` en alcance:** solo recepción de lotes y lectura de lo ya cargado. Transformar y cambiar estados exigen conexión. La cola local guarda solo operaciones y una copia de lectura; el esquema real vive en el servidor. Sin Background Sync. Forma débil con lectura desde caché `[DECIDIDO]` (reintentos, indicador de pendientes, regla de uso: no recargar sin conexión; texto de interfaz "con conectividad limitada"). La forma "fuerte" sigue `[EN VALIDACIÓN]`: el resultado de Graffe (marco, Anexo A) falló el punto 1 y dejó pendiente el 5. La cola es un módulo único `offline/`; solo recepción escribe en ella. Si falla la idempotencia, se corrige primero en el servidor: también protege el inventario.
+- **Offline `[DECIDIDO]` en alcance:** solo recepción de lotes y lectura de lo ya cargado. Transformar y cambiar estados exigen conexión. La cola local guarda solo operaciones y una copia de lectura; el esquema real vive en el servidor. Sin Background Sync. Forma débil con lectura desde caché `[DECIDIDO]` (reintentos, indicador de pendientes, regla de uso: no recargar sin conexión; texto de interfaz "con conectividad limitada"). La forma "fuerte" `[EN VALIDACIÓN]` queda fuera de esta entrega. La cola es un módulo único `offline/`; solo recepción escribe en ella. Si falla la idempotencia, se corrige primero en el servidor: también protege el inventario.
 - **Propuestos, solo si el usuario lo pide:** ficha pública como plantilla servida por el backend (la SPA no la renderiza; `/api` y `/publico` fuera del fallback del service worker) y contrato de idempotencia con hash (misma clave y otro contenido, 422; claves sin caducidad). Hoy el árbol de arriba aún lista `features/ficha-publica/`.
-- **Esquema de datos `[ABIERTO]`:** no crear modelos ni migraciones definitivas sin acuerdo; proponer. Puntos pendientes en marco §8 (fuente única de costos, motivo en auditoría, propagación del bloqueo a derivados, compra del cacao fuera del costo de etapa).
+- **Esquema de datos `[ABIERTO]`:** no crear modelos ni migraciones definitivas sin acuerdo; proponer. Quedan fuera de esta entrega los puntos del marco §8 (fuente única de costos, motivo en auditoría, propagación del bloqueo a derivados, compra del cacao fuera del costo de etapa).
 - **Reglas de corte `[PROPUESTO]`:** hora 14 sin núcleo demostrable, offline pasa a forma débil y la analítica a tres consultas fijas; hora 21 congelar funcionalidades; hora 23 solo el integrador toca la rama principal.
 - **Responsables:** matriz en marco §10 (`[PROPUESTO]`). El agente no asigna ni reasigna trabajo.
 
@@ -142,12 +142,12 @@ Crear módulos y directorios solo cuando se vayan a usar de inmediato. No dejar 
 
 | Command | Purpose | Notes |
 |---|---|---|
-| `make setup` | Instala dependencias de backend y frontend | Instalación limpia en pocos comandos; por definir |
-| `make run` | Construye el frontend y arranca el backend en un solo proceso | Puerto por definir |
+| `make setup` | Instala dependencias de backend y frontend | Instalación limpia en pocos comandos |
+| `make run` | Construye el frontend y arranca el backend en un solo proceso | |
 | `make test` | Ejecuta pytest (unit, integration, regresión) | Debe pasar antes de cada commit |
 | `make perf` | Mide trazabilidad sobre 100 registros sintéticos | Declarar método y equipo; objetivo <= 3 s |
 | `make seed` | Carga CAC001–003 y usuarios demo | Ver Dangerous Commands |
-| `make backup` | Respalda la base a `datos/respaldo/` con checksum (método por definir) | Idempotente |
+| `make backup` | Respalda la base a `datos/respaldo/` con checksum  | Idempotente |
 | `make restore` | Restaura un respaldo | Ver Dangerous Commands |
 
 Los targets del `Makefile` ya están completos (setup, run, test, backup, verify, restore, perf). Frontend (desde `src/frontend/`): `pnpm test` (vitest), `pnpm exec tsc -b` (tipos), `pnpm exec eslint .` (lint), `pnpm build`. Variables del frontend (`src/frontend/.env.example`): `VITE_API_URL` y `VITE_PERMITIR_MODO_LOCAL` (`false` en la evaluación; `true` solo para trabajar sin servidor, en `.env.local`). CI en `.github/workflows/ci.yml`: tipos, lint, pruebas y build del frontend; pytest del backend cuando existe `backend/`. Backend: `python -m pytest -q` desde `backend/`.
@@ -216,7 +216,7 @@ Document known landmines here. Be specific: name the files, describe the behavio
 - **[Idempotencia]**: la clave de idempotencia es única por operación y vive en la base (índice único). Reenviar la misma operación devuelve el resultado original sin volver a consumir. Aplica a transformaciones y a la sincronización offline.
 - **[Auditoría]**: tabla de solo inserción (sin `UPDATE`/`DELETE` desde el código). Se escribe en la misma transacción que la operación auditada: quién, cuándo (hora del servidor, `core/clock.py`), qué cambió, valor anterior y nuevo. La hora de captura offline del cliente es un campo aparte y nunca reemplaza la hora del servidor.
 - **[Transacciones y errores]**: un error no deja registros parciales ni pierde datos válidos. Toda operación multi-escritura va en una sola transacción con rollback completo.
-- **[Persistencia y respaldo]**: PostgreSQL (marco §7); estado local ignorado por git. Verificar restauración por cantidades e identificadores, sin pérdida ni duplicación. Método y ubicación del respaldo por definir; no respaldar con copia de archivos de una base en escritura activa. `[RESUELTO]` la versión anterior de esta entrada asumía SQLite y copia de archivo.
+- **[Persistencia y respaldo]**: PostgreSQL (marco §7); estado local ignorado por git. Verificar restauración por cantidades e identificadores, sin pérdida ni duplicación. No respaldar con copia de archivos de una base en escritura activa. `[RESUELTO]` la versión anterior de esta entrada asumía SQLite y copia de archivo.
 - **[Valores del jurado]**: el jurado cambiará los valores de prueba. Merma, costo unitario y margen se calculan siempre; nunca hardcodear 20 %, 15 %, 20.000 ni 25.000. El umbral de alerta (15 %) es configuración, no literal en la lógica.
 - **[División entre cero]**: costo unitario con salida vendible 0 y margen con precio 0 deben devolver un resultado explícito (error de dominio o valor nulo explicado), nunca una excepción sin manejar ni `inf`.
 - **[Salida mayor que entrada]**: solo se acepta con justificación registrada (p. ej. adición de insumos). Sin justificación se rechaza. No comparar masas de etapas con bases distintas sin explicar el balance.
@@ -229,7 +229,7 @@ Document known landmines here. Be specific: name the files, describe the behavio
 - **[Usuarios demo locales]**: `context/usuariosDemo.ts` guarda usuarios de demostración solo para el modo sin backend. En la fase 2 la autenticación real la hace el servidor; estos usuarios solo se ofrecen con `VITE_PERMITIR_MODO_LOCAL=true` y deben desaparecer del despliegue final.
 - **[Fuente única por sesión]**: al iniciar sesión, si la API responde todo va a la API (`features/*/api/*Api.ts`); solo si no hay red y `VITE_PERMITIR_MODO_LOCAL=true` todo va a Dexie (`*Db.ts`). Nunca se mezclan por llamada: dejaría lotes locales que el servidor no conoce y existencias duplicadas. Dexie conserva la cola de recepciones pendientes y la copia del catálogo de fincas. Un 401 con sesión la cierra sin tocar la cola.
 - **[Modo local en la evaluación]**: `VITE_PERMITIR_MODO_LOCAL` debe ir en `false` en la entrega. Encendido, un fallo de red muestra datos de demostración en lugar del servidor.
-- **[Contrato con el backend]**: `docs/contrato-api.md` lista endpoints, equivalencias de vocabulario y deltas pendientes. Si cambia un endpoint, se actualiza ese archivo y las pruebas de `*Api.test.ts` en el mismo commit. La forma de `/lots/{id}/traceability`, `/economics` y `/audit` se armó leyendo el código del backend y debe verificarse contra la API en marcha.
+- **[Contrato con el backend]**: `docs/contrato-api.md` lista endpoints y equivalencias de vocabulario. Si cambia un endpoint, se actualiza ese archivo y las pruebas de `*Api.test.ts` en el mismo commit. La forma de `/lots/{id}/traceability`, `/economics` y `/audit` se armó leyendo el código del backend y debe verificarse contra la API en marcha.
 - **[RESUELTO · CSV del servidor]**: `GET /exports/lots.csv` ahora antepone un apóstrofo al texto que empieza con `=`, `+`, `-`, `@`, tabulador o retorno (`app/api/exports.py`), igual que el CSV local. Prueba: `backend/tests/test_exportacion_csv_seguro.py`.
 - **[RESUELTO · Costo sin dato]**: `costs_cop` omitido es «sin dato»: no crea entrada de costo, `/economics` devuelve costo unitario y margen nulos y `/alerts` emite `registro_incompleto`. Un `costs_cop: 0` explícito sí se registra y cuenta como dato. Prueba: `backend/tests/test_costo_sin_dato.py`.
 - **[RESUELTO · Versiones del backend]**: `backend/requirements.txt` fija versiones exactas (`==`). Sigue sin lockfile de las dependencias transitivas.
@@ -309,7 +309,7 @@ Solo el `administrador` cambia el estado, con motivo obligatorio. Las etiquetas 
 - Un directorio por módulo del backend en `features/`. Componentes de dominio dentro de su feature; primitivos reutilizables en `shared/`. Antes de crear un componente, revisar `shared/`.
 - El cliente y los tipos de `api/` se generan desde OpenAPI; no editarlos a mano.
 - Interfaz usable en computador y pantalla móvil. Etiquetas en formularios, contraste legible, navegación por teclado, foco visible (nunca anularlo sin sustituto).
-- Objetivos táctiles de tamaño cómodo en móvil. Sistema visual y tokens: por definir; hasta entonces, un único archivo de tokens y componentes que consumen solo esos tokens.
+- Objetivos táctiles de tamaño cómodo en móvil. Un único archivo de tokens y componentes que consumen solo esos tokens.
 - Formato de números y fechas centralizado en `shared/`; no formatear en cada componente.
 - Mostrar siempre fórmula, unidades y supuestos junto a los indicadores económicos (RF05, RF12).
 - Respetar `prefers-reduced-motion`; animaciones mínimas.
@@ -419,13 +419,13 @@ Las funciones puras de `rules.py` se escriben primero con su prueba.
 
 **Mínimos del reto:** 5 pruebas automáticas relevantes (merma, validación, permisos, idempotencia, ficha sin costos) y 15 casos documentados con ID, requisito, datos, pasos, esperado, obtenido, estado y evidencia. Deben cubrir: flujo feliz, dato inválido, lote duplicado, falta de existencia, reenvío de operación, costos con salida cero, permiso denegado, bloqueo y consulta pública, cambio auditado, persistencia, exportación, respaldo y restauración, además de la regresión de la hora 12 y la medición de rendimiento (100 registros, <= 3 s, método y equipo declarados).
 
-No inventar resultados de pruebas. Registrar lo obtenido tal cual; si falla, indicar corrección o limitación pendiente.
+No inventar resultados de pruebas. Registrar lo obtenido tal cual; si falla, indicar corrección o limitación conocida.
 
 ### Validation before claiming done
 
 Antes de declarar el trabajo completo:
 
-1. Typecheck — backend (comando por definir) y `tsc` en frontend. Sin errores.
+1. Typecheck — `tsc` en frontend; el backend no tiene verificador de tipos. Sin errores.
 2. Lint — sin errores.
 3. `make test` — todos los tests pasan.
 4. Build del frontend — exitoso.

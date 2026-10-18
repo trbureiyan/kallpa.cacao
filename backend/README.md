@@ -39,7 +39,7 @@ Si existe `../src/frontend/dist/index.html` (resultado de `pnpm build` en `src/f
 
 Desde `backend/`, ejecuta `docker compose up --build db api` para levantar PostgreSQL y la API. El contenedor aplica las migraciones Alembic antes de iniciar la API, disponible en el puerto 8000. PostgreSQL guarda datos en el volumen `postgres_data`.
 
-El servicio frontend usa la aplicación canónica React/PWA en `../src/frontend`. El build de producción está verificado; aún falta recorrer manualmente las vistas administrativas en escritorio y móvil conectadas a una API y PostgreSQL en ejecución.
+El servicio frontend usa la aplicación canónica React/PWA en `../src/frontend`. El build de producción está verificado. El recorrido manual de las vistas administrativas en escritorio y móvil queda fuera de esta entrega.
 
 ## Usuarios sintéticos
 

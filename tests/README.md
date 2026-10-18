@@ -1,6 +1,6 @@
 # Guía para el equipo de pruebas
 
-Cómo levantar el sistema, qué está cubierto por pruebas automáticas, qué se prueba a mano y qué está pendiente.
+Cómo levantar el sistema, qué está cubierto por pruebas automáticas y qué se prueba a mano.
 **Este archivo no contiene resultados de pruebas.** Cada resultado lo registra quien ejecuta la prueba en `tests/casos_manuales.md` y en `documentos/E05_pruebas`, tal como salió, incluidas las fallas.
 
 ## 1. Requisitos

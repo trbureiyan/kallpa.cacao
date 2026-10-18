@@ -30,7 +30,7 @@ Una transformación consume un lote de entrada y puede crear una o varias salida
 
 ## 3. Arquitectura y datos
 
-El backend usa FastAPI, SQLAlchemy y Alembic. Docker Compose configura PostgreSQL con un volumen persistente y una API; el proyecto también permite SQLite para desarrollo local y pruebas. La API publica OpenAPI/Swagger en `/docs`. `src/frontend/` contiene el frontend React/PWA canónico; su build de producción está verificado, pero la revisión visual manual contra la pila integrada sigue pendiente.
+El backend usa FastAPI, SQLAlchemy y Alembic. Docker Compose configura PostgreSQL con un volumen persistente y una API; el proyecto también permite SQLite para desarrollo local y pruebas. La API publica OpenAPI/Swagger en `/docs`. `src/frontend/` contiene el frontend React/PWA canónico; su build de producción está verificado. La revisión visual manual contra la pila integrada queda fuera de esta entrega.
 
 Los modelos principales son `User`, `Producer`, `Farm`, `Lot`, `Reception`, `Transformation`, `TransformationOutput`, `InventoryMovement`, `CostEntry` y `AuditEvent`. `CostEntry` es la fuente única de costos; la migración `e4219b1a7c30` elimina `FinanceRecord` y `Transformation.costs_cop`. El diagrama y las decisiones están en [E03](documentos/E03_diseno.md); las historias y criterios, en [E02](documentos/E02_requisitos.md).
 
@@ -129,4 +129,4 @@ La guía oficial pide que la solución funcione en computador y móvil. En esta 
 
 Se conectaron las pantallas activas de panel, transformación, trazabilidad, inventario, alertas, economía, auditoría, administración de usuarios y ficha pública con FastAPI. La recepción conserva su cola IndexedDB. Los prototipos que dependían de Dexie/React Router ausentes se archivaron en `src/frontend/design-reference/legacy/`; la interfaz activa no depende de esos módulos.
 
-Verificación ejecutada el 16-10-2026: build PWA `npm run build` exitoso; suite backend 18 aprobadas/1 omitida (concurrencia aparte: 1 aprobada en PostgreSQL temporal); `/health`, `/docs` y frontend respondieron HTTP 200; Alembic actual `b6d1ef3a9204 (head)`. El chequeo HTTP no certifica el recorrido visual. Siguen pendientes las pruebas manuales, la restauración y la medición de rendimiento.
+Verificación ejecutada el 16-10-2026: build PWA `npm run build` exitoso; suite backend 18 aprobadas/1 omitida (concurrencia aparte: 1 aprobada en PostgreSQL temporal); `/health`, `/docs` y frontend respondieron HTTP 200; Alembic actual `b6d1ef3a9204 (head)`. El chequeo HTTP no certifica el recorrido visual. Las pruebas manuales, la restauración y la medición de rendimiento quedan fuera de esta verificación.
