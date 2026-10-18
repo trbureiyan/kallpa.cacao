@@ -23,10 +23,10 @@ Desarrolladores del proyecto en la II Hackathon de Programación USCO:
 
 Perfiles de GitHub:
 
-- [alejopro26](https://github.com/alejopro26)
-- [EliteBoku](https://github.com/EliteBoku)
-- [MrEnviss](https://github.com/MrEnviss)
 - [trbureiyan](https://github.com/trbureiyan)
+- [EliteBoku](https://github.com/EliteBoku)
+- [alejopro26](https://github.com/alejopro26)
+- [MrEnviss](https://github.com/MrEnviss)
 
 ## Qué hace
 
