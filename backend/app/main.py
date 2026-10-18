@@ -1,4 +1,3 @@
-from datetime import date
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
@@ -7,38 +6,17 @@ from fastapi.responses import JSONResponse
 from app.config import settings, validar_configuracion
 from app.frontend import montar_frontend
 from app.database import SessionLocal
-from app import models
+from app.seed import sembrar_demo
+from app.security.headers import instalar_cabeceras
+from app.security.rate_limit import instalar_limite
 from app.api import auth, receptions, transformations, lots, inventory, economics, public, exports, alerts, users, analytics, audit
-from app.security.authentication import hash_password
 from contextlib import asynccontextmanager
 
 def initialize_database():
     if not settings.seed_demo_data:
         return
     with SessionLocal() as db:
-        if db.query(models.User).count() == 0:
-            db.add_all([
-                models.User(username="admin", full_name="Administrador demo", password_hash=hash_password("Admin123!"), role="admin"),
-                models.User(username="operador", full_name="Operador demo", password_hash=hash_password("Operador123!"), role="operator"),
-            ])
-        if db.query(models.Producer).count() == 0:
-            db.add_all([models.Producer(code="PROD-A", name="Productor A"), models.Producer(code="PROD-B", name="Productor B"), models.Producer(code="PROD-C", name="Productor C")])
-        db.commit()
-        if db.query(models.Farm).count() == 0:
-            producers = {p.code: p.id for p in db.query(models.Producer).all()}
-            db.add_all([models.Farm(producer_id=producers["PROD-A"], name="Finca A", region="Rivera"),
-                        models.Farm(producer_id=producers["PROD-B"], name="Finca B", region="Campoalegre"),
-                        models.Farm(producer_id=producers["PROD-C"], name="Finca C", region="Algeciras")])
-            db.commit()
-        if db.query(models.Lot).count() == 0:
-            producers = {p.code: p.id for p in db.query(models.Producer).all()}
-            farms = {f.region: f.id for f in db.query(models.Farm).all()}
-            db.add_all([
-                models.Lot(code="CAC001", producer_id=producers["PROD-A"], farm_id=farms["Rivera"], origin="Rivera", received_on=date.today(), received_quantity=100, available_quantity=100, consumed_quantity=0, unit="kg"),
-                models.Lot(code="CAC002", producer_id=producers["PROD-B"], farm_id=farms["Campoalegre"], origin="Campoalegre", received_on=date.today(), received_quantity=150, available_quantity=150, consumed_quantity=0, unit="kg"),
-                models.Lot(code="CAC003", producer_id=producers["PROD-C"], farm_id=farms["Algeciras"], origin="Algeciras", received_on=date.today(), received_quantity=80, available_quantity=80, consumed_quantity=0, unit="kg"),
-            ])
-            db.commit()
+        sembrar_demo(db)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -59,6 +37,10 @@ app = FastAPI(title=settings.app_name, version="0.1.0",
 async def validation_error(_request, exc: RequestValidationError):
     return JSONResponse(status_code=422, content={"detail": [{"loc": list(e.get("loc", ())), "msg": e.get("msg", ""), "type": e.get("type", "")} for e in exc.errors()]})
 
+
+# el orden importa: el último middleware agregado es el más externo, así las cabeceras también cubren los 429
+app.state.limitador = instalar_limite(app, settings.rate_limit_per_minute, settings.rate_limit_login_per_minute, settings.api_prefix)
+instalar_cabeceras(app)
 
 origins = [value.strip() for value in settings.cors_origins.split(",") if value.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])

@@ -1,0 +1,46 @@
+name: reset-demo
+
+# Cada semana deja la base de la DEMO con los datos básicos (usuarios demo y CAC001-003) y borra lo que hayan creado
+# los visitantes. No usa Render: se conecta directo a Neon, así que no gasta horas del servicio web.
+# Requiere el secreto DEMO_DATABASE_URL (Settings > Secrets and variables > Actions) con la URL de la base de la demo.
+# [!] Borra TODOS los datos de esa base, auditoría incluida. Nunca apunte el secreto a una base con datos reales.
+# Las ejecuciones programadas solo corren desde la rama por defecto (master).
+on:
+  schedule:
+    - cron: '0 8 * * 0' # domingos 08:00 UTC (03:00 en Colombia)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reset-demo
+  cancel-in-progress: false
+
+jobs:
+  reiniciar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - run: pip install -r backend/requirements.txt
+
+      - name: Reiniciar la demo
+        working-directory: backend
+        env:
+          DEMO_DATABASE_URL: ${{ secrets.DEMO_DATABASE_URL }}
+        run: |
+          if [ -z "$DEMO_DATABASE_URL" ]; then
+            echo "Falta el secreto DEMO_DATABASE_URL: no se reinició nada."
+            exit 1
+          fi
+          # Neon entrega postgresql://; SQLAlchemy necesita indicar el controlador psycopg (v3) que instala el backend
+          export DATABASE_URL="$(printf '%s' "$DEMO_DATABASE_URL" | sed -E 's#^postgres(ql)?://#postgresql+psycopg://#')"
+          python ../scripts/reiniciar_demo.py --confirmar
