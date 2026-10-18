@@ -150,7 +150,7 @@ Crear módulos y directorios solo cuando se vayan a usar de inmediato. No dejar 
 | `make backup` | Respalda la base a `datos/respaldo/` con checksum (método por definir) | Idempotente |
 | `make restore` | Restaura un respaldo | Ver Dangerous Commands |
 
-Los targets del `Makefile` existen pero aún están vacíos. Completarlos antes de documentarlos en `README.md`. Frontend (desde `src/frontend/`): `pnpm test` (vitest), `pnpm exec tsc -b` (tipos), `pnpm exec eslint .` (lint), `pnpm build`. Variables del frontend (`src/frontend/.env.example`): `VITE_API_URL` y `VITE_PERMITIR_MODO_LOCAL` (`false` en la evaluación; `true` solo para trabajar sin servidor, en `.env.local`). CI en `.github/workflows/ci.yml`: tipos, lint, pruebas y build del frontend; pytest del backend cuando existe `backend/`. Backend: `python -m pytest -q` desde `backend/`.
+Los targets del `Makefile` ya están completos (setup, run, test, backup, verify, restore, perf). Frontend (desde `src/frontend/`): `pnpm test` (vitest), `pnpm exec tsc -b` (tipos), `pnpm exec eslint .` (lint), `pnpm build`. Variables del frontend (`src/frontend/.env.example`): `VITE_API_URL` y `VITE_PERMITIR_MODO_LOCAL` (`false` en la evaluación; `true` solo para trabajar sin servidor, en `.env.local`). CI en `.github/workflows/ci.yml`: tipos, lint, pruebas y build del frontend; pytest del backend cuando existe `backend/`. Backend: `python -m pytest -q` desde `backend/`.
 
 ### Dangerous Commands
 
@@ -232,7 +232,8 @@ Document known landmines here. Be specific: name the files, describe the behavio
 - **[Contrato con el backend]**: `docs/contrato-api.md` lista endpoints, equivalencias de vocabulario y deltas pendientes. Si cambia un endpoint, se actualiza ese archivo y las pruebas de `*Api.test.ts` en el mismo commit. La forma de `/lots/{id}/traceability`, `/economics` y `/audit` se armó leyendo el código del backend y debe verificarse contra la API en marcha.
 - **[RESUELTO · CSV del servidor]**: `GET /exports/lots.csv` ahora antepone un apóstrofo al texto que empieza con `=`, `+`, `-`, `@`, tabulador o retorno (`app/api/exports.py`), igual que el CSV local. Prueba: `backend/tests/test_exportacion_csv_seguro.py`.
 - **[RESUELTO · Costo sin dato]**: `costs_cop` omitido es «sin dato»: no crea entrada de costo, `/economics` devuelve costo unitario y margen nulos y `/alerts` emite `registro_incompleto`. Un `costs_cop: 0` explícito sí se registra y cuenta como dato. Prueba: `backend/tests/test_costo_sin_dato.py`.
-- **[Versiones del backend]**: `backend/requirements.txt` usa rangos y no hay lockfile; contradice «Supply Chain and Dependencies» y hace que CI pueda instalar versiones distintas.
+- **[RESUELTO · Versiones del backend]**: `backend/requirements.txt` fija versiones exactas (`==`). Sigue sin lockfile de las dependencias transitivas.
+- **[Demo desplegada: cuota y abuso]**: Render y Neon son planes gratuitos compartidos con otros proyectos. `keep-alive.yml` es solo manual (no reintroducir `schedule`). `reset-demo.yml` vacía la base de la demo cada domingo y exige el secreto `DEMO_DATABASE_URL`: nunca apuntarlo a datos reales. El límite por IP (`app/security/rate_limit.py`) usa `CF-Connecting-IP`, no `X-Forwarded-For`; está en memoria de una instancia.
 - **[Datos sintéticos]**: solo datos sintéticos. Sin contraseñas, claves ni información privada en el repo ni en herramientas de IA.
 - **[Dependencias]**: `[RESUELTO]` FastAPI y PostgreSQL ya están `[DECIDIDO]` en el marco (SQLite descartado). Sigue vigente: no instalar dependencias sin aprobación, versión exacta y declaración en E08 (ver Manual Actions).
 

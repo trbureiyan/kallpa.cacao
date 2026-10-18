@@ -147,7 +147,7 @@ Esto levanta PostgreSQL 16 en `127.0.0.1:5433` y la API en `localhost:8000`. El 
 
 Las credenciales de `backend/docker-compose.yml` son solo para la máquina local. Cámbielas antes de exponer el servicio.
 
-Para levantar también la interfaz en `http://localhost:8080`, ejecute `docker compose up --build` sin nombrar servicios. La imagen del frontend todavía no está verificada (ver [Pendientes](#pendientes)).
+Para levantar también la interfaz en `http://localhost:8080`, ejecute `docker compose up --build` sin nombrar servicios. La imagen del frontend no está verificada (ver [Pendientes](#pendientes)).
 
 ## Configuración
 
@@ -441,23 +441,19 @@ La demo corre en planes gratuitos (Render y Neon), compartidos con otros proyect
 
 ## Pendientes
 
-Estos puntos están verificados en el código y se conocen; no son fallas nuevas:
+Revisados contra el código entregado el 18-10-2026. Lo que ya estaba resuelto se quitó de esta lista. Lo siguiente queda **fuera de esta entrega** porque es una decisión o una ejecución humana que no se puede confirmar desde el repositorio:
 
-- El CSV del servidor no neutraliza texto que Excel interpreta como fórmula (`=`, `+`, `-`, `@`). El CSV del modo local sí lo hace.
-- Un costo de etapa sin dato llega al servidor como 0 y puede leerse como costo calculable.
-- `SECRET_KEY` y `SEED_DEMO_DATA` tienen valores de desarrollo por defecto.
-- `backend/requirements.txt` usa rangos de versión y no hay lockfile del backend.
+- Casos manuales: 14 de los 15 de `tests/casos_manuales.md` no tienen resultado obtenido (solo CM-10 está ejecutado). Los registra quien los ejecute.
+- Tarjeta de cambio `documentos/cambios/CC-001` (incidencia de la hora 12): no existe en el repositorio. La prueba automática REG-001 sí existe.
 - La imagen Docker del frontend (`src/frontend/Dockerfile`) no se ha probado.
-- Los targets de `Makefile` están vacíos.
-- `backend/cacao.db` no está en `.gitignore`. Solo se ignoran `.env`, `datos/runtime/*` y las carpetas de dependencias. Agregue una regla para `*.db` antes de versionar `backend/`.
-- El saldo disponible se guarda en `lots.available_quantity` y no se recalcula desde `inventory_movements` en cada lectura. La regla de diseño pide derivarlo del libro. Hoy la coherencia depende de las transacciones de `backend/app/services/transformation.py`.
-- Las credenciales de demostración están en `backend/app/main.py` y en esta guía. Retírelas o desactive el sembrado antes de cualquier despliegue.
-- `.env.example` de la raíz no coincide con la configuración que lee la API. Use `backend/.env.example`.
-- Faltan los casos manuales de `tests/casos_manuales.md`, la tarjeta de cambio `documentos/cambios/CC-001` y la prueba de regresión de la hora 12 en `tests/backend/regresion/`.
-- Las pruebas de la PWA en la evaluación (desconexión, móvil, teclado) se hacen a mano y se registran en `documentos/E05_pruebas.md`.
+- El saldo disponible se guarda en `lots.available_quantity` y no se recalcula desde `inventory_movements` en cada lectura; la coherencia depende de las transacciones de `backend/app/services/transformation.py`.
+- Bloquear CAC001 no bloquea por sí solo los productos derivados (marco §8). Si se decide propagarlo, hay que actualizar REG-001.
+- Las credenciales de demostración son públicas por diseño (ver «Datos de demostración»); no hay límite de intentos por usuario, solo por IP.
+- `backend/requirements.txt` fija versiones exactas, pero no hay lockfile de las dependencias transitivas.
+- Las pruebas manuales de la PWA (desconexión, móvil, teclado) las registra una persona en `documentos/E05_pruebas.md`.
+- La prueba de concurrencia en PostgreSQL y el `TRUNCATE` de `reset-demo.yml` en Neon solo se verifican contra un PostgreSQL real (el reinicio, con el secreto `DEMO_DATABASE_URL`).
 
 ## Documentación
 
-- `documentos/` contiene los entregables E01–E03 y E05–E09. Todos están vacíos y no existe E04. `ENTREGA.md` y `tests/casos_manuales.md` también están vacíos.
-- Las bibliotecas y plantillas de terceros se declararán en `documentos/E08_IA_y_fuentes.md`.
-- `ENTREGA.md` indicará el commit final y la matriz de requisitos, componentes, pruebas y resultados.
+- `documentos/` contiene los entregables E01–E10 en PDF; `ENTREGA.md` tiene el índice y la matriz de trazabilidad y `tests/casos_manuales.md` los 15 casos.
+- Las bibliotecas y plantillas de terceros se declaran en la declaración de uso de IA y componentes externos (E08).

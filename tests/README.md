@@ -105,13 +105,6 @@ Además, solo se verifica a mano:
 - **Teclado y lector de pantalla:** recorrer el flujo solo con teclado (el modal de cambio de estado atrapa el foco y se cierra con Esc).
 - **Persona ajena al equipo** (E06): dos tareas sin indicarle cada clic.
 
-## 7. Pendientes conocidos (no son fallas nuevas)
+## 7. Pendientes conocidos (fuera de esta entrega)
 
-- El CSV del servidor no neutraliza texto que Excel lee como fórmula (`=`, `+`, `-`, `@`); el del modo local sí.
-- Un costo de etapa sin dato llega al servidor como 0 y puede mostrarse como costo calculable.
-- `SECRET_KEY` y `SEED_DEMO_DATA` tienen valores por defecto de desarrollo; cambiarlos antes de la entrega.
-- `backend/requirements.txt` usa rangos de versión y no hay lockfile.
-- `make backup`, `make restore` y `make perf` están deshabilitados a propósito en el `Makefile`; use los scripts de las secciones 4 y 5.
-- `make setup` usa `npm ci`, pero el frontend usa pnpm.
-- Faltan los 15 casos de `tests/casos_manuales.md` y la tarjeta de cambio `documentos/cambios/CC-001` (con el criterio de aceptación ajustado). La prueba automática de la incidencia ya existe: `tests/backend/regresion/test_incidencia_cac001.py` (REG-001).
-- La prueba REG-001 fija el comportamiento actual: bloquear CAC001 no bloquea por sí solo los productos derivados. Si el equipo decide propagar el bloqueo (marco §8), esa prueba debe actualizarse junto con el cambio.
+Ver la sección «Pendientes» del `README.md` raíz: es la lista vigente, revisada contra el código entregado.
