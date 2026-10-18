@@ -12,6 +12,14 @@ from app.models import Farm, Producer, User
 from app.security.authentication import create_access_token, hash_password
 
 
+@pytest.fixture(autouse=True)
+def limite_limpio():
+    # todas las pruebas llegan desde la misma IP: sin esto, el cupo de una prueba bloquearía a las siguientes
+    app.state.limitador._contadores.clear()
+    yield
+    app.state.limitador._contadores.clear()
+
+
 @pytest.fixture
 def api() -> Iterator[dict]:
     engine = create_engine(

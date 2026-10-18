@@ -46,6 +46,9 @@ def medir(lotes: int = 100, repeticiones: int = 5, con_segunda_etapa: int = 30) 
             DATABASE_URL=f"sqlite:///{Path(carpeta, 'perf.db').as_posix()}",
             SEED_DEMO_DATA="false",
             SECRET_KEY="perf-local-only",
+            # mide la lógica del servidor, no el límite por IP: todas las peticiones salen de una misma IP
+            RATE_LIMIT_PER_MINUTE="1000000",
+            RATE_LIMIT_LOGIN_PER_MINUTE="1000000",
         )
         from fastapi.testclient import TestClient
 

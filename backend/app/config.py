@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     # carpeta del build del frontend; vacío = src/frontend/dist del repositorio
     frontend_dist: str = ""
     seed_demo_data: bool = True
+    # por IP y por minuto; el login es más estricto para frenar la fuerza bruta
+    rate_limit_per_minute: int = Field(default=120, ge=1)
+    rate_limit_login_per_minute: int = Field(default=10, ge=1)
     loss_alert_threshold_percent: float = 15.0
     delay_alert_days: int = Field(default=7, ge=0)
     cost_alert_threshold_cop_per_kg: float | None = None
