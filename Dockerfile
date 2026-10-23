@@ -4,7 +4,7 @@
 FROM node:24-alpine AS web
 WORKDIR /web
 # misma versión de pnpm que usa el CI y la que generó pnpm-lock.yaml
-RUN npm install -g pnpm@11.20.0
+RUN npm install -g pnpm@12.15.0
 COPY src/frontend/package.json src/frontend/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY src/frontend/ ./

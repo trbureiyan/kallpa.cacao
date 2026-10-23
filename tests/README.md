@@ -8,8 +8,8 @@ Cómo levantar el sistema, qué está cubierto por pruebas automáticas y qué s
 | Herramienta | Versión usada en el desarrollo |
 |---|---|
 | Python | 3.12 (CI) y 3.13 local |
-| Node | 24.20.0 |
-| pnpm | 11.20.0 (el frontend usa `pnpm-lock.yaml`, no `package-lock.json`) |
+| Node | 24.22.1 |
+| pnpm | 12.15.0 (el frontend usa `pnpm-lock.yaml`, no `package-lock.json`) |
 | Docker (opcional) | 29.x, solo para `docker compose` |
 
 ## 2. Levantar el sistema sin Docker

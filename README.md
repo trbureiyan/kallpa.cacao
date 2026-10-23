@@ -58,8 +58,8 @@ Roles:
 | Herramienta | Versión | Notas |
 |---|---|---|
 | Python | 3.12 (CI y Docker) | El backend declara 3.11 o superior; el desarrollo local usó 3.13 |
-| Node.js | 24.20.0 (CI); `node:24` en la imagen Docker | |
-| pnpm | 11.20.0 | `npm install -g pnpm@11.20.0`. El frontend usa `pnpm-lock.yaml`, no `package-lock.json` |
+| Node.js | 24.22.1 (CI); `node:24` en la imagen Docker | |
+| pnpm | 12.15.0 | `npm install -g pnpm@12.15.0`. El frontend usa `pnpm-lock.yaml`, no `package-lock.json` |
 | Docker y Docker Compose | 29.x (opcional) | Solo para PostgreSQL y para ejecutar la API en contenedor |
 
 Desarrollado en Windows 11. El CI corre en Ubuntu.
@@ -447,7 +447,7 @@ Demo en línea: https://kallpa-cacao.onrender.com. **La primera carga puede tard
 
 **Un cambio de `VITE_API_URL` no tiene efecto.** Las variables de Vite se incrustan al compilar. Reinicie `pnpm dev` o vuelva a ejecutar `pnpm build`.
 
-**`pnpm install --frozen-lockfile` falla.** Revise que tenga pnpm 11.20.0 (`pnpm -v`). Si cambió `package.json`, actualice `pnpm-lock.yaml` en el mismo cambio. No use `npm install` en `src/frontend/`: el lockfile es de pnpm.
+**`pnpm install --frozen-lockfile` falla.** Revise que tenga pnpm 12.15.0 (`pnpm -v`). Si cambió `package.json`, actualice `pnpm-lock.yaml` en el mismo cambio. No use `npm install` en `src/frontend/`: el lockfile es de pnpm.
 
 **Las pruebas del frontend muestran "HTMLCanvasElement's getContext() method ... not implemented".** Es ruido de jsdom y no indica un fallo.
 
